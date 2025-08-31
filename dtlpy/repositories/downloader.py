@@ -136,16 +136,24 @@ class Downloader:
             if file_types is not None:
                 filters.add(field='metadata.system.mimetype', values=file_types, operator=entities.FiltersOperations.IN)
             if annotation_filters is not None:
-                for annotation_filter_and in annotation_filters.and_filter_list:
-                    filters.add_join(field=annotation_filter_and.field,
-                                     values=annotation_filter_and.values,
-                                     operator=annotation_filter_and.operator,
-                                     method=entities.FiltersMethod.AND)
-                for annotation_filter_or in annotation_filters.or_filter_list:
-                    filters.add_join(field=annotation_filter_or.field,
-                                     values=annotation_filter_or.values,
-                                     operator=annotation_filter_or.operator,
-                                     method=entities.FiltersMethod.OR)
+                if len(annotation_filters.and_filter_list) > 0 or len(annotation_filters.or_filter_list) > 0:
+                    for annotation_filter_and in annotation_filters.and_filter_list:
+                        filters.add_join(field=annotation_filter_and.field,
+                                        values=annotation_filter_and.values,
+                                        operator=annotation_filter_and.operator,
+                                        method=entities.FiltersMethod.AND)
+                    for annotation_filter_or in annotation_filters.or_filter_list:
+                        filters.add_join(field=annotation_filter_or.field,
+                                        values=annotation_filter_or.values,
+                                        operator=annotation_filter_or.operator,
+                                        method=entities.FiltersMethod.OR)
+                elif annotation_filters.custom_filter is not None:
+                    annotation_query_dict = annotation_filters.prepare()
+                    items_query_dict = filters.prepare()
+                    items_query_dict["join"] = annotation_query_dict
+                    filters.reset()
+                    filters.custom_filter = items_query_dict
+
             else:
                 annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
                 filters._user_query = 'false'

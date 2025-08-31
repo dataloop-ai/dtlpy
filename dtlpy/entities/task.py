@@ -9,6 +9,10 @@ from .. import repositories, entities, exceptions
 logger = logging.getLogger(name='dtlpy')
 
 
+class AllocationMethod(str, Enum):
+    DISTRIBUTION = 'distribution'
+    PULLING = 'pulling'
+
 class ConsensusTaskType(str, Enum):
     CONSENSUS = 'consensus'
     QUALIFICATION = 'qualification'

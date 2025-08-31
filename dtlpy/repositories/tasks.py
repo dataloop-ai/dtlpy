@@ -7,8 +7,8 @@ import warnings
 from .. import exceptions, miscellaneous, entities, repositories, _api_reference
 from ..services.api_client import ApiClient
 
-logger = logging.getLogger(name='dtlpy')
-URL_PATH = '/annotationtasks'
+logger = logging.getLogger(name="dtlpy")
+URL_PATH = "/annotationtasks"
 
 
 class Tasks:
@@ -19,23 +19,17 @@ class Tasks:
     For more information, read in our developers' documentation about `Creating Tasks <https://developers.dataloop.ai/tutorials/task_workflows/create_a_task/chapter/>`_, and `Redistributing and Reassigning Tasks <https://developers.dataloop.ai/tutorials/task_workflows/redistributing_and_reassigning_a_task/chapter/>`_.
     """
 
-    def __init__(self,
-                 client_api: ApiClient,
-                 project: entities.Project = None,
-                 dataset: entities.Dataset = None,
-                 project_id: str = None):
+    def __init__(
+        self,
+        client_api: ApiClient,
+        project: entities.Project = None,
+        dataset: entities.Dataset = None,
+        project_id: str = None,
+    ):
         self._client_api = client_api
         self._project = project
         self._dataset = dataset
         self._assignments = None
-        if project_id is None:
-            if self._project is not None:
-                project_id = self._project.id
-            elif self._dataset is not None:
-                if self._dataset._project is not None:
-                    project_id = self._dataset._project.id
-                elif isinstance(self._dataset.projects, list) and len(self._dataset.projects) > 0:
-                    project_id = self._dataset.projects[0]
         self._project_id = project_id
 
     ############
@@ -43,32 +37,38 @@ class Tasks:
     ############
     @property
     def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.tasks repository')
-        assert isinstance(self._project, entities.Project)
+        if self._project is None and self._project_id is None:
+            if self._dataset is None:
+                raise exceptions.PlatformException(
+                    error="2001",
+                    message='Missing "project". need to set a Project entity or use project.tasks repository',
+                )
+            else:
+                self._project = self._dataset.project
+                self._project_id = self._project.id
+        if self._project is None and self._project_id is not None:
+            self._project = self._client_api.projects.get(project_id=self._project_id)
         return self._project
 
     @project.setter
     def project(self, project: entities.Project):
         if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
+            raise ValueError("Must input a valid Project entity")
         self._project = project
 
     @property
     def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "dataset". need to set a Dataset entity or use dataset.tasks repository')
+                error="2001", message='Missing "dataset". need to set a Dataset entity or use dataset.tasks repository'
+            )
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
     @dataset.setter
     def dataset(self, dataset: entities.Dataset):
         if not isinstance(dataset, entities.Dataset):
-            raise ValueError('Must input a valid Dataset entity')
+            raise ValueError("Must input a valid Dataset entity")
         self._dataset = dataset
 
     @property
@@ -79,18 +79,13 @@ class Tasks:
         return self._assignments
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Task]:
-        pool = self._client_api.thread_pools(pool_name='entity.create')
+        pool = self._client_api.thread_pools(pool_name="entity.create")
         jobs = [None for _ in range(len(response_items))]
 
         for i_task, task in enumerate(response_items):
             jobs[i_task] = pool.submit(
                 entities.Task._protected_from_json,
-                **{
-                    'client_api': self._client_api,
-                    '_json': task,
-                    'project': self._project,
-                    'dataset': self._dataset
-                }
+                **{"client_api": self._client_api, "_json": task, "project": self._project, "dataset": self._dataset},
             )
 
         # get all results
@@ -102,14 +97,10 @@ class Tasks:
         return tasks
 
     def _list(self, filters: entities.Filters):
-        url = '{}/query'.format(URL_PATH)
+        url = "{}/query".format(URL_PATH)
         query = filters.prepare()
-        query['context'] = dict(projectIds=[self._project_id])
-        success, response = self._client_api.gen_request(
-            req_type='post',
-            path=url,
-            json_req=filters.prepare()
-        )
+        query["context"] = dict(projectIds=[self._project_id])
+        success, response = self._client_api.gen_request(req_type="post", path=url, json_req=filters.prepare())
 
         if not success:
             raise exceptions.PlatformException(response)
@@ -136,7 +127,7 @@ class Tasks:
             if self._project_id is not None:
                 project_ids = self._project_id
             else:
-                raise exceptions.PlatformException('400', 'Please provide param project_ids')
+                raise exceptions.PlatformException("400", "Please provide param project_ids")
 
         if not isinstance(project_ids, list):
             project_ids = [project_ids]
@@ -145,45 +136,47 @@ class Tasks:
             filters = entities.Filters(resource=entities.FiltersResource.TASK)
         else:
             if not isinstance(filters, entities.Filters):
-                raise exceptions.PlatformException('400', 'Unknown filters type')
+                raise exceptions.PlatformException("400", "Unknown filters type")
             if filters.resource != entities.FiltersResource.TASK:
-                raise exceptions.PlatformException('400', 'Filter resource must be task')
+                raise exceptions.PlatformException("400", "Filter resource must be task")
 
         if filters.context is None:
-            filters.context = {'projectIds': project_ids}
+            filters.context = {"projectIds": project_ids}
 
         if self._project_id is not None:
-            filters.add(field='projectId', values=self._project_id)
+            filters.add(field="projectId", values=self._project_id)
 
         if self._dataset is not None:
-            filters.add(field='datasetId', values=self._dataset.id)
+            filters.add(field="datasetId", values=self._dataset.id)
 
-        paged = entities.PagedEntities(items_repository=self,
-                                       filters=filters,
-                                       page_offset=filters.page,
-                                       page_size=filters.page_size,
-                                       project_id=self._project_id,
-                                       client_api=self._client_api)
+        paged = entities.PagedEntities(
+            items_repository=self,
+            filters=filters,
+            page_offset=filters.page,
+            page_size=filters.page_size,
+            project_id=self._project_id,
+            client_api=self._client_api,
+        )
         paged.get_page()
         return paged
 
     ###########
     # methods #
     ###########
-    @_api_reference.add(path='/annotationtasks/query', method='post')
+    @_api_reference.add(path="/annotationtasks/query", method="post")
     def list(
-            self,
-            project_ids=None,
-            status=None,
-            task_name=None,
-            pages_size=None,
-            page_offset=None,
-            recipe=None,
-            creator=None,
-            assignments=None,
-            min_date=None,
-            max_date=None,
-            filters: entities.Filters = None
+        self,
+        project_ids=None,
+        status=None,
+        task_name=None,
+        pages_size=None,
+        page_offset=None,
+        recipe=None,
+        creator=None,
+        assignments=None,
+        min_date=None,
+        max_date=None,
+        filters: entities.Filters = None,
     ) -> Union[miscellaneous.List[entities.Task], entities.PagedEntities]:
         """
         List all tasks.
@@ -210,7 +203,7 @@ class Tasks:
             dataset.tasks.list(project_ids='project_ids',pages_size=100, page_offset=0)
         """
         # url
-        url = URL_PATH + '/query'
+        url = URL_PATH + "/query"
 
         if filters is None:
             filters = entities.Filters(use_defaults=False, resource=entities.FiltersResource.TASK)
@@ -218,7 +211,7 @@ class Tasks:
             return self.query(filters=filters, project_ids=project_ids)
 
         if self._dataset is not None:
-            filters.add(field='datasetId', values=self._dataset.id)
+            filters.add(field="datasetId", values=self._dataset.id)
 
         if project_ids is not None:
             if not isinstance(project_ids, list):
@@ -226,7 +219,7 @@ class Tasks:
         elif self._project_id is not None:
             project_ids = [self._project_id]
         else:
-            raise ('400', 'Must provide project')
+            raise exceptions.PlatformException("400", "Must provide project")
         filters.context = {"projectIds": project_ids}
 
         if assignments is not None:
@@ -234,12 +227,13 @@ class Tasks:
                 assignments = [assignments]
             assignments = [
                 assignments_entity.id if isinstance(assignments_entity, entities.Assignment) else assignments_entity
-                for assignments_entity in assignments]
-            filters.add(field='assignmentIds', values=assignments, operator=entities.FiltersOperations.IN)
+                for assignments_entity in assignments
+            ]
+            filters.add(field="assignmentIds", values=assignments, operator=entities.FiltersOperations.IN)
         if status is not None:
-            filters.add(field='status', values=status)
+            filters.add(field="status", values=status)
         if task_name is not None:
-            filters.add(field='name', values=task_name)
+            filters.add(field="name", values=task_name)
         if pages_size is not None:
             filters.page_size = pages_size
         if pages_size is None:
@@ -249,31 +243,35 @@ class Tasks:
         if recipe is not None:
             if not isinstance(recipe, list):
                 recipe = [recipe]
-            recipe = [recipe_entity.id if isinstance(recipe_entity, entities.Recipe) else recipe_entity
-                      for recipe_entity in recipe]
-            filters.add(field='recipeId', values=recipe, operator=entities.FiltersOperations.IN)
+            recipe = [
+                recipe_entity.id if isinstance(recipe_entity, entities.Recipe) else recipe_entity
+                for recipe_entity in recipe
+            ]
+            filters.add(field="recipeId", values=recipe, operator=entities.FiltersOperations.IN)
         if creator is not None:
-            filters.add(field='creator', values=creator)
+            filters.add(field="creator", values=creator)
         if min_date is not None:
-            filters.add(field='dueDate', values=min_date, operator=entities.FiltersOperations.GREATER_THAN)
+            filters.add(field="dueDate", values=min_date, operator=entities.FiltersOperations.GREATER_THAN)
         if max_date is not None:
-            filters.add(field='dueDate', values=max_date, operator=entities.FiltersOperations.LESS_THAN)
+            filters.add(field="dueDate", values=max_date, operator=entities.FiltersOperations.LESS_THAN)
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path=url,
-                                                         json_req=filters.prepare())
+        success, response = self._client_api.gen_request(req_type="post", path=url, json_req=filters.prepare())
         if success:
             tasks = miscellaneous.List(
-                [entities.Task.from_json(client_api=self._client_api,
-                                         _json=_json, project=self._project, dataset=self._dataset)
-                 for _json in response.json()['items']])
+                [
+                    entities.Task.from_json(
+                        client_api=self._client_api, _json=_json, project=self._project, dataset=self._dataset
+                    )
+                    for _json in response.json()["items"]
+                ]
+            )
         else:
-            logger.error('Platform error getting annotation task')
+            logger.error("Platform error getting annotation task")
             raise exceptions.PlatformException(response)
 
         return tasks
 
-    @_api_reference.add(path='/annotationtasks/{id}', method='get')
+    @_api_reference.add(path="/annotationtasks/{id}", method="get")
     def get(self, task_name=None, task_id=None) -> entities.Task:
         """
         Get a Task object to use in your code.
@@ -296,48 +294,43 @@ class Tasks:
         url = URL_PATH
 
         if task_id is not None:
-            url = '{}/{}'.format(url, task_id)
-            success, response = self._client_api.gen_request(req_type='get',
-                                                             path=url)
+            url = "{}/{}".format(url, task_id)
+            success, response = self._client_api.gen_request(req_type="get", path=url)
             if not success:
                 raise exceptions.PlatformException(response)
             else:
-                task = entities.Task.from_json(_json=response.json(),
-                                               client_api=self._client_api, project=self._project,
-                                               dataset=self._dataset)
+                task = entities.Task.from_json(
+                    _json=response.json(), client_api=self._client_api, project=self._project, dataset=self._dataset
+                )
             # verify input task name is same as the given id
             if task_name is not None and task.name != task_name:
                 logger.warning(
                     "Mismatch found in tasks.get: task_name is different then task.name:"
-                    " {!r} != {!r}".format(
-                        task_name,
-                        task.name))
+                    " {!r} != {!r}".format(task_name, task.name)
+                )
         elif task_name is not None:
-            tasks = self.list(filters=entities.Filters(field='name',
-                                                       values=task_name,
-                                                       resource=entities.FiltersResource.TASK))
+            tasks = self.list(
+                filters=entities.Filters(field="name", values=task_name, resource=entities.FiltersResource.TASK)
+            )
             if tasks.items_count == 0:
-                raise exceptions.PlatformException('404', 'Annotation task not found')
+                raise exceptions.PlatformException("404", "Annotation task not found")
             elif tasks.items_count > 1:
-                raise exceptions.PlatformException('404',
-                                                   'More than one Annotation task exist with the same name: {}'.format(
-                                                       task_name))
+                raise exceptions.PlatformException(
+                    "404", f"More than one Annotation task exist with the same name: {task_name}"
+                )
             else:
                 task = tasks[0][0]
         else:
-            raise exceptions.PlatformException('400', 'Must provide either Annotation task name or Annotation task id')
+            raise exceptions.PlatformException("400", "Must provide either Annotation task name or Annotation task id")
 
         assert isinstance(task, entities.Task)
         return task
 
     @property
     def platform_url(self):
-        return self._client_api._get_resource_url("projects/{}/tasks".format(self.project.id))
+        return self._client_api._get_resource_url(f"projects/{self.project.id}/tasks")
 
-    def open_in_web(self,
-                    task_name: str = None,
-                    task_id: str = None,
-                    task: entities.Task = None):
+    def open_in_web(self, task_name: str = None, task_id: str = None, task: entities.Task = None):
         """
         Open the task in the web platform.
 
@@ -358,16 +351,12 @@ class Tasks:
         if task is not None:
             task.open_in_web()
         elif task_id is not None:
-            self._client_api._open_in_web(url=self.platform_url + '/' + str(task_id))
+            self._client_api._open_in_web(url=self.platform_url + "/" + str(task_id))
         else:
             self._client_api._open_in_web(url=self.platform_url)
 
-    @_api_reference.add(path='/annotationtasks/{id}', method='delete')
-    def delete(self,
-               task: entities.Task = None,
-               task_name: str = None,
-               task_id: str = None,
-               wait: bool = True):
+    @_api_reference.add(path="/annotationtasks/{id}", method="delete")
+    def delete(self, task: entities.Task = None, task_name: str = None, task_id: str = None, wait: bool = True):
         """
         Delete the Task.
 
@@ -389,38 +378,32 @@ class Tasks:
         if task_id is None:
             if task is None:
                 if task_name is None:
-                    raise exceptions.PlatformException('400',
-                                                       'Must provide either annotation task, '
-                                                       'annotation task name or annotation task id')
+                    raise exceptions.PlatformException(
+                        "400", "Must provide either annotation task, " "annotation task name or annotation task id"
+                    )
                 else:
                     task = self.get(task_name=task_name)
             task_id = task.id
 
         url = URL_PATH
-        url = '{}/{}'.format(url, task_id)
-        success, response = self._client_api.gen_request(req_type='delete',
-                                                         path=url,
-                                                         json_req={'asynced': wait})
+        url = f"{url}/{task_id}"
+        success, response = self._client_api.gen_request(req_type="delete", path=url, json_req={"asynced": wait})
 
         if not success:
             raise exceptions.PlatformException(response)
         response_json = response.json()
-        command = entities.Command.from_json(_json=response_json,
-                                             client_api=self._client_api)
+        command = entities.Command.from_json(_json=response_json, client_api=self._client_api)
         if not wait:
             return command
         command = command.wait(timeout=0)
-        if 'deleteTaskId' not in command.spec:
-            raise exceptions.PlatformException(error='400',
-                                               message="deleteTaskId key is missing in command response: {}"
-                                               .format(response))
+        if "deleteTaskId" not in command.spec:
+            raise exceptions.PlatformException(
+                error="400", message="deleteTaskId key is missing in command response: {}".format(response)
+            )
         return True
 
-    @_api_reference.add(path='/annotationtasks/{id}', method='patch')
-    def update(self,
-               task: entities.Task = None,
-               system_metadata=False
-               ) -> entities.Task:
+    @_api_reference.add(path="/annotationtasks/{id}", method="patch")
+    def update(self, task: entities.Task = None, system_metadata=False) -> entities.Task:
         """
         Update a Task.
 
@@ -438,17 +421,19 @@ class Tasks:
             dataset.tasks.update(task='task_entity')
         """
         url = URL_PATH
-        url = '{}/{}'.format(url, task.id)
+        url = f"{url}/{task.id}"
 
         if system_metadata:
-            warnings.warn("Task system metadata updates are not permitted. Please store custom metadata in 'task.metadata['user']' instead.", DeprecationWarning)
+            warnings.warn(
+                "Task system metadata updates are not permitted. Please store custom metadata in 'task.metadata['user']' instead.",
+                DeprecationWarning,
+            )
 
-        success, response = self._client_api.gen_request(req_type='patch',
-                                                         path=url,
-                                                         json_req=task.to_json())
+        success, response = self._client_api.gen_request(req_type="patch", path=url, json_req=task.to_json())
         if success:
-            return entities.Task.from_json(_json=response.json(),
-                                           client_api=self._client_api, project=self._project, dataset=self._dataset)
+            return entities.Task.from_json(
+                _json=response.json(), client_api=self._client_api, project=self._project, dataset=self._dataset
+            )
         else:
             raise exceptions.PlatformException(response)
 
@@ -550,45 +535,450 @@ class Tasks:
                            priority=priority
                            )
 
+    def create_honeypot_task(
+        self,
+        name: str,
+        dataset: entities.Dataset = None,
+        due_date: float = None,
+        filters: entities.Filters = None,
+        owner: str = None,
+        recipe_id: str = None,
+        assignee_ids: List[str] = None,
+        workload=None,
+        available_actions=None,
+        priority=entities.TaskPriority.MEDIUM,
+        consensus_percentage=None,
+        consensus_assignees=None,
+        scoring=True,
+        limit=None,
+        wait=True,
+        enforce_video_conversion=True,
+    ) -> entities.Task:
+        """
+        Create a new Consensus Task.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
+
+        :param str name: the name of the task
+        :param entities.Dataset dataset: dataset object, the dataset that refer to the task
+        :param float due_date: date by which the task should be finished; for example, due_date=datetime.datetime(day=1, month=1, year=2029).timestamp()
+        :param entities.Filters filters: dl.Filters entity to filter items for the task
+        :param str owner: task owner. Provide user email
+        :param str recipe_id: recipe id for the task
+        :param list assignee_ids: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
+        :param workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees
+        :param list available_actions: list of available actions (statuses) that will be available for the task items
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
+        :param str consensus_task_type: consensus task type - "consensus", "qualification", or "honeypot"
+        :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
+        :param int consensus_assignees: the number of different annotators per item (number of copies per item)
+        :param bool scoring: create a scoring app in project
+        :param int limit: the limit items that the task can include
+        :param bool wait: wait until create task finish
+        :param bool enforce_video_conversion: Enforce WEBM conversion on video items for frame-accurate annotations
+        :return: Task object
+        :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            # Create a consensus task
+            dataset.tasks.create_consensus_task(name='my_consensus_task',
+                                              assignee_ids=['annotator1@dataloop.ai', 'annotator2@dataloop.ai'],
+                                              consensus_percentage=66,
+                                              consensus_assignees=2)
+        """
+        return self.create_consensus_task(
+            name=name,
+            dataset=dataset,
+            due_date=due_date,
+            filters=filters,
+            owner=owner,
+            recipe_id=recipe_id,
+            assignee_ids=assignee_ids,
+            workload=workload,
+            available_actions=available_actions,
+            priority=priority,
+            consensus_task_type=entities.ConsensusTaskType.HONEYPOT,
+            consensus_percentage=consensus_percentage,
+            consensus_assignees=consensus_assignees,
+            scoring=scoring,
+            limit=limit,
+            wait=wait,
+            enforce_video_conversion=enforce_video_conversion,
+        )
+
+    def create_qualification_task(
+        self,
+        name: str,
+        dataset: entities.Dataset = None,
+        due_date: float = None,
+        filters: entities.Filters = None,
+        owner: str = None,
+        recipe_id: str = None,
+        assignee_ids: List[str] = None,
+        workload=None,
+        available_actions=None,
+        priority=entities.TaskPriority.MEDIUM,
+        consensus_percentage=None,
+        consensus_assignees=None,
+        limit=None,
+        wait=True,
+        enforce_video_conversion=True,
+    ) -> entities.Task:
+        """
+        Create a new Qualification Task.
+        """
+        return self.create_consensus_task(
+            name=name,
+            dataset=dataset,
+            due_date=due_date,
+            filters=filters,
+            owner=owner,
+            recipe_id=recipe_id,
+            assignee_ids=assignee_ids,
+            workload=workload,
+            available_actions=available_actions,
+            priority=priority,
+            consensus_task_type=entities.ConsensusTaskType.QUALIFICATION,
+            consensus_percentage=consensus_percentage,
+            consensus_assignees=consensus_assignees,
+            scoring=True,
+            limit=limit,
+            wait=wait,
+            enforce_video_conversion=enforce_video_conversion,
+        )
+
+    def create_consensus_task(
+        self,
+        name: str,
+        dataset: entities.Dataset = None,
+        due_date: float = None,
+        filters: entities.Filters = None,
+        owner: str = None,
+        recipe_id: str = None,
+        assignee_ids: List[str] = None,
+        workload=None,
+        available_actions=None,
+        priority=entities.TaskPriority.MEDIUM,
+        metadata=None,
+        consensus_task_type: entities.ConsensusTaskType = entities.ConsensusTaskType.CONSENSUS,
+        consensus_percentage=None,
+        consensus_assignees=None,
+        scoring=True,
+        limit=None,
+        wait=True,
+        enforce_video_conversion=True,
+    ) -> entities.Task:
+        """
+        Create a new Consensus Task.
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
+
+        :param str name: the name of the task
+        :param entities.Dataset dataset: dataset object, the dataset that refer to the task
+        :param float due_date: date by which the task should be finished; for example, due_date=datetime.datetime(day=1, month=1, year=2029).timestamp()
+        :param entities.Filters filters: dl.Filters entity to filter items for the task
+        :param str owner: task owner. Provide user email
+        :param str recipe_id: recipe id for the task
+        :param list assignee_ids: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
+        :param workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees
+        :param list available_actions: list of available actions (statuses) that will be available for the task items
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
+        :param dict metadata: metadata for the task
+        :param str consensus_task_type: consensus task type - "consensus", "qualification", or "honeypot"
+        :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
+        :param int consensus_assignees: the number of different annotators per item (number of copies per item)
+        :param bool scoring: create a scoring app in project
+        :param int limit: the limit items that the task can include
+        :param bool wait: wait until create task finish
+        :param bool enforce_video_conversion: Enforce WEBM conversion on video items for frame-accurate annotations
+        :return: Task object
+        :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            # Create a consensus task
+            dataset.tasks.create_consensus_task(name='my_consensus_task',
+                                              assignee_ids=['annotator1@dataloop.ai', 'annotator2@dataloop.ai'],
+                                              consensus_percentage=66,
+                                              consensus_assignees=2)
+        """
+
+        if dataset is None:
+            dataset = self.dataset
+
+        if due_date is None:
+            due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp()
+
+        if filters is None:
+            filters = entities.Filters()
+
+        if owner is None:
+            owner = self._client_api.info()["user_email"]
+
+        if recipe_id is None:
+            recipe_id = dataset.get_recipe_ids()[0]
+
+        if workload is None and assignee_ids is not None:
+            workload = entities.Workload.generate(assignee_ids=assignee_ids)
+
+        # Handle metadata for consensus tasks
+        if metadata is None:
+            metadata = {}
+        if "system" not in metadata:
+            metadata["system"] = {}
+        if assignee_ids is not None:
+            metadata["system"]["allowedAssignees"] = assignee_ids
+        if consensus_task_type is not None:
+            metadata["system"]["consensusTaskType"] = consensus_task_type
+        metadata = self._add_task_metadata_params(
+            metadata=metadata, input_value=consensus_percentage, input_name="consensusPercentage"
+        )
+        metadata = self._add_task_metadata_params(
+            metadata=metadata, input_value=consensus_assignees, input_name="consensusAssignees"
+        )
+        metadata = self._add_task_metadata_params(metadata=metadata, input_value=scoring, input_name="scoring")
+
+        # Create payload for consensus task
+        payload = {
+            "name": name,
+            "query": "{}".format(json.dumps(filters.prepare()).replace("'", '"')),
+            "taskOwner": owner,
+            "spec": {"type": "annotation"},
+            "datasetId": dataset.id,
+            "projectId": self.project.id,
+            "assignmentIds": [],
+            "recipeId": recipe_id,
+            "dueDate": due_date * 1000,
+            "asynced": wait,
+            "priority": priority,
+            "percentage": True,
+        }
+
+        # Add workload if provided
+        if workload:
+            payload["workload"] = workload.to_json()
+
+        # Add limit if provided
+        if limit:
+            payload["limit"] = limit
+
+        # Add available actions if provided
+        if available_actions is not None:
+            payload["availableActions"] = [action.to_json() for action in available_actions]
+
+        # Handle video conversion
+        if not enforce_video_conversion:
+            payload["disableWebm"] = not enforce_video_conversion
+
+        # Handle metadata for consensus tasks
+        if metadata is not None:
+            payload["metadata"] = metadata
+
+        return self._create_task(payload, wait=wait)
+
     def _add_task_metadata_params(self, metadata, input_value, input_name):
         if input_value is not None and not isinstance(input_value, int):
-            raise exceptions.PlatformException(error='400',
-                                               message="{} must be a numbers".format(input_name))
+            raise exceptions.PlatformException(error="400", message=f"{input_name} must be a numbers")
         if input_value is not None:
-            metadata['system'][input_name] = input_value
+            metadata["system"][input_name] = input_value
         return metadata
 
-    @_api_reference.add(path='/annotationtasks', method='post')
-    def create(self,
-               task_name,
-               due_date=None,
-               assignee_ids=None,
-               workload=None,
-               dataset=None,
-               task_owner=None,
-               task_type='annotation',
-               task_parent_id=None,
-               project_id=None,
-               recipe_id=None,
-               assignments_ids=None,
-               metadata=None,
-               filters=None,
-               items=None,
-               query=None,
-               available_actions=None,
-               wait=True,
-               check_if_exist: entities.Filters = False,
-               limit=None,
-               batch_size=None,
-               max_batch_workload=None,
-               allowed_assignees=None,
-               priority=entities.TaskPriority.MEDIUM,
-               consensus_task_type=None,
-               consensus_percentage=None,
-               consensus_assignees=None,
-               scoring=True,
-               enforce_video_conversion=True,
-               ) -> entities.Task:
+    def create_labeling_task(
+        self,
+        name: str,
+        dataset: entities.Dataset = None,
+        due_date: float = None,
+        filters: entities.Filters = None,
+        owner: str = None,
+        recipe_id: str = None,
+        assignee_ids: List[str] = None,
+        workload=None,
+        available_actions=None,
+        priority=entities.TaskPriority.MEDIUM,
+        metadata=None,
+        batch_size=None,
+        max_batch_workload=None,
+        allowed_assignees=None,
+        limit=None,
+        wait=True,
+        enforce_video_conversion=True,
+    ) -> entities.Task:
+        """
+        Create a new Annotation Task (Distribution or Pulling).
+
+        **Prerequisites**: You must be in the role of an *owner*, *developer*, or *annotation manager* who has been assigned to be *owner* of the annotation task.
+
+        :param str name: the name of the task
+        :param entities.Dataset dataset: dataset object, the dataset that refer to the task
+        :param float due_date: date by which the task should be finished; for example, due_date=datetime.datetime(day=1, month=1, year=2029).timestamp()
+        :param entities.Filters filters: dl.Filters entity to filter items for the task
+        :param str owner: task owner. Provide user email
+        :param str recipe_id: recipe id for the task
+        :param list assignee_ids: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
+        :param workload: list of WorkloadUnit objects. Customize distribution (percentage) between the task assignees
+        :param list available_actions: list of available actions (statuses) that will be available for the task items
+        :param entities.TaskPriority priority: priority of the task options in entities.TaskPriority
+        :param dict metadata: metadata for the task
+        :param int batch_size: Pulling batch size (items), use with pulling allocation method. Restrictions - Min 3, max 100
+        :param int max_batch_workload: Max items in assignment, use with pulling allocation method. Restrictions - Min batchSize + 2, max batchSize * 2
+        :param list allowed_assignees: list the task assignees (contributors) that should be working on the task. Provide a list of users' emails
+        :param int limit: the limit items that the task can include
+        :param bool wait: wait until create task finish
+        :param bool enforce_video_conversion: Enforce WEBM conversion on video items for frame-accurate annotations
+        :return: Task object
+        :rtype: dtlpy.entities.task.Task
+
+        **Example**:
+
+        .. code-block:: python
+
+            # Create a distribution task
+            dataset.tasks.create_labeling(name='my_distribution_task',
+                                        assignee_ids=['annotator1@dataloop.ai', 'annotator2@dataloop.ai'])
+
+            # Create a pulling task
+            dataset.tasks.create_labeling(name='my_pulling_task',
+                                        assignee_ids=['annotator1@dataloop.ai', 'annotator2@dataloop.ai'],
+                                        batch_size=5,
+                                        max_batch_workload=7)
+        """
+
+        if dataset is None:
+            dataset = self.dataset
+
+        if due_date is None:
+            due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp()
+
+        if filters is None:
+            filters = entities.Filters()
+
+        if owner is None:
+            owner = self._client_api.info()["user_email"]
+
+        if recipe_id is None:
+            recipe_id = dataset.get_recipe_ids()[0]
+
+        if workload is None and assignee_ids is not None:
+            workload = entities.Workload.generate(assignee_ids=assignee_ids)
+
+        if metadata is None:
+            metadata = {}
+        if any([batch_size, max_batch_workload]):
+            if "system" not in metadata:
+                metadata["system"] = {}
+            if allowed_assignees is not None or assignee_ids is not None:
+                metadata["system"]["allowedAssignees"] = allowed_assignees if allowed_assignees else assignee_ids
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=batch_size, input_name="batchSize")
+            metadata = self._add_task_metadata_params(
+                metadata=metadata, input_value=max_batch_workload, input_name="maxBatchWorkload"
+            )
+
+        # Create payload for annotation task
+        payload = {
+            "name": name,
+            "query": "{}".format(json.dumps(filters.prepare()).replace("'", '"')),
+            "taskOwner": owner,
+            "spec": {"type": "annotation"},
+            "datasetId": dataset.id,
+            "projectId": self.project.id,
+            "assignmentIds": [],
+            "recipeId": recipe_id,
+            "dueDate": due_date * 1000,
+            "asynced": wait,
+            "priority": priority,
+        }
+
+        # Add workload if provided
+        if workload:
+            payload["workload"] = workload.to_json()
+
+        # Add limit if provided
+        if limit:
+            payload["limit"] = limit
+
+        # Add available actions if provided
+        if available_actions is not None:
+            payload["availableActions"] = [action.to_json() for action in available_actions]
+
+        # Handle video conversion
+        if not enforce_video_conversion:
+            payload["disableWebm"] = not enforce_video_conversion
+
+        # Handle metadata for pulling tasks
+        if metadata is not None:
+            payload["metadata"] = metadata
+
+        return self._create_task(payload, wait=wait)
+
+    def _create_task(self, payload: dict, wait: bool = True) -> entities.Task:
+        """
+        Private function to create a task from a prepared payload.
+
+        :param dict payload: the prepared payload for task creation
+        :param bool wait: whether to wait for task creation to complete
+        :return: created Task object
+        :rtype: dtlpy.entities.task.Task
+        """
+        success, response = self._client_api.gen_request(req_type="post", path=URL_PATH, json_req=payload)
+        if success:
+            response_json = response.json()
+            if payload.get("checkIfExist") is not None and "name" in response_json:
+                return entities.Task.from_json(
+                    _json=response.json(), client_api=self._client_api, project=self._project, dataset=self._dataset
+                )
+
+            command = entities.Command.from_json(_json=response_json, client_api=self._client_api)
+            if not wait:
+                return command
+            command = command.wait(timeout=0)
+            if "createTaskPayload" not in command.spec:
+                raise exceptions.PlatformException(
+                    error="400", message="createTaskPayload key is missing in command response: {}".format(response)
+                )
+            task = self.get(task_id=command.spec["createdTaskId"])
+        else:
+            raise exceptions.PlatformException(response)
+
+        assert isinstance(task, entities.Task)
+        return task
+
+    @_api_reference.add(path="/annotationtasks", method="post")
+    def create(
+        self,
+        task_name,  # all
+        due_date=None,  # all
+        assignee_ids=None,  # all
+        workload=None,
+        dataset=None,  # all
+        task_owner=None,  # all
+        task_type="annotation",  # distribution / pulling /
+        task_parent_id=None,  # qa from task
+        project_id=None,  # all
+        recipe_id=None,  # all
+        assignments_ids=None,  # Check
+        metadata=None,  # all
+        filters=None,  # all
+        items=None,  # deprecate
+        query=None,  # deprecate
+        available_actions=None,  # all
+        wait=True,  # all
+        check_if_exist: entities.Filters = False,  # all
+        limit=None,  # all
+        batch_size=None,  # Pulling
+        max_batch_workload=None,  # Pulling
+        allowed_assignees=None,  # pulling - check distribution
+        priority=entities.TaskPriority.MEDIUM,  # all
+        consensus_task_type=None,  # qualification / honeypot / consensus
+        consensus_percentage=None,  # qualification / honeypot / consensus
+        consensus_assignees=None,  # qualification / honeypot / consensus Check qualifications
+        scoring=True,  # quality task
+        enforce_video_conversion=True,  # all
+    ) -> entities.Task:
         """
         Create a new Task (Annotation or QA).
 
@@ -636,7 +1026,7 @@ class Tasks:
         """
 
         if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide param dataset')
+            raise exceptions.PlatformException("400", "Please provide param dataset")
         if due_date is None:
             due_date = (datetime.datetime.now() + datetime.timedelta(days=7)).timestamp()
         if query is None:
@@ -653,11 +1043,13 @@ class Tasks:
                 elif isinstance(items, entities.Item):
                     item_list.append(items)
                 else:
-                    raise exceptions.PlatformException('400', 'Unknown items type')
-                query = entities.Filters(field='id',
-                                         values=[item.id for item in item_list],
-                                         operator=entities.FiltersOperations.IN,
-                                         use_defaults=False).prepare()
+                    raise exceptions.PlatformException("400", "Unknown items type")
+                query = entities.Filters(
+                    field="id",
+                    values=[item.id for item in item_list],
+                    operator=entities.FiltersOperations.IN,
+                    use_defaults=False,
+                ).prepare()
             else:
                 query = filters.prepare()
 
@@ -665,9 +1057,9 @@ class Tasks:
             dataset = self._dataset
 
         if task_owner is None:
-            task_owner = self._client_api.info()['user_email']
+            task_owner = self._client_api.info()["user_email"]
 
-        if task_type not in ['annotation', 'qa']:
+        if task_type not in ["annotation", "qa"]:
             raise ValueError('task_type must be one of: "annotation", "qa". got: {}'.format(task_type))
 
         if recipe_id is None:
@@ -677,7 +1069,7 @@ class Tasks:
             if self._project_id is not None:
                 project_id = self._project_id
             else:
-                raise exceptions.PlatformException('400', 'Must provide a project id')
+                raise exceptions.PlatformException("400", "Must provide a project id")
 
         if workload is None and assignee_ids is not None:
             workload = entities.Workload.generate(assignee_ids=assignee_ids)
@@ -685,124 +1077,95 @@ class Tasks:
         if assignments_ids is None:
             assignments_ids = list()
 
-        payload = {'name': task_name,
-                   'query': "{}".format(json.dumps(query).replace("'", '"')),
-                   'taskOwner': task_owner,
-                   'spec': {'type': task_type},
-                   'datasetId': dataset.id,
-                   'projectId': project_id,
-                   'assignmentIds': assignments_ids,
-                   'recipeId': recipe_id,
-                   'dueDate': due_date * 1000,
-                   'asynced': wait,
-                   'priority': priority
-                   }
+        payload = {
+            "name": task_name,
+            "query": "{}".format(json.dumps(query).replace("'", '"')),
+            "taskOwner": task_owner,
+            "spec": {"type": task_type},
+            "datasetId": dataset.id,
+            "projectId": project_id,
+            "assignmentIds": assignments_ids,
+            "recipeId": recipe_id,
+            "dueDate": due_date * 1000,
+            "asynced": wait,
+            "priority": priority,
+        }
 
         if check_if_exist:
             if check_if_exist.resource != entities.FiltersResource.TASK:
                 raise exceptions.PlatformException(
-                    '407', 'Filter resource for check_if_exist param must be {}, got {}'.format(
+                    "407",
+                    "Filter resource for check_if_exist param must be {}, got {}".format(
                         entities.FiltersResource.TASK, check_if_exist.resource
-                    )
+                    ),
                 )
-            payload['checkIfExist'] = {'query': check_if_exist.prepare()}
+            payload["checkIfExist"] = {"query": check_if_exist.prepare()}
 
         if workload:
-            payload['workload'] = workload.to_json()
+            payload["workload"] = workload.to_json()
 
         if limit:
-            payload['limit'] = limit
+            payload["limit"] = limit
 
         if available_actions is not None:
-            payload['availableActions'] = [action.to_json() for action in available_actions]
+            payload["availableActions"] = [action.to_json() for action in available_actions]
 
         if task_parent_id is not None:
-            payload['spec']['parentTaskId'] = task_parent_id
+            payload["spec"]["parentTaskId"] = task_parent_id
 
         if not enforce_video_conversion:
-            payload['disableWebm'] = not enforce_video_conversion
+            payload["disableWebm"] = not enforce_video_conversion
 
         is_pulling = any([batch_size, max_batch_workload])
         is_consensus = any([consensus_percentage, consensus_assignees, consensus_task_type])
         if is_pulling and is_consensus:
-            raise exceptions.PlatformException(error='400',
-                                               message="Consensus can not work as a pulling task")
+            raise exceptions.PlatformException(error="400", message="Consensus can not work as a pulling task")
         if any([is_pulling, is_consensus]):
             if metadata is None:
                 metadata = {}
-            if 'system' not in metadata:
-                metadata['system'] = {}
+            if "system" not in metadata:
+                metadata["system"] = {}
             if allowed_assignees is not None or assignee_ids is not None:
-                metadata['system']['allowedAssignees'] = allowed_assignees if allowed_assignees else assignee_ids
+                metadata["system"]["allowedAssignees"] = allowed_assignees if allowed_assignees else assignee_ids
             if consensus_task_type is not None:
-                metadata['system']['consensusTaskType'] = consensus_task_type
-            metadata = self._add_task_metadata_params(metadata=metadata,
-                                                      input_value=batch_size,
-                                                      input_name='batchSize')
-            metadata = self._add_task_metadata_params(metadata=metadata,
-                                                      input_value=max_batch_workload,
-                                                      input_name='maxBatchWorkload')
-            metadata = self._add_task_metadata_params(metadata=metadata,
-                                                      input_value=consensus_percentage,
-                                                      input_name='consensusPercentage')
-            metadata = self._add_task_metadata_params(metadata=metadata,
-                                                      input_value=consensus_assignees,
-                                                      input_name='consensusAssignees')
-            metadata = self._add_task_metadata_params(metadata=metadata,
-                                                      input_value=scoring,
-                                                      input_name='scoring')
+                metadata["system"]["consensusTaskType"] = consensus_task_type
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=batch_size, input_name="batchSize")
+            metadata = self._add_task_metadata_params(
+                metadata=metadata, input_value=max_batch_workload, input_name="maxBatchWorkload"
+            )
+            metadata = self._add_task_metadata_params(
+                metadata=metadata, input_value=consensus_percentage, input_name="consensusPercentage"
+            )
+            metadata = self._add_task_metadata_params(
+                metadata=metadata, input_value=consensus_assignees, input_name="consensusAssignees"
+            )
+            metadata = self._add_task_metadata_params(metadata=metadata, input_value=scoring, input_name="scoring")
 
         if metadata is not None:
-            payload['metadata'] = metadata
+            payload["metadata"] = metadata
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path=URL_PATH,
-                                                         json_req=payload)
-        if success:
-
-            response_json = response.json()
-            if check_if_exist is not None and 'name' in response_json:
-                return entities.Task.from_json(
-                    _json=response.json(),
-                    client_api=self._client_api,
-                    project=self._project,
-                    dataset=self._dataset
-                )
-
-            command = entities.Command.from_json(_json=response_json,
-                                                 client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
-            if 'createTaskPayload' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="createTaskPayload key is missing in command response: {}"
-                                                   .format(response))
-            task = self.get(task_id=command.spec['createdTaskId'])
-        else:
-            raise exceptions.PlatformException(response)
-
-        assert isinstance(task, entities.Task)
-        return task
+        return self._create_task(payload, wait=wait)
 
     def __item_operations(self, dataset: entities.Dataset, op, task=None, task_id=None, filters=None, items=None):
 
         if task is None and task_id is None:
-            raise exceptions.PlatformException('400', 'Must provide either task or task id')
+            raise exceptions.PlatformException("400", "Must provide either task or task id")
         elif task_id is None:
             task_id = task.id
 
         try:
             if filters is None and items is None:
-                raise exceptions.PlatformException('400', 'Must provide either filters or items list')
+                raise exceptions.PlatformException("400", "Must provide either filters or items list")
 
             if filters is None:
-                filters = entities.Filters(field='id',
-                                           values=[item.id for item in items],
-                                           operator=entities.FiltersOperations.IN,
-                                           use_defaults=False)
+                filters = entities.Filters(
+                    field="id",
+                    values=[item.id for item in items],
+                    operator=entities.FiltersOperations.IN,
+                    use_defaults=False,
+                )
 
-            if op == 'delete':
+            if op == "delete":
                 if task is None:
                     task = self.get(task_id=task_id)
                 assignment_ids = task.assignmentIds
@@ -817,17 +1180,19 @@ class Tasks:
             if filters is not None:
                 filters._nullify_refs()
 
-    @_api_reference.add(path='/annotationtasks/{id}/addToTask', method='post')
-    def add_items(self,
-                  task: entities.Task = None,
-                  task_id=None,
-                  filters: entities.Filters = None,
-                  items=None,
-                  assignee_ids=None,
-                  query=None,
-                  workload=None,
-                  limit=None,
-                  wait=True) -> entities.Task:
+    @_api_reference.add(path="/annotationtasks/{id}/addToTask", method="post")
+    def add_items(
+        self,
+        task: entities.Task = None,
+        task_id=None,
+        filters: entities.Filters = None,
+        items=None,
+        assignee_ids=None,
+        query=None,
+        workload=None,
+        limit=None,
+        wait=True,
+    ) -> entities.Task:
         """
         Add items to a Task.
 
@@ -853,19 +1218,21 @@ class Tasks:
                                 items = [items])
         """
         if filters is None and items is None and query is None:
-            raise exceptions.PlatformException('400', 'Must provide either filters, query or items list')
+            raise exceptions.PlatformException("400", "Must provide either filters, query or items list")
 
         if task is None and task_id is None:
-            raise exceptions.PlatformException('400', 'Must provide either task or task_id')
+            raise exceptions.PlatformException("400", "Must provide either task or task_id")
 
         if query is None:
             if filters is None:
                 if not isinstance(items, list):
                     items = [items]
-                filters = entities.Filters(field='id',
-                                           values=[item.id for item in items],
-                                           operator=entities.FiltersOperations.IN,
-                                           use_defaults=False)
+                filters = entities.Filters(
+                    field="id",
+                    values=[item.id for item in items],
+                    operator=entities.FiltersOperations.IN,
+                    use_defaults=False,
+                )
             query = filters.prepare()
 
         if workload is None and assignee_ids is not None:
@@ -874,39 +1241,34 @@ class Tasks:
         if task_id is None:
             task_id = task.id
 
-        payload = {
-            "query": "{}".format(json.dumps(query).replace("'", '"')),
-        }
+        payload = {"query": "{}".format(json.dumps(query).replace("'", '"'))}
 
         if workload is not None:
             payload["workload"] = workload.to_json()
 
         if limit is not None:
-            payload['limit'] = limit
+            payload["limit"] = limit
 
-        payload['asynced'] = wait
+        payload["asynced"] = wait
 
-        url = '{}/{}/addToTask'.format(URL_PATH, task_id)
+        url = "{}/{}/addToTask".format(URL_PATH, task_id)
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path=url,
-                                                         json_req=payload)
+        success, response = self._client_api.gen_request(req_type="post", path=url, json_req=payload)
 
         if success:
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
+            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
             if not wait:
                 return command
             backoff_factor = 2
-            if command.type == 'BulkAddToTaskSetting':
+            if command.type == "BulkAddToTaskSetting":
                 backoff_factor = 8
             command = command.wait(timeout=0, backoff_factor=backoff_factor)
             if task is None:
                 task = self.get(task_id=task_id)
-            if 'addToTaskPayload' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="addToTaskPayload key is missing in command response: {}"
-                                                   .format(response))
+            if "addToTaskPayload" not in command.spec:
+                raise exceptions.PlatformException(
+                    error="400", message="addToTaskPayload key is missing in command response: {}".format(response)
+                )
         else:
             raise exceptions.PlatformException(response)
 
@@ -914,13 +1276,15 @@ class Tasks:
         return task
 
     # @_api_reference.add(path='/annotationtasks/{id}/removeFromTask', method='post')
-    def remove_items(self,
-                     task: entities.Task = None,
-                     task_id=None,
-                     filters: entities.Filters = None,
-                     query=None,
-                     items=None,
-                     wait=True):
+    def remove_items(
+        self,
+        task: entities.Task = None,
+        task_id=None,
+        filters: entities.Filters = None,
+        query=None,
+        items=None,
+        wait=True,
+    ):
         """
         remove items from Task.
 
@@ -944,55 +1308,55 @@ class Tasks:
 
         """
         if filters is None and items is None and query is None:
-            raise exceptions.PlatformException('400', 'Must provide either filters, query or items list')
+            raise exceptions.PlatformException("400", "Must provide either filters, query or items list")
 
         if task is None and task_id is None:
-            raise exceptions.PlatformException('400', 'Must provide either task or task_id')
+            raise exceptions.PlatformException("400", "Must provide either task or task_id")
 
         if query is None:
             if filters is None:
                 if not isinstance(items, list):
                     items = [items]
-                filters = entities.Filters(field='id',
-                                           values=[item.id for item in items],
-                                           operator=entities.FiltersOperations.IN,
-                                           use_defaults=False)
+                filters = entities.Filters(
+                    field="id",
+                    values=[item.id for item in items],
+                    operator=entities.FiltersOperations.IN,
+                    use_defaults=False,
+                )
             query = filters.prepare()
 
         if task_id is None:
             task_id = task.id
 
-        payload = {"query": "{}".format(json.dumps(query).replace("'", '"')), 'asynced': wait}
+        payload = {"query": "{}".format(json.dumps(query).replace("'", '"')), "asynced": wait}
 
-        url = '{}/{}/removeFromTask'.format(URL_PATH, task_id)
+        url = "{}/{}/removeFromTask".format(URL_PATH, task_id)
 
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path=url,
-                                                         json_req=payload)
+        success, response = self._client_api.gen_request(req_type="post", path=url, json_req=payload)
 
         if success:
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
+            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
             if not wait:
                 return command
             command = command.wait(timeout=0)
 
-            if 'removeFromTaskId' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="removeFromTaskId key is missing in command response: {}"
-                                                   .format(response))
+            if "removeFromTaskId" not in command.spec:
+                raise exceptions.PlatformException(
+                    error="400", message="removeFromTaskId key is missing in command response: {}".format(response)
+                )
         else:
             raise exceptions.PlatformException(response)
         return True
 
-    def get_items(self,
-                  task_id: str = None,
-                  task_name: str = None,
-                  dataset: entities.Dataset = None,
-                  filters: entities.Filters = None,
-                  get_consensus_items: bool = False,
-                  task: entities.Task = None
-                  ) -> entities.PagedEntities:
+    def get_items(
+        self,
+        task_id: str = None,
+        task_name: str = None,
+        dataset: entities.Dataset = None,
+        filters: entities.Filters = None,
+        get_consensus_items: bool = False,
+        task: entities.Task = None,
+    ) -> entities.PagedEntities:
         """
         Get the task items to use in your code.
 
@@ -1016,7 +1380,7 @@ class Tasks:
             dataset.tasks.get_items(task_id= 'task_id')
         """
         if task is None and task_id is None and task_name is None:
-            raise exceptions.PlatformException('400', 'Please provide either task_id or task_name')
+            raise exceptions.PlatformException("400", "Please provide either task_id or task_name")
 
         if task_id is None:
             if task is None:
@@ -1024,22 +1388,22 @@ class Tasks:
             task_id = task.id
 
         if dataset is None and self._dataset is None:
-            raise exceptions.PlatformException('400', 'Please provide a dataset entity')
+            raise exceptions.PlatformException("400", "Please provide a dataset entity")
         if dataset is None:
             dataset = self._dataset
 
         if filters is None:
             filters = entities.Filters(use_defaults=False)
-        filters.add(field='metadata.system.refs.id', values=[task_id], operator=entities.FiltersOperations.IN)
+        filters.add(field="metadata.system.refs.id", values=[task_id], operator=entities.FiltersOperations.IN)
 
         if not get_consensus_items:
             if task is None:
                 task = self.get(task_id=task_id)
-            if task.metadata.get('system', dict()).get('consensusAssignmentId', None):
+            if task.metadata.get("system", dict()).get("consensusAssignmentId", None):
                 filters.add(
-                    field='metadata.system.refs.id',
-                    values=task.metadata['system']['consensusAssignmentId'],
-                    operator=entities.FiltersOperations.NOT_EQUAL
+                    field="metadata.system.refs.id",
+                    values=task.metadata["system"]["consensusAssignmentId"],
+                    operator=entities.FiltersOperations.NOT_EQUAL,
                 )
 
         return dataset.items.list(filters=filters)
@@ -1063,34 +1427,27 @@ class Tasks:
 
             dataset.tasks.set_status(task_id= 'task_id', status='complete', operation='create')
         """
-        url = '/assignments/items/tasks/{task_id}/status'.format(task_id=task_id)
+        url = "/assignments/items/tasks/{task_id}/status".format(task_id=task_id)
         payload = {
-            'itemIds': item_ids,
-            'statusPayload': {
-                'operation': operation,
-                'returnLastStatus': True,
-                'status': status
-            }
+            "itemIds": item_ids,
+            "statusPayload": {"operation": operation, "returnLastStatus": True, "status": status},
         }
 
-        success, response = self._client_api.gen_request(
-            req_type='post',
-            path=url,
-            json_req=payload
-        )
+        success, response = self._client_api.gen_request(req_type="post", path=url, json_req=payload)
 
         if not success:
             raise exceptions.PlatformException(response)
         if response.json() is not None:
             updated_items = set(response.json().keys())
-            log_msg = 'Items status was updated successfully.'
+            log_msg = "Items status was updated successfully."
             if len(updated_items) != len(item_ids):
                 failed_items = set(item_ids).difference(updated_items)
-                log_msg = '{success_count} out of TOTAL items were updated. The following items failed to update: {failed_items}'.format(
-                    success_count=len(updated_items), failed_items=failed_items)
+                log_msg = "{success_count} out of TOTAL items were updated. The following items failed to update: {failed_items}".format(
+                    success_count=len(updated_items), failed_items=failed_items
+                )
             logger.info(msg=log_msg)
         return True
-    
+
     def task_scores(self, task_id: str = None, page_offset: int = 0, page_size: int = 100):
         """
         Get all entities scores in a task.
@@ -1107,17 +1464,12 @@ class Tasks:
             dataset.tasks.task_scores(task_id= 'task_id')
         """
         if task_id is None:
-            raise exceptions.PlatformException('400', 'Please provide task_id')
-    
-        url = '/scores/tasks/{task_id}?page={page_offset}&pageSize={page_size}'.format(
-            task_id=task_id,
-            page_offset=page_offset,
-            page_size=page_size
+            raise exceptions.PlatformException("400", "Please provide task_id")
+
+        url = "/scores/tasks/{task_id}?page={page_offset}&pageSize={page_size}".format(
+            task_id=task_id, page_offset=page_offset, page_size=page_size
         )
-        success, response = self._client_api.gen_request(
-            req_type='get',
-            path=url
-        )
+        success, response = self._client_api.gen_request(req_type="get", path=url)
 
         if success:
             return response.json()

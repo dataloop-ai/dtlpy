@@ -48,7 +48,7 @@ from .service import Service, KubernetesAutoscalerType, KubernetesRabbitmqAutosc
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit
-from .task import Task, ItemAction, TaskPriority, ConsensusTaskType
+from .task import Task, ItemAction, TaskPriority, ConsensusTaskType, AllocationMethod
 from .directory_tree import DirectoryTree
 from .user import User
 from .bot import Bot

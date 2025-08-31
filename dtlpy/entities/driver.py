@@ -30,8 +30,9 @@ class ExternalStorage(str, Enum):
     GCS = "gcs"
     AZUREBLOB = "azureblob"
     AZURE_DATALAKE_GEN2 = 'azureDatalakeGen2'
-    KEY_VALUE = "key_value"
-    AWS_STS = 'aws-sts'
+    POWERSCALE_S3 = 'powerscaleS3'
+    MIN_IO = 's3'
+    POWERSCALE_NFS = 'powerscaleNfs'
 
 
 @attr.s()

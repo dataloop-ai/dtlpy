@@ -17,6 +17,77 @@ class Models:
     """
     Models Repository
     """
+    @staticmethod
+    def _filter_to_dict(filter_obj):
+        """Convert Filters object to dict, or return as-is if already dict/None"""
+        if filter_obj is not None:
+            filter_obj = filter_obj.prepare() if isinstance(filter_obj, entities.Filters) else filter_obj
+        return filter_obj
+
+    @staticmethod
+    def _get_filter_from_model(model, subset_type, resource_type):
+        """Extract filter dict from model metadata"""
+        filter_dict = None
+        if model is not None:
+            if resource_type == entities.FiltersResource.ITEM:
+                filter_dict = model.metadata.get('system', {}).get('subsets', {}).get(subset_type.value)
+            else:  # ANNOTATION
+                filter_dict = model.metadata.get('system', {}).get('annotationsSubsets', {}).get(subset_type.value)
+        return filter_dict
+
+    @staticmethod
+    def _build_model_metadata(
+        train_filter: entities.Filters = None,
+        validation_filter: entities.Filters = None,
+        annotations_train_filter: entities.Filters = None,
+        annotations_validation_filter: entities.Filters = None,
+        from_model: entities.Model = None
+    ) -> dict:
+        """
+        Build model metadata with filters, optionally inheriting from existing model.
+        
+        :param train_filter: Training data filter (Filters object or dict)
+        :param validation_filter: Validation data filter (Filters object or dict)
+        :param annotations_train_filter: Training annotations filter (Filters object or dict)
+        :param annotations_validation_filter: Validation annotations filter (Filters object or dict)
+        :param from_model: Source model to inherit filters from (if not provided explicitly)
+        :return: Metadata dictionary with filters
+        """
+        metadata = {'system': {'subsets': {}, 'annotationsSubsets': {}}}
+
+        # Handle item filters
+        train_filter_dict = Models._filter_to_dict(train_filter)
+        if train_filter_dict is None and from_model is not None:
+            train_filter_dict = Models._get_filter_from_model(
+                model=from_model, subset_type=entities.DatasetSubsetType.TRAIN, resource_type=entities.FiltersResource.ITEM)
+
+        validation_filter_dict = Models._filter_to_dict(validation_filter)
+        if validation_filter_dict is None and from_model is not None:
+            validation_filter_dict = Models._get_filter_from_model(
+                model=from_model, subset_type=entities.DatasetSubsetType.VALIDATION, resource_type=entities.FiltersResource.ITEM)
+
+        # Handle annotation filters
+        annotations_train_filter_dict = Models._filter_to_dict(annotations_train_filter)
+        if annotations_train_filter_dict is None and from_model is not None:
+            annotations_train_filter_dict = Models._get_filter_from_model(
+                model=from_model, subset_type=entities.DatasetSubsetType.TRAIN, resource_type=entities.FiltersResource.ANNOTATION)
+
+        annotations_validation_filter_dict = Models._filter_to_dict(annotations_validation_filter)
+        if annotations_validation_filter_dict is None and from_model is not None:
+            annotations_validation_filter_dict = Models._get_filter_from_model(
+                model=from_model, subset_type=entities.DatasetSubsetType.VALIDATION, resource_type=entities.FiltersResource.ANNOTATION)
+
+        # Set filters in metadata
+        if train_filter_dict is not None:
+            metadata['system']['subsets']['train'] = train_filter_dict
+        if validation_filter_dict is not None:
+            metadata['system']['subsets']['validation'] = validation_filter_dict
+        if annotations_train_filter_dict is not None:
+            metadata['system']['annotationsSubsets']['train'] = annotations_train_filter_dict
+        if annotations_validation_filter_dict is not None:
+            metadata['system']['annotationsSubsets']['validation'] = annotations_validation_filter_dict
+
+        return metadata
 
     def __init__(self,
                  client_api: ApiClient,
@@ -216,35 +287,56 @@ class Models:
         return metadata
 
     @staticmethod
-    def add_subset(model: entities.Model, subset_name: str, subset_filter: entities.Filters):
+    def add_subset(
+        model: entities.Model,
+        subset_name: str,
+        subset_filter=None,
+        subset_annotation_filter=None,
+    ):
         """
         Adds a subset for a model, specifying a subset of the model's dataset that could be used for training or
-        validation.
+        validation. Optionally also adds an annotations subset.
 
         :param dtlpy.entities.Model model: the model to which the subset should be added
         :param str subset_name: the name of the subset
-        :param dtlpy.entities.Filters subset_filter: the filtering operation that this subset performs in the dataset.
+        :param subset_filter: filtering for items subset. Can be `entities.Filters`, `dict`, or `None`
+        :param subset_annotation_filter: optional filtering for annotations subset. Can be `entities.Filters`, `dict`, or `None`
 
-        **Example**
-
-        .. code-block:: python
-
-            project.models.add_subset(model=model_entity, subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
-            model_entity.metadata['system']['subsets']
-                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
-
+        Behavior:
+        - If both filters are None, no metadata is added/changed.
+        - If a filter is a dict, it is used as-is (no prepare()).
+        - If a filter is `entities.Filters`, `.prepare()` is used.
+        - Only non-None filters are added.
         """
+        if subset_filter is None and subset_annotation_filter is None:
+            return
+
+        subset_filter_dict = subset_filter.prepare() if isinstance(subset_filter, entities.Filters) else subset_filter
+        subset_annotation_filter_dict = (
+            subset_annotation_filter.prepare()
+            if isinstance(subset_annotation_filter, entities.Filters)
+            else subset_annotation_filter
+        )
+
+        # Initialize containers only if needed
         if 'system' not in model.metadata:
             model.metadata['system'] = dict()
-        if 'subsets' not in model.metadata['system']:
-            model.metadata['system']['subsets'] = dict()
-        model.metadata['system']['subsets'][subset_name] = subset_filter.prepare()
+        if subset_filter_dict is not None:
+            if 'subsets' not in model.metadata['system']:
+                model.metadata['system']['subsets'] = dict()
+            model.metadata['system']['subsets'][subset_name] = subset_filter_dict
+
+        if subset_annotation_filter_dict is not None:
+            if 'annotationsSubsets' not in model.metadata['system']:
+                model.metadata['system']['annotationsSubsets'] = dict()
+            model.metadata['system']['annotationsSubsets'][subset_name] = subset_annotation_filter_dict
+
         model.update(system_metadata=True)
 
     @staticmethod
     def delete_subset(model: entities.Model, subset_name: str):
         """
-        Removes a subset from a model's metadata.
+        Removes a subset from a model's metadata (both subsets and annotationsSubsets).
 
         :param dtlpy.entities.Model model: the model to which the subset should be added
         :param str subset_name: the name of the subset
@@ -261,10 +353,16 @@ class Models:
                 {}
 
         """
+        # Check if subset exists in subsets (for warning)
         if model.metadata.get("system", dict()).get("subsets", dict()).get(subset_name) is None:
             logger.error(f"Model system metadata incomplete, could not delete subset {subset_name}.")
         else:
             _ = model.metadata['system']['subsets'].pop(subset_name)
+
+        # Remove from annotationsSubsets if it exists
+        if model.metadata.get("system", dict()).get("annotationsSubsets", dict()).get(subset_name) is not None:
+            _ = model.metadata['system']['annotationsSubsets'].pop(subset_name)
+
             model.update(system_metadata=True)
 
     def create(
@@ -286,6 +384,8 @@ class Models:
             output_type=None,
             train_filter: entities.Filters = None,
             validation_filter: entities.Filters = None,
+            annotations_train_filter: entities.Filters = None,
+            annotations_validation_filter: entities.Filters = None,
             app: entities.App = None
     ) -> entities.Model:
         """
@@ -308,6 +408,8 @@ class Models:
         :param str output_type: dl.AnnotationType - the type of annotations the model produces (class, box segment, text, etc)
         :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
         :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
+        :param dtlpy.entities.filters.Filters annotations_train_filter: Filters entity or a dictionary to define the annotations' scope in the specified dataset_id for the model train
+        :param dtlpy.entities.filters.Filters annotations_validation_filter: Filters entity or a dictionary to define the annotations' scope in the specified dataset_id for the model validation
         :param dtlpy.entities.App app: App entity to connect the model to
         :return: Model Entity
 
@@ -407,10 +509,13 @@ class Models:
         if status is not None:
             payload['status'] = status
 
-        if train_filter or validation_filter:
-            metadata = self._set_model_filter(metadata={},
-                                              train_filter=train_filter,
-                                              validation_filter=validation_filter)
+        if train_filter or validation_filter or annotations_train_filter or annotations_validation_filter:
+            metadata = Models._build_model_metadata(
+                train_filter=train_filter,
+                validation_filter=validation_filter,
+                annotations_train_filter=annotations_train_filter,
+                annotations_validation_filter=annotations_validation_filter
+            )
             payload['metadata'] = metadata
 
         # request
@@ -442,6 +547,8 @@ class Models:
               tags: list = None,
               train_filter: entities.Filters = None,
               validation_filter: entities.Filters = None,
+              annotations_train_filter: entities.Filters = None,
+              annotations_validation_filter: entities.Filters = None,
               wait=True,
               ) -> entities.Model:
         """
@@ -459,6 +566,8 @@ class Models:
         :param list tags:  `list` of `str` - label of the model
         :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
         :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
+        :param dtlpy.entities.filters.Filters annotations_train_filter: Filters entity or a dictionary to define the annotations' scope in the specified dataset_id for the model train
+        :param dtlpy.entities.filters.Filters annotations_validation_filter: Filters entity or a dictionary to define the annotations' scope in the specified dataset_id for the model validation
         :param bool wait: `bool` wait for model to be ready
         :return: dl.Model which is a clone version of the existing model
         """
@@ -495,12 +604,14 @@ class Models:
         if status is not None:
             from_json['status'] = status
 
-        metadata = self._set_model_filter(metadata={},
-                                          train_filter=train_filter if train_filter is not None else from_model.metadata.get(
-                                              'system', {}).get('subsets', {}).get('train', None),
-                                          validation_filter=validation_filter if validation_filter is not None else from_model.metadata.get(
-                                              'system', {}).get('subsets', {}).get('validation', None))
-        if metadata:
+        metadata = Models._build_model_metadata(
+            train_filter=train_filter,
+            validation_filter=validation_filter,
+            annotations_train_filter=annotations_train_filter,
+            annotations_validation_filter=annotations_validation_filter,
+            from_model=from_model
+        )
+        if metadata['system']['subsets'] or metadata['system']['annotationsSubsets']:
             from_json['metadata'] = metadata
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/ml/models/{}/clone'.format(from_model.id),

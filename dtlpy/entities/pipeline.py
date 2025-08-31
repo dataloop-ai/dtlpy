@@ -504,6 +504,20 @@ class Pipeline(entities.BaseEntity):
         )
         return execution
 
+    def test(self, execution_input=None):
+        """
+        Execute a pipeline in test mode and return the pipeline execution as an object.
+
+        :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
+        :return: entities.PipelineExecution object
+        """
+        execution = self.pipelines.test(
+            pipeline=self,
+            pipeline_id=self.id,
+            execution_input=execution_input,
+        )
+        return execution
+
     def execute_batch(
             self,
             filters,
@@ -591,3 +605,20 @@ class Pipeline(entities.BaseEntity):
         for variable in self.variables:
             if variable.name in keys:
                 variable.value = kwargs[variable.name]
+
+    def validate(self):
+        """
+        Validate the pipeline configuration.
+
+        **prerequisites**: You must be an *owner* or *developer* to use this method.
+
+        :return: Validation result
+        :rtype: dict
+
+        **Example**:
+
+        .. code-block:: python
+
+            validation_result = pipeline.validate()
+        """
+        return self.pipelines.validate(pipeline_json=self.to_json())

@@ -449,41 +449,25 @@ class Model(entities.BaseEntity):
     # methods #
     ###########
 
-    def add_subset(self, subset_name: str, subset_filter: entities.Filters):
+    def add_subset(
+        self, subset_name: str, subset_filter=None, subset_annotation_filter=None
+    ):
         """
         Adds a subset for the model, specifying a subset of the model's dataset that could be used for training or
-        validation.
+        validation. Optionally also adds an annotations subset.
 
         :param str subset_name: the name of the subset
-        :param dtlpy.entities.Filters subset_filter: the filtering operation that this subset performs in the dataset.
-
-        **Example**
-
-        .. code-block:: python
-
-            model.add_subset(subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
-            model.metadata['system']['subsets']
-                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
+        :param subset_filter: filtering for items subset. Can be `entities.Filters`, `dict`, or `None`
+        :param subset_annotation_filter: optional filtering for annotations subset. Can be `entities.Filters`, `dict`, or `None`
 
         """
-        self.models.add_subset(self, subset_name, subset_filter)
+        self.models.add_subset(self, subset_name, subset_filter, subset_annotation_filter)
 
     def delete_subset(self, subset_name: str):
         """
-        Removes a subset from the model's metadata.
+        Removes a subset from the model's metadata (both subsets and annotationsSubsets).
 
         :param str subset_name: the name of the subset
-
-        **Example**
-
-        .. code-block:: python
-
-            model.add_subset(subset_name='train', subset_filter=dtlpy.Filters(field='dir', values='/train'))
-            model.metadata['system']['subsets']
-                {'train': <dtlpy.entities.filters.Filters object at 0x1501dfe20>}
-            models.delete_subset(subset_name='train')
-            metadata['system']['subsets']
-                {}
 
         """
         self.models.delete_subset(self, subset_name)
@@ -529,6 +513,8 @@ class Model(entities.BaseEntity):
               tags: list = None,
               train_filter: entities.Filters = None,
               validation_filter: entities.Filters = None,
+              annotations_train_filter: entities.Filters = None,
+              annotations_validation_filter: entities.Filters = None,
               wait=True
               ):
         """
@@ -545,6 +531,8 @@ class Model(entities.BaseEntity):
         :param list tags:  `list` of `str` - label of the model
         :param dtlpy.entities.filters.Filters train_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model train
         :param dtlpy.entities.filters.Filters validation_filter: Filters entity or a dictionary to define the items' scope in the specified dataset_id for the model validation
+        :param dtlpy.entities.filters.Filters annotations_train_filter: Filters entity or a dictionary to define the annotations' scope in the specified dataset_id for the model train
+        :param dtlpy.entities.filters.Filters annotations_validation_filter: Filters entity or a dictionary to define the annotations' scope in the specified dataset_id for the model validation
         :param bool wait: `bool` wait for the model to be ready before returning
 
         :return: dl.Model which is a clone version of the existing model
@@ -561,6 +549,8 @@ class Model(entities.BaseEntity):
                                  tags=tags,
                                  train_filter=train_filter,
                                  validation_filter=validation_filter,
+                                 annotations_train_filter=annotations_train_filter,
+                                 annotations_validation_filter=annotations_validation_filter,
                                  wait=wait
                                  )
 

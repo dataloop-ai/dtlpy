@@ -193,12 +193,13 @@ class PipelineExecutions:
         paged.get_page()
         return paged
 
-    @_api_reference.add(path='/pipelines/{pipelineId}/execute', method='post')
+    @_api_reference.add(path="/pipelines/{pipelineId}/execute", method="post")
     def create(
             self,
             pipeline_id: str = None,
             execution_input=None,
-            node_id: str = None
+            node_id: str = None,
+            test_mode: bool = None
     ):
         """
         Execute a pipeline.
@@ -208,7 +209,7 @@ class PipelineExecutions:
         :param pipeline_id: pipeline id
         :param execution_input: list of the dl.FunctionIO or dict of pipeline input - example {'item': 'item_id'}
         :param node_id: node id to start from
-
+        :param bool test_mode: if True, the pipeline will be executed in test mode
         :return: entities.PipelineExecution object
         :rtype: dtlpy.entities.pipeline_execution.PipelineExecution
 
@@ -223,29 +224,31 @@ class PipelineExecutions:
                 raise exceptions.PlatformException('400', 'Please provide pipeline id')
             pipeline_id = self._pipeline.id
 
-        payload = dict()
+        pipeline_options = dict()
+        if test_mode is not None:
+            pipeline_options["testMode"] = test_mode
         if execution_input is None:
             # support pipeline executions without any input
             pass
         elif isinstance(execution_input, dict):
-            payload['input'] = execution_input
+            pipeline_options["input"] = execution_input
         else:
             if not isinstance(execution_input, list):
                 execution_input = [execution_input]
             if len(execution_input) > 0 and isinstance(execution_input[0], entities.FunctionIO):
-                payload['input'] = dict()
+                pipeline_options["input"] = dict()
                 for single_input in execution_input:
-                    payload['input'].update(single_input.to_json(resource='execution'))
+                    pipeline_options["input"].update(single_input.to_json(resource="execution"))
             else:
                 raise exceptions.PlatformException('400', 'Unknown input type')
 
         if node_id is not None:
-            payload['nodeId'] = node_id
+            pipeline_options["nodeId"] = node_id
 
         success, response = self._client_api.gen_request(
-            path='/pipelines/{}/execute'.format(pipeline_id),
-            req_type='POST',
-            json_req=payload
+            path="/pipelines/{}/execute".format(pipeline_id),
+            req_type="POST",
+            json_req={"pipeline": pipeline_options},
         )
 
         if not success:

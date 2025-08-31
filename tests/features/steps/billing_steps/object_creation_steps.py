@@ -102,8 +102,6 @@ def step_impl(context):
             context.json_object['plan']['resources'][14]['amount'] = float(param[1])
         if param[0] == "compute-gpu-a100-s":
             context.json_object['plan']['resources'][15]['amount'] = float(param[1])
-        if param[0] == "compute-gpu-a100-m":
-            context.json_object['plan']['resources'][16]['amount'] = float(param[1])
         if param[0] == "account":
             context.json_object['account'] = context.org.account['id']
         if param[0] == "compute-budget":

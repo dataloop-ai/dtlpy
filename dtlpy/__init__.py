@@ -65,7 +65,7 @@ from .entities import (
     # main entities
     Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
     Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App, AppModule, AppScope,
-    Ontology, Label, Task, TaskPriority, ConsensusTaskType, Assignment, Service, Package, Codebase, Model,
+    Ontology, Label, Task, TaskPriority, ConsensusTaskType, AllocationMethod, Assignment, Service, Package, Codebase, Model,
     PackageModule, PackageFunction,
     # annotations
     Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Gis, GisType,
@@ -483,6 +483,9 @@ TASK_PRIORITY_HIGH = TaskPriority.HIGH
 CONSENSUS_TASK_TYPE_CONSENSUS = ConsensusTaskType.CONSENSUS
 CONSENSUS_TASK_TYPE_QUALIFICATION = ConsensusTaskType.QUALIFICATION
 CONSENSUS_TASK_TYPE_HONEYPOT = ConsensusTaskType.HONEYPOT
+
+TASK_TYPE_PULLING = AllocationMethod.PULLING
+TASK_TYPE_DISTRIBUTION = AllocationMethod.DISTRIBUTION
 
 SERVICE_MODE_TYPE_REGULAR = ServiceModeType.REGULAR
 SERVICE_MODE_TYPE_DEBUG = ServiceModeType.DEBUG

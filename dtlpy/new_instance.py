@@ -10,7 +10,7 @@ class Dtlpy:
         # main entities
         Project, Dataset, ExpirationOptions, ExportVersion, Trigger, Item, Execution, AnnotationCollection, Annotation,
         Recipe, IndexDriver, AttributesTypes, AttributesRange, Dpk, App, AppModule, AppScope,
-        Ontology, Label, Task, TaskPriority, ConsensusTaskType, Assignment, Service, Package, Codebase, Model,
+        Ontology, Label, Task, TaskPriority, ConsensusTaskType, AllocationMethod, Assignment, Service, Package, Codebase, Model,
         PackageModule, PackageFunction,
         # annotations
         Box, Cube, Cube3d, Point, Note, Message, Segmentation, Ellipse, Classification, Subtitle, Polyline, Pose, Gis, GisType,

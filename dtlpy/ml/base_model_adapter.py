@@ -15,6 +15,7 @@ from functools import partial
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import attr
+from collections.abc import MutableMapping
 from .. import entities, utilities, repositories, exceptions
 from ..services import service_defaults
 from ..services.api_client import ApiClient
@@ -22,8 +23,89 @@ from ..services.api_client import ApiClient
 logger = logging.getLogger('ModelAdapter')
 
 
+class ModelConfigurations(MutableMapping):
+    """
+    Manages model configuration using composition with a backing dict.
+
+    Uses MutableMapping to implement dict-like behavior without inheritance.
+    This avoids duplication: if we inherited from dict, we'd have two dicts
+    (one from inheritance, one from model_entity.configuration), leading to
+    data inconsistency and maintenance issues.
+    """
+
+    def __init__(self, base_model_adapter):
+        # Store reference to base_model_adapter dictionary
+        self._backing_dict = {}
+
+        if (
+            base_model_adapter is not None
+            and base_model_adapter.model_entity is not None
+            and base_model_adapter.model_entity.configuration is not None
+        ):
+            self._backing_dict = base_model_adapter.model_entity.configuration
+        if 'include_background' not in self._backing_dict:
+            self._backing_dict['include_background'] = False
+        self._base_model_adapter = base_model_adapter
+        # Don't call _update_model_entity during initialization to avoid premature updates
+
+    def _update_model_entity(self):
+        if self._base_model_adapter is not None and self._base_model_adapter.model_entity is not None:
+            self._base_model_adapter.model_entity.update()
+
+    def __ior__(self, other):
+        self.update(other)
+        return self
+
+    # Required MutableMapping abstract methods
+    def __getitem__(self, key):
+        return self._backing_dict[key]
+
+    def __setitem__(self, key, value):
+        # Note: This method only updates the backing dict, not object attributes.
+        # If you need to also update object attributes, be careful to avoid
+        # infinite recursion by not calling __setattr__ from here.
+        update = False
+        if key not in self._backing_dict or self._backing_dict.get(key) != value:
+            update = True
+        self._backing_dict[key] = value
+        if update:
+            self._update_model_entity()
+
+    def __delitem__(self, key):
+        del self._backing_dict[key]
+
+    def __iter__(self):
+        return iter(self._backing_dict)
+
+    def __len__(self):
+        return len(self._backing_dict)
+
+    def get(self, key, default=None):
+        if key not in self._backing_dict:
+            self.__setitem__(key, default)
+        return self._backing_dict.get(key)
+
+    def update(self, *args, **kwargs):
+        # Check if there will be any modifications
+        update_dict = dict(*args, **kwargs)
+        has_changes = False
+        for key, value in update_dict.items():
+            if key not in self._backing_dict or self._backing_dict[key] != value:
+                has_changes = True
+                break
+        self._backing_dict.update(*args, **kwargs)
+
+        if has_changes:
+            self._update_model_entity()
+
+    def setdefault(self, key, default=None):
+        if key not in self._backing_dict:
+            self._backing_dict[key] = default
+        return self._backing_dict[key]
+
+
 @dataclasses.dataclass
-class AdapterDefaults(dict):
+class AdapterDefaults(ModelConfigurations):
     # for predict items, dataset, evaluate
     upload_annotations: bool = dataclasses.field(default=True)
     clean_annotations: bool = dataclasses.field(default=True)
@@ -34,20 +116,32 @@ class AdapterDefaults(dict):
     data_path: str = dataclasses.field(default=None)
     output_path: str = dataclasses.field(default=None)
 
-    def __post_init__(self):
-        # Initialize the internal dictionary with the dataclass fields
-        self.update(**dataclasses.asdict(self))
+    def __init__(self, base_model_adapter=None):
+        super().__init__(base_model_adapter)
+        for f in dataclasses.fields(AdapterDefaults):
+            # if the field exists in model_entity.configuration, use it
+            # else set it from the attribute default value
+            if super().get(f.name) is not None:
+                super().__setattr__(f.name, super().get(f.name))
+            else:
+                super().__setitem__(f.name, f.default)
 
-    def update(self, **kwargs):
+    def __setattr__(self, key, value):
+        # Dataclass-like fields behave as attributes, so map to dict
+        super().__setattr__(key, value)
+        if not key.startswith("_"):
+            super().__setitem__(key, value)
+
+    def update(self, *args, **kwargs):
         for f in dataclasses.fields(AdapterDefaults):
             if f.name in kwargs:
                 setattr(self, f.name, kwargs[f.name])
-        super().update(**kwargs)
+        super().update(*args, **kwargs)
 
     def resolve(self, key, *args):
-
         for arg in args:
             if arg is not None:
+                super().__setitem__(key, arg)
                 return arg
         return self.get(key, None)
 
@@ -56,12 +150,13 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     _client_api = attr.ib(type=ApiClient, repr=False)
 
     def __init__(self, model_entity: entities.Model = None):
-        self.adapter_defaults = AdapterDefaults()
         self.logger = logger
         # entities
         self._model_entity = None
         self._package = None
         self._base_configuration = dict()
+        self._configuration = None
+        self.adapter_defaults = None
         self.package_name = None
         self.model = None
         self.bucket_path = None
@@ -81,7 +176,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     def configuration(self) -> dict:
         # load from model
         if self._model_entity is not None:
-            configuration = self.model_entity.configuration
+            configuration = self._configuration
         # else - load the default from the package
         elif self._package is not None:
             configuration = self.package.metadata.get('system', {}).get('ml', {}).get('defaultConfiguration', {})
@@ -90,10 +185,13 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         return configuration
 
     @configuration.setter
-    def configuration(self, d):
-        assert isinstance(d, dict)
+    def configuration(self, configuration: dict):
+        assert isinstance(configuration, dict)
         if self._model_entity is not None:
-            self._model_entity.configuration = d
+            # Update configuration with received dict
+            self._model_entity.configuration = configuration
+            self.adapter_defaults = AdapterDefaults(self)
+            self._configuration = self.adapter_defaults
 
     ############
     # Entities #
@@ -115,6 +213,8 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                     'Replacing Model from {!r} to {!r}'.format(self._model_entity.name, model_entity.name))
         self._model_entity = model_entity
         self.package = model_entity.package
+        self.adapter_defaults = AdapterDefaults(self)
+        self._configuration = self.adapter_defaults
 
     @property
     def package(self):
@@ -252,15 +352,39 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
         return processed
 
-    def prepare_data(self,
-                     dataset: entities.Dataset,
-                     # paths
-                     root_path=None,
-                     data_path=None,
-                     output_path=None,
-                     #
-                     overwrite=False,
-                     **kwargs):
+    def __include_model_annotations(self, annotation_filters):
+        include_model_annotations = self.model_entity.configuration.get("include_model_annotations", False)
+        if include_model_annotations is False:
+            if annotation_filters.custom_filter is None:
+                annotation_filters.add(
+                    field="metadata.system.model.name", values=False, operator=entities.FiltersOperations.EXISTS
+                )
+            else:
+                annotation_filters.custom_filter['filter']['$and'].append({'metadata.system.model.name': {'$exists': False}})
+        return annotation_filters
+
+    def __download_background_images(self, filters, data_subset_base_path, annotation_options):
+        background_list = list()
+        if self.configuration.get('include_background', False) is True:
+            filters.custom_filter["filter"]["$and"].append({"annotated": False})
+            background_list = self.model_entity.dataset.items.download(
+                filters=filters,
+                local_path=data_subset_base_path,
+                annotation_options=annotation_options,
+            )
+        return background_list
+
+    def prepare_data(
+        self,
+        dataset: entities.Dataset,
+        # paths
+        root_path=None,
+        data_path=None,
+        output_path=None,
+        #
+        overwrite=False,
+        **kwargs,
+    ):
         """
         Prepares dataset locally before training or evaluation.
         download the specific subset selected to data_path and preforms `self.convert` to the data_path dir
@@ -277,7 +401,6 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         root_path = self.adapter_defaults.resolve("root_path", root_path)
         data_path = self.adapter_defaults.resolve("data_path", data_path)
         output_path = self.adapter_defaults.resolve("output_path", output_path)
-
         if root_path is None:
             now = datetime.datetime.now()
             root_path = os.path.join(dataloop_path,
@@ -300,54 +423,72 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             annotation_options = entities.ViewAnnotationOptions.INSTANCE
 
         # Download the subset items
-        subsets = self.model_entity.metadata.get("system", dict()).get("subsets", None)
+        subsets = self.model_entity.metadata.get("system", {}).get("subsets", None)
+        annotations_subsets = self.model_entity.metadata.get("system", {}).get("annotationsSubsets", {})
         if subsets is None:
             raise ValueError("Model (id: {}) must have subsets in metadata.system.subsets".format(self.model_entity.id))
         for subset, filters_dict in subsets.items():
-            filters = entities.Filters(custom_filter=filters_dict)
             data_subset_base_path = os.path.join(data_path, subset)
             if os.path.isdir(data_subset_base_path) and not overwrite:
                 # existing and dont overwrite
                 self.logger.debug("Subset {!r} already exists (and overwrite=False). Skipping.".format(subset))
-            else:
-                self.logger.debug("Downloading subset {!r} of {}".format(subset,
-                                                                         self.model_entity.dataset.name))
+                continue
 
-                annotation_filters = None
-                if self.model_entity.output_type is not None and self.model_entity.output_type != "embedding":
-                    annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, use_defaults=False)
-                    if self.model_entity.output_type in [entities.AnnotationType.SEGMENTATION,
-                                                        entities.AnnotationType.POLYGON]:
-                        model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
-                    else:
-                        model_output_types = [self.model_entity.output_type]
-                        
-                    annotation_filters.add(
-                        field=entities.FiltersKnownFields.TYPE,
-                        values=model_output_types,
-                        operator=entities.FiltersOperations.IN
-                    )
+            filters = entities.Filters(custom_filter=filters_dict)
+            self.logger.debug("Downloading subset {!r} of {}".format(subset, self.model_entity.dataset.name))
 
-                    if not self.configuration.get("include_model_annotations", False):
-                        annotation_filters.add(
-                            field="metadata.system.model.name",
-                            values=False,
-                            operator=entities.FiltersOperations.EXISTS
-                        )
+            annotation_filters = None
+            if subset in annotations_subsets:
+                annotation_filters = entities.Filters(
+                    use_defaults=False,
+                    resource=entities.FiltersResource.ANNOTATION,
+                    custom_filter=annotations_subsets[subset]
+                )
+            # if user provided annotation_filters, skip the default filters
+            elif self.model_entity.output_type is not None and self.model_entity.output_type != "embedding":
+                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, use_defaults=False)
+                if self.model_entity.output_type in [
+                    entities.AnnotationType.SEGMENTATION,
+                    entities.AnnotationType.POLYGON,
+                ]:
+                    model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
+                else:
+                    model_output_types = [self.model_entity.output_type]
 
-                ret_list = dataset.items.download(filters=filters,
-                                                  local_path=data_subset_base_path,
-                                                  annotation_options=annotation_options,
-                                                  annotation_filters=annotation_filters
-                                                  )
-                if isinstance(ret_list, list) and len(ret_list) == 0:
-                    if annotation_filters is not None:
-                        annotation_filters_str = annotation_filters.prepare()
-                        raise ValueError(f"No items downloaded for subset {subset}! Cannot train model with empty subset.\n"
-                                         f"Subset {subset} filters: {filters.prepare()}\nAnnotation filters: {annotation_filters_str}")
-                    else:
-                        raise ValueError(f"No items downloaded for subset {subset}! Cannot train model with empty subset.\n"
-                                         f"Subset {subset} filters: {filters.prepare()}")
+                annotation_filters.add(
+                    field=entities.FiltersKnownFields.TYPE,
+                    values=model_output_types,
+                    operator=entities.FiltersOperations.IN,
+                )
+
+            annotation_filters = self.__include_model_annotations(annotation_filters)
+            annotations_subsets[subset] = annotation_filters.prepare()
+
+            ret_list = dataset.items.download(
+                filters=filters,
+                local_path=data_subset_base_path,
+                annotation_options=annotation_options,
+                annotation_filters=annotation_filters,
+            )
+            filters = entities.Filters(custom_filter=subsets[subset])
+            background_ret_list = self.__download_background_images(
+                filters=filters, data_subset_base_path=data_subset_base_path, annotation_options=annotation_options
+            )
+            ret_list = list(ret_list)
+            background_ret_list = list(background_ret_list)
+            self.logger.debug(f"Subset '{subset}': ret_list length: {len(ret_list)}, background_ret_list length: {len(background_ret_list)}")
+            # Combine ret_list and background_ret_list generators into a single generator
+            ret_list = ret_list + background_ret_list
+            if isinstance(ret_list, list) and len(ret_list) == 0:
+                if annotation_filters is not None:
+                    annotation_filters_str = annotation_filters.prepare()
+                else:
+                    annotation_filters_str = None
+                raise ValueError(
+                    f"No items downloaded for subset {subset}! Cannot train model with empty subset.\n"
+                    f"Subset {subset} filters: {filters.prepare()}\n"
+                    f"Annotation filters: {annotation_filters_str}"
+                )
 
         self.convert_from_dtlpy(data_path=data_path, **kwargs)
         return root_path, data_path, output_path
@@ -365,10 +506,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             self.model_entity = model_entity
         if local_path is None:
             local_path = os.path.join(service_defaults.DATALOOP_PATH, "models", self.model_entity.name)
-        # Load configuration
-        self.configuration = self.model_entity.configuration
-        # Update the adapter config with the model config to run over defaults if needed
-        self.adapter_defaults.update(**self.configuration)
+        # Load configuration and adapter defaults
+        self.adapter_defaults = AdapterDefaults(self)
+        # Point _configuration to the same object since AdapterDefaults inherits from ModelConfigurations
+        self._configuration = self.adapter_defaults
         # Download
         self.model_entity.artifacts.download(
             local_path=local_path,

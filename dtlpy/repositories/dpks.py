@@ -254,7 +254,7 @@ class Dpks:
                 local_path = os.path.dirname(manifest_filepath)
         if dpk.codebase is None:
             dpk.codebase = self.project.codebases.pack(directory=local_path,
-                                                       name=dpk.display_name,
+                                                       name=dpk.name,
                                                        extension='dpk',
                                                        ignore_directories=['artifacts'],
                                                        ignore_max_file_size=ignore_max_file_size)

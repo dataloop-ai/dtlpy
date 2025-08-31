@@ -148,7 +148,7 @@ class PagedEntities:
                 self.get_page()
             else:
                 # For offset pagination, increment the offset
-                self.page_offset += 1
+                self._move_page_offset(1)
                 self.get_page()
             
             if not self.items:
@@ -166,7 +166,17 @@ class PagedEntities:
             yield self.items
             if self.page_offset == 0:
                 break
-            self.page_offset -= 1
+            self._move_page_offset(-1)
+
+    def _move_page_offset(self, offset: int) -> None:
+        """
+        Move the page offset by a given step.
+        :param offset: offset to move
+        """
+        self.page_offset += offset
+        if self.filters.custom_filter is not None:
+            if 'page' in self.filters.custom_filter and self.filters.custom_filter['page'] != self.page_offset:
+                self.filters.custom_filter['page'] = self.page_offset
 
     def return_page(self, page_offset: Optional[int] = None, page_size: Optional[int] = None) -> List[Any]:
         """
@@ -212,7 +222,6 @@ class PagedEntities:
                     operator=operator_value,
                     method=FiltersOperations.AND,
                 )
-
         # Fetch data
         if self._list_function is None:
             result = self.items_repository._list(filters=req)
@@ -246,7 +255,7 @@ class PagedEntities:
             self.get_page()
         else:
             # For offset pagination, increment the offset
-            self.page_offset += 1
+            self._move_page_offset(1)
             self.get_page()
 
     def prev_page(self) -> None:
@@ -256,7 +265,7 @@ class PagedEntities:
         """
         if self.use_id_based_paging:
             raise NotImplementedError("prev_page is not supported for keyset pagination.")
-        self.page_offset -= 1
+        self._move_page_offset(-1)
         self.get_page()
 
     def go_to_page(self, page: int = 0) -> None:
