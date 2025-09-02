@@ -127,7 +127,7 @@ class Tasks:
             if self._project_id is not None:
                 project_ids = self._project_id
             else:
-                raise exceptions.PlatformException("400", "Please provide param project_ids")
+                project_ids = self.project.id
 
         if not isinstance(project_ids, list):
             project_ids = [project_ids]
@@ -219,7 +219,7 @@ class Tasks:
         elif self._project_id is not None:
             project_ids = [self._project_id]
         else:
-            raise exceptions.PlatformException("400", "Must provide project")
+            project_ids = [self.project.id]
         filters.context = {"projectIds": project_ids}
 
         if assignments is not None:
@@ -950,34 +950,34 @@ class Tasks:
     @_api_reference.add(path="/annotationtasks", method="post")
     def create(
         self,
-        task_name,  # all
-        due_date=None,  # all
-        assignee_ids=None,  # all
+        task_name,
+        due_date=None,
+        assignee_ids=None,
         workload=None,
-        dataset=None,  # all
-        task_owner=None,  # all
-        task_type="annotation",  # distribution / pulling /
-        task_parent_id=None,  # qa from task
-        project_id=None,  # all
-        recipe_id=None,  # all
-        assignments_ids=None,  # Check
-        metadata=None,  # all
-        filters=None,  # all
-        items=None,  # deprecate
-        query=None,  # deprecate
-        available_actions=None,  # all
-        wait=True,  # all
-        check_if_exist: entities.Filters = False,  # all
-        limit=None,  # all
-        batch_size=None,  # Pulling
-        max_batch_workload=None,  # Pulling
-        allowed_assignees=None,  # pulling - check distribution
-        priority=entities.TaskPriority.MEDIUM,  # all
-        consensus_task_type=None,  # qualification / honeypot / consensus
-        consensus_percentage=None,  # qualification / honeypot / consensus
-        consensus_assignees=None,  # qualification / honeypot / consensus Check qualifications
-        scoring=True,  # quality task
-        enforce_video_conversion=True,  # all
+        dataset=None,
+        task_owner=None,
+        task_type="annotation",
+        task_parent_id=None,
+        project_id=None,
+        recipe_id=None,
+        assignments_ids=None,
+        metadata=None,
+        filters=None,
+        items=None,
+        query=None,
+        available_actions=None,
+        wait=True,
+        check_if_exist: entities.Filters = False,
+        limit=None,
+        batch_size=None,
+        max_batch_workload=None,
+        allowed_assignees=None,
+        priority=entities.TaskPriority.MEDIUM,
+        consensus_task_type=None,
+        consensus_percentage=None,
+        consensus_assignees=None,
+        scoring=True,
+        enforce_video_conversion=True,
     ) -> entities.Task:
         """
         Create a new Task (Annotation or QA).
@@ -1069,7 +1069,7 @@ class Tasks:
             if self._project_id is not None:
                 project_id = self._project_id
             else:
-                raise exceptions.PlatformException("400", "Must provide a project id")
+                project_id = self.project.id
 
         if workload is None and assignee_ids is not None:
             workload = entities.Workload.generate(assignee_ids=assignee_ids)
