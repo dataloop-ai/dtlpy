@@ -50,7 +50,7 @@ class ModelConfigurations(MutableMapping):
 
     def _update_model_entity(self):
         if self._base_model_adapter is not None and self._base_model_adapter.model_entity is not None:
-            self._base_model_adapter.model_entity.update()
+            self._base_model_adapter.model_entity.update(reload_services=False)
 
     def __ior__(self, other):
         self.update(other)
@@ -793,7 +793,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             if context is not None:
                 if 'system' not in model.metadata:
                     model.metadata['system'] = dict()
-            model.update()
+            model.update(reload_services=False)
 
             ##########################
             # load model and weights #
@@ -828,7 +828,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
 
             self.save_to_model(local_path=output_path, replace=True)
             model.status = 'trained'
-            model.update()
+            model.update(reload_services=False)
             ###########
             # cleanup #
             ###########
