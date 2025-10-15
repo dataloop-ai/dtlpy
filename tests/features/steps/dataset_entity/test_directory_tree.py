@@ -33,8 +33,7 @@ def step_impl(context, directory_names):
             break
 
         time.sleep(interval)
-        context.dl.logger.warning(
-            f"Step is running for {(i + 1) * 10:.2f}[s] and now Going to sleep {10:.2f}[s]")
+        context.dl.logger.warning(f"Step is running for {i * interval:.2f}[s]. Sleeping for {interval:.2f}[s]")
         context.dataset = context.project.datasets.get(dataset_name=context.dataset.name)
 
     assert finished, f"Expected dataset to contain directories {expected_names}, Actual: {context.dataset.directory_tree.dir_names}"

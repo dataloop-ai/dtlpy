@@ -227,9 +227,7 @@ def step_impl(context):
             context.service = service
             success = True
             break
-        context.dl.logger.debug(
-            "Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,
-                                                                                    interval))
+        context.dl.logger.debug(f"Step is running for {i * interval:.2f}[s]. Sleeping for {interval:.2f}[s]")
 
     assert success, "TEST FAILED: Expected 1-service, Got {}".format(len(services))
 

@@ -55,7 +55,8 @@ class Computes:
             wait=True,
             status: entities.ComputeStatus = None,
             settings: entities.ComputeSettings = None,
-            metadata: dict = None
+            metadata: dict = None,
+            deployment_configuration: dict = None
     ):
         """
         Create a new compute
@@ -71,6 +72,7 @@ class Computes:
         :param status: Compute status
         :param settings: Compute settings
         :param metadata: Compute metadata
+        :param deployment_configuration: Compute deployment Configuration
         :return: Compute
         :rtype: dl.entities.compute.Compute
         """
@@ -78,7 +80,8 @@ class Computes:
             metadata = {}
         shared_contexts_json = []
         for shared_context in shared_contexts:
-            src_json = shared_context.to_json() if isinstance(shared_context, entities.ComputeContext) else shared_context
+            src_json = shared_context.to_json() if isinstance(shared_context,
+                                                              entities.ComputeContext) else shared_context
             shared_contexts_json.append(src_json)
         payload = {
             'name': name,
@@ -90,7 +93,8 @@ class Computes:
             'cluster': cluster.to_json(),
             'status': status,
             "settings": settings.to_json() if isinstance(settings, entities.ComputeSettings) else settings,
-            "metadata": metadata
+            "metadata": metadata,
+            "deploymentConfiguration": deployment_configuration
         }
 
         # request
@@ -171,9 +175,10 @@ class Computes:
                     if compute_id not in self.log_cache:
                         self.log_cache[compute_id] = {}
                     self.log_cache[compute_id]['validation'] = validation_logs
+
         return func
 
-    def get(self, compute_id: str, archived = False):
+    def get(self, compute_id: str, archived=False):
         """
         Get a compute
 
@@ -183,7 +188,7 @@ class Computes:
         :rtype: dl.entities.compute.Compute
         """
         url_path = self._base_url + '/{}'.format(compute_id)
-        params_to_add = {"archived": "true" if archived else "false" }
+        params_to_add = {"archived": "true" if archived else "false"}
         parsed_url = urlparse(url_path)
         query_dict = parse_qs(parsed_url.query)
         query_dict.update(params_to_add)
@@ -234,7 +239,7 @@ class Computes:
         :param bool wait: Wait for deletion
         """
         url_path = self._base_url + '/{}'.format(compute_id)
-        params_to_add = {"skipDestroy": "true" if skip_destroy else "false" }
+        params_to_add = {"skipDestroy": "true" if skip_destroy else "false"}
         parsed_url = urlparse(url_path)
         query_dict = parse_qs(parsed_url.query)
         query_dict.update(params_to_add)
@@ -315,7 +320,6 @@ class Computes:
         if not success:
             raise exceptions.PlatformException(response)
 
-
         return response.json()
 
     @staticmethod
@@ -346,7 +350,7 @@ class Computes:
             }
         )
 
-    def setup_compute_cluster(self, config, integration, org_id, project=None):
+    def setup_compute_cluster(self, config, integration, org_id, project=None, is_global=False):
         """Set up a compute cluster using the provided configuration and integration."""
         cluster = ComputeCluster.from_setup_json(config, integration)
         project_id = None
@@ -360,11 +364,12 @@ class Computes:
             ComputeType.KUBERNETES,
             status=config['config'].get('status', None),
             settings=config['config'].get('settings', None),
-            metadata=config['config'].get('metadata', None))
+            deployment_configuration=config['config'].get('deploymentConfiguration', {}),
+            metadata=config['config'].get('metadata', None), is_global=is_global)
 
         return compute
 
-    def create_from_config_file(self, config_file_path, org_id, project_name: Optional[str] = None):
+    def create_from_config_file(self, config_file_path, org_id, project_name: Optional[str] = None, is_global=False):
         config = self.decode_and_parse_input(config_file_path)
         project = None
         if project_name is not None:
@@ -373,9 +378,8 @@ class Computes:
         integration_name = ('cluster_integration_test_' + datetime.datetime.now().isoformat().split('.')[0]
                             .replace(':', '_'))
         integration = self.create_integration(org, integration_name, config['authentication'])
-        compute = self.setup_compute_cluster(config, integration, org_id, project)
+        compute = self.setup_compute_cluster(config, integration, org_id, project, is_global=is_global)
         return compute
-
 
     def _list(self, filters: entities.Filters):
         url = self._base_url + '/query'

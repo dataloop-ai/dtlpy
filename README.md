@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/github/license/dataloop-ai/dtlpy.svg)](https://github.com/dataloop-ai/dtlpy/blob/master/LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/dtlpy?period=total&units=international_system&left_color=grey&right_color=green&left_text=Downloads)](https://pepy.tech/project/dtlpy)
 
-📚 [Platform Documentation](https://dataloop.ai/docs) | 📖 [SDK Documentation](https://console.dataloop.ai/sdk-docs/latest) | [Developer docs](https://developers.dataloop.ai/)
+📚 [Platform Documentation](https://dataloop.ai/docs) | 📖 [SDK Documentation](https://sdk-docs.dataloop.ai/en/latest/) | [Developer docs](https://developers.dataloop.ai/)
 
 An open-source SDK and CLI toolkit to interact seamlessly with the [Dataloop.ai](https://dataloop.ai/) platform, providing powerful data management, annotation capabilities, and workflow automation.
 
@@ -16,15 +16,17 @@ An open-source SDK and CLI toolkit to interact seamlessly with the [Dataloop.ai]
 
 ## **Table of Contents**
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [SDK Usage](#sdk-usage)
-  - [CLI Usage](#cli-usage)
-- [Python Version Support](#python-version-support)
-- [Development](#development)
-- [Resources](#resources)
-- [Contribution Guidelines](#contribution-guidelines)
+- [**DTLPY – SDK and CLI for Dataloop.ai**](#dtlpy--sdk-and-cli-for-dataloopai)
+  - [**Table of Contents**](#table-of-contents)
+  - [**Overview**](#overview)
+  - [**Installation**](#installation)
+  - [**Usage**](#usage)
+    - [**SDK Usage**](#sdk-usage)
+    - [**CLI Usage**](#cli-usage)
+  - [**Python Version Support**](#python-version-support)
+  - [**Development**](#development)
+  - [**Resources**](#resources)
+  - [**Contribution Guidelines**](#contribution-guidelines)
 
 ---
 
@@ -108,7 +110,7 @@ pip install -r requirements.txt
 ## **Resources**
 
 - [Dataloop Platform](https://console.dataloop.ai)
-- [Full SDK Documentation](https://console.dataloop.ai/sdk-docs/latest)
+- [Full SDK Documentation](https://sdk-docs.dataloop.ai/en/latest/)
 - [Platform Documentation](https://dataloop.ai/docs)
 - [SDK Examples and Tutorials](https://github.com/dataloop-ai/dtlpy-documentation)
 - [Developer docs](https://developers.dataloop.ai/)

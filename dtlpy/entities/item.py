@@ -1,7 +1,7 @@
-import warnings
 from collections import namedtuple
 from enum import Enum
 import traceback
+import mimetypes
 import logging
 import attr
 import copy
@@ -354,7 +354,10 @@ class Item(entities.BaseEntity):
 
     @property
     def mimetype(self):
-        return self.metadata.get('system', dict()).get('mimetype', None)
+        mimetype = self.metadata.get('system', dict()).get('mimetype', None)
+        if mimetype is None:
+            mimetype = mimetypes.guess_type(self.filename)[0]
+        return mimetype
 
     @property
     def size(self):
@@ -457,6 +460,7 @@ class Item(entities.BaseEntity):
             dataset_lock=False,
             lock_timeout_sec=None,
             export_summary=False,
+            raise_on_error=False
     ):
         """
         Download dataset by filters.
@@ -478,6 +482,7 @@ class Item(entities.BaseEntity):
         :param bool with_text: optional - add text to annotations, default = False
         :param float alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param bool raise_on_error: raise an exception if an error occurs
         :return: generator of local_path per each downloaded item
         :rtype: generator or single item
 
@@ -531,7 +536,8 @@ class Item(entities.BaseEntity):
                                    filters=filters,
                                    dataset_lock=dataset_lock,
                                    lock_timeout_sec=lock_timeout_sec,
-                                   export_summary=export_summary)
+                                   export_summary=export_summary,
+                                   raise_on_error=raise_on_error)
 
     def delete(self):
         """

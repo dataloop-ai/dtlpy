@@ -75,7 +75,15 @@ class ServiceSample(BaseSample):
                  service_type: entities.ServiceType = None,
                  interval: int = None,
                  driver_id: str = None,
-                 other_keys: dict = None
+                 other_keys: dict = None,
+                 concurrency_limit: int = None,
+                 concurrency_count: int = None,
+                 cpu_limit: int = None,
+                 ram_limit: int = None,
+                 gpu_limit: int = None,
+                 gpu: int = None,
+                 gpu_memory: int = None,
+                 gpu_memory_limit: int = None
                  ):
         super().__init__(
             start_time=start_time,
@@ -102,6 +110,14 @@ class ServiceSample(BaseSample):
         self.service_type = service_type if service_type is not None else entities.ServiceType.REGULAR
         self.interval = interval
         self.driver_id = driver_id
+        self.concurrency_limit = concurrency_limit
+        self.concurrency_count = concurrency_count
+        self.cpu_limit = cpu_limit
+        self.ram_limit = ram_limit
+        self.gpu_limit = gpu_limit
+        self.gpu = gpu
+        self.gpu_memory = gpu_memory
+        self.gpu_memory_limit = gpu_memory_limit
 
     def to_json(self):
         _json = super().to_json()
@@ -120,7 +136,15 @@ class ServiceSample(BaseSample):
             'queueSize': self.queue_size,
             'numExecutions': self.num_executions,
             'interval': self.interval,
-            'driverId': self.driver_id
+            'driverId': self.driver_id,
+            'concurrencyLimit': self.concurrency_limit,
+            'concurrencyCount': self.concurrency_count,
+            'cpuLimit': self.cpu_limit,
+            'ramLimit': self.ram_limit,
+            'gpuLimit': self.gpu_limit,
+            'gpu': self.gpu,
+            'gpuMemory': self.gpu_memory,
+            'gpuMemoryLimit': self.gpu_memory_limit
         })
         _json.update({
             'entityType': self.entity_type
@@ -153,7 +177,15 @@ class ServiceSample(BaseSample):
             num_executions=_json.get('data', {}).get('numExecutions', None),
             service_type=_json.get('type', entities.ServiceType.REGULAR),
             interval=_json.get('data', {}).get('interval', None),
-            driver_id=_json.get('data', {}).get('driverId', None)
+            driver_id=_json.get('data', {}).get('driverId', None),
+            concurrency_limit=_json.get('data', {}).get('concurrencyLimit', None),
+            concurrency_count=_json.get('data', {}).get('concurrencyCount', None),
+            cpu_limit=_json.get('data', {}).get('cpuLimit', None),
+            ram_limit=_json.get('data', {}).get('ramLimit', None),
+            gpu_limit=_json.get('data', {}).get('gpuLimit', None),
+            gpu=_json.get('data', {}).get('gpu', None),
+            gpu_memory=_json.get('data', {}).get('gpuMemory', None),
+            gpu_memory_limit=_json.get('data', {}).get('gpuMemoryLimit', None)
         )
         return inst
 
@@ -177,7 +209,8 @@ class ExecutionSample(BaseSample):
                  trigger_id=None,
                  function_name=None,
                  duration=None,
-                 other_keys: dict = None
+                 other_keys: dict = None,
+                 function_duration=None
                  ):
         super().__init__(
             start_time=start_time,
@@ -199,6 +232,7 @@ class ExecutionSample(BaseSample):
         self.trigger_id = trigger_id
         self.function_name = function_name
         self.duration = duration
+        self.function_duration = function_duration
 
     def to_json(self):
         _json = super().to_json()
@@ -212,7 +246,8 @@ class ExecutionSample(BaseSample):
         })
         _json['data'].update({
             'functionName': self.function_name,
-            'duration': self.duration
+            'duration': self.duration,
+            'functionDuration': self.function_duration,
         })
         _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
         _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
@@ -237,7 +272,8 @@ class ExecutionSample(BaseSample):
             action=_json.get('action', None),
             status=_json.get('data', {}).get('status', None),
             function_name=_json.get('data', {}).get('functionName', None),
-            duration=_json.get('data', {}).get('duration', None)
+            duration=_json.get('data', {}).get('duration', None),
+            function_duration=_json.get('data', {}).get('functionDuration', None)
         )
         return inst
 

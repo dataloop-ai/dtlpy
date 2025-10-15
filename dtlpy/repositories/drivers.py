@@ -259,9 +259,9 @@ class Drivers:
     def create_powerscale_nfs(
         self,
         name: str,
-        integration: entities.Integration,
         elastic_index: str,
         elastic_index_path: str,
+        integration: entities.Integration = None,
         project_id: str = None,
         allow_external_delete: bool = False
     ):
@@ -271,14 +271,13 @@ class Drivers:
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param str name: The driver name
-        :param Integration integration: The S3 integration to use
         :param str elastic_index: The elastic index for PowerScale NFS driver
+        :param Integration integration (optional): The S3 integration to use. If not provided, integration id will be 'system'
         :param str project_id: Optional project ID. If not provided, uses the current project
         :param bool allow_external_delete: True to allow deleting files from external storage when files are deleted in your Dataloop storage
         :param str elastic_index_path: The elastic index path for PowerScale NFS driver
         :return: The created PowerScale NFS driver object
         :rtype: dtlpy.entities.driver.Driver
-        :raises ValueError: If the integration type is not S3
         :raises PlatformException: If the driver creation fails
 
         **Example**:
@@ -287,17 +286,22 @@ class Drivers:
 
             project.drivers.create_powerscale_nfs(
                 name='powerscale_driver',
-                integration=integration,
                 elastic_index='my_index',
                 elastic_index_path='my_index_path',
             )
         """
-        if not integration.type == entities.IntegrationType.S3:
-            raise ValueError("Integration type must be S3 for PowerScale NFS driver")
+
+        integration_id = 'system'
+        integration_type = None
+        if integration is not None:
+            if not integration.type == entities.IntegrationType.S3:
+                raise ValueError("Integration type must be S3 for PowerScale NFS driver")
+            integration_id = integration.id
+            integration_type = integration.type
 
         payload = {
-            "integrationId": integration.id,
-            "integrationType": integration.type,
+            "integrationId": integration_id,
+            "integrationType": integration_type,
             "name": name,
             "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
             "type": entities.ExternalStorage.POWERSCALE_NFS,

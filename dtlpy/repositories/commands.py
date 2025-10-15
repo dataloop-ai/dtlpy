@@ -113,13 +113,7 @@ class Commands:
             elapsed = time.time() - start
             sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** num_tries), MAX_SLEEP_TIME])
             num_tries += 1
-            logger.debug(
-                "Command {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(
-                    command.id,
-                    elapsed,
-                    sleep_time
-                )
-            )
+            logger.debug(f"Command {command.id} is running for {elapsed:.2f}[s]. Sleeping for {sleep_time:.2f}[s]")
             if iteration_callback is not None:
                 try:
                     iteration_callback()

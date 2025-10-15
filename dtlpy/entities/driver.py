@@ -51,6 +51,12 @@ class Driver(entities.BaseEntity):
     name = attr.ib()
     id = attr.ib()
     path = attr.ib()
+    bucket_name = attr.ib()
+    end_point = attr.ib()
+    elastic_index = attr.ib()
+    elastic_index_path = attr.ib()
+    directory = attr.ib()
+    mount_path = attr.ib()
     # api
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
@@ -89,7 +95,14 @@ class Driver(entities.BaseEntity):
                    name=_json.get('name', None),
                    id=_json.get('id', None),
                    client_api=client_api,
-                   path=_json.get('path', None))
+                   path=_json.get('path', None),
+                   bucket_name=_json.get('bucketName', None),
+                   end_point=_json.get('endpoint', None),
+                   elastic_index=_json.get('elasticIndex', None),
+                   elastic_index_path=_json.get('elasticIndexPath', None),
+                   directory=_json.get('directory', None),
+                   mount_path=_json.get('mountPath', None)
+                   )
 
         inst.is_fetched = is_fetched
         return inst
@@ -108,7 +121,6 @@ class Driver(entities.BaseEntity):
                                                               attr.fields(Driver).created_at,
                                                               attr.fields(Driver).integration_id,
                                                               attr.fields(Driver).integration_type,
-                                                              attr.fields(Driver).path
                                                               ))
         output_dict['allowExternalDelete'] = self.allow_external_delete
         output_dict['allowExternalModification'] = self.allow_external_modification

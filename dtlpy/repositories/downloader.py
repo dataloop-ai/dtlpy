@@ -49,7 +49,8 @@ class Downloader:
                  export_version=entities.ExportVersion.V1,
                  dataset_lock=False,
                  lock_timeout_sec=None,
-                 export_summary=False
+                 export_summary=False,
+                 raise_on_error=False
                  ):
         """
         Download dataset by filters.
@@ -78,6 +79,7 @@ class Downloader:
         :param bool dataset_lock: optional - default = False
         :param bool export_summary: optional - default = False
         :param int lock_timeout_sec: optional
+        :param bool raise_on_error: raise an exception if an error occurs
         :return: Output (list)
         """
 
@@ -313,8 +315,24 @@ class Downloader:
         # log error
         if n_error > 0:
             log_filepath = reporter.generate_log_files()
+            # Get up to 5 error examples for the exception message
+            error_text = ""
+            error_counter = 0
+            if reporter._errors:
+                for _id, error in reporter._errors.items():
+                    error_counter += 1
+                    error_text += f"Item ID: {_id}, Error: {error} | "
+                    if error_counter >= 5:
+                        break
+            error_message = f"Errors in {n_error} files. Errors: {error_text}"
             if log_filepath is not None:
-                logger.warning("Errors in {} files. See {} for full log".format(n_error, log_filepath))
+                error_message += f", see {log_filepath} for full log"
+            if raise_on_error is True:
+                raise PlatformException(
+                    error="400", message=error_message
+                )
+            else:
+                logger.warning(error_message)
         if int(n_download) <= 1 and int(n_exist) <= 1:
             try:
                 return next(reporter.output)
@@ -428,7 +446,7 @@ class Downloader:
 
             if export_summary:
                 payload['summary'] = export_summary
-                
+
             if lock_timeout_sec:
                 payload['lockTimeoutSec'] = lock_timeout_sec
 
@@ -753,6 +771,7 @@ class Downloader:
                             if response_output != local_filepath:
                                 source_path = os.path.normpath(response_output)
                                 shutil.copyfile(source_path, local_filepath)
+                        download_done = True
                     else:
                         try:
                             temp_file_path = local_filepath + '.download'
@@ -806,6 +825,7 @@ class Downloader:
                             source_file = response_output
                             with open(source_file, 'wb') as f:
                                 data = f.read()
+                        download_done = True
                     else:
                         try:
                             for chunk in response.iter_content(chunk_size=chunk_size):

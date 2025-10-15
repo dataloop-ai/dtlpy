@@ -132,7 +132,13 @@ class Prompt:
             elif element['mimetype'] == PromptType.AUDIO:
                 raise NotImplementedError('Audio prompt is not supported yet')
             elif element['mimetype'] == PromptType.VIDEO:
-                raise NotImplementedError('Video prompt is not supported yet')
+                data = {
+                    "type": "video_url",
+                    "video_url": {
+                        "url": element['value']
+                    }
+                }
+                messages.append(data)
             else:
                 raise ValueError(f'Invalid mimetype: {element["mimetype"]}')
         return messages, self.key

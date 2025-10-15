@@ -59,12 +59,8 @@ class GitCodebase(entities.DlEntity):
     @property
     def codebases(self):
         if self._codebases is None:
-            if self._item is not None:
-                dataset = self.item.dataset
-            else:
-                dataset = None
             self._codebases = repositories.Codebases(client_api=self.client_api,
-                                                     dataset=dataset)
+                                                     dataset=None)
         assert isinstance(self._codebases, repositories.Codebases)
         return self._codebases
 

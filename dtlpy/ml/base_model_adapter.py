@@ -1,4 +1,5 @@
 import dataclasses
+import threading
 import tempfile
 import datetime
 import logging
@@ -6,21 +7,30 @@ import string
 import shutil
 import random
 import base64
+import copy
+import time
 import tqdm
+import traceback
 import sys
 import io
 import os
+from itertools import chain
 from PIL import Image
 from functools import partial
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import attr
 from collections.abc import MutableMapping
+from typing import Optional
 from .. import entities, utilities, repositories, exceptions
 from ..services import service_defaults
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger('ModelAdapter')
+
+# Constants
+PREDICT_EMBED_DEFAULT_SUBSET_LIMIT = 1000
+PREDICT_EMBED_DEFAULT_TIMEOUT = 3600 * 24
 
 
 class ModelConfigurations(MutableMapping):
@@ -37,11 +47,7 @@ class ModelConfigurations(MutableMapping):
         # Store reference to base_model_adapter dictionary
         self._backing_dict = {}
 
-        if (
-            base_model_adapter is not None
-            and base_model_adapter.model_entity is not None
-            and base_model_adapter.model_entity.configuration is not None
-        ):
+        if base_model_adapter is not None and base_model_adapter.model_entity is not None and base_model_adapter.model_entity.configuration is not None:
             self._backing_dict = base_model_adapter.model_entity.configuration
         if 'include_background' not in self._backing_dict:
             self._backing_dict['include_background'] = False
@@ -148,6 +154,7 @@ class AdapterDefaults(ModelConfigurations):
 
 class BaseModelAdapter(utilities.BaseServiceRunner):
     _client_api = attr.ib(type=ApiClient, repr=False)
+    _feature_set_lock = threading.Lock()
 
     def __init__(self, model_entity: entities.Model = None):
         self.logger = logger
@@ -161,12 +168,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.model = None
         self.bucket_path = None
         # funcs
-        self.item_to_batch_mapping = {'text': self._item_to_text,
-                                      'image': self._item_to_image}
+        self.item_to_batch_mapping = {'text': self._item_to_text, 'image': self._item_to_image}
         if model_entity is not None:
             self.load_from_model(model_entity=model_entity)
         logger.warning(
-            "in case of a mismatch between 'model.name' and 'model_info.name' in the model adapter, model_info.name will be updated to align with 'model.name'.")
+            "in case of a mismatch between 'model.name' and 'model_info.name' in the model adapter, model_info.name will be updated to align with 'model.name'."
+        )
 
     ##################
     # Configurations #
@@ -199,8 +206,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     @property
     def model_entity(self):
         if self._model_entity is None:
-            raise ValueError(
-                "No model entity loaded. Please load a model (adapter.load_from_model(<dl.Model>)) or set: 'adapter.model_entity=<dl.Model>'")
+            raise ValueError("No model entity loaded. Please load a model (adapter.load_from_model(<dl.Model>)) or set: 'adapter.model_entity=<dl.Model>'")
         assert isinstance(self._model_entity, entities.Model)
         return self._model_entity
 
@@ -209,8 +215,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         assert isinstance(model_entity, entities.Model)
         if self._model_entity is not None and isinstance(self._model_entity, entities.Model):
             if self._model_entity.id != model_entity.id:
-                self.logger.warning(
-                    'Replacing Model from {!r} to {!r}'.format(self._model_entity.name, model_entity.name))
+                self.logger.warning('Replacing Model from {!r} to {!r}'.format(self._model_entity.name, model_entity.name))
         self._model_entity = model_entity
         self.package = model_entity.package
         self.adapter_defaults = AdapterDefaults(self)
@@ -236,22 +241,24 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     ###################################
 
     def load(self, local_path, **kwargs):
-        """ Loads model and populates self.model with a `runnable` model
+        """
+        Loads model and populates self.model with a `runnable` model
 
-            Virtual method - need to implement
+        Virtual method - need to implement
 
-            This function is called by load_from_model (download to local and then loads)
+        This function is called by load_from_model (download to local and then loads)
 
         :param local_path: `str` directory path in local FileSystem
         """
         raise NotImplementedError("Please implement `load` method in {}".format(self.__class__.__name__))
 
     def save(self, local_path, **kwargs):
-        """ saves configuration and weights locally
+        """
+        Saves configuration and weights locally
 
-            Virtual method - need to implement
+        Virtual method - need to implement
 
-            the function is called in save_to_model which first save locally and then uploads to model entity
+        the function is called in save_to_model which first save locally and then uploads to model entity
 
         :param local_path: `str` directory path in local FileSystem
         """
@@ -270,9 +277,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         raise NotImplementedError("Please implement `train` method in {}".format(self.__class__.__name__))
 
     def predict(self, batch, **kwargs):
-        """ Model inference (predictions) on batch of items
+        """
+        Model inference (predictions) on batch of items
 
-            Virtual method - need to implement
+        Virtual method - need to implement
 
         :param batch: output of the `prepare_item_func` func
         :return: `list[dl.AnnotationCollection]` each collection is per each image / item in the batch
@@ -280,9 +288,10 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         raise NotImplementedError("Please implement `predict` method in {}".format(self.__class__.__name__))
 
     def embed(self, batch, **kwargs):
-        """ Extract model embeddings on batch of items
+        """
+        Extract model embeddings on batch of items
 
-            Virtual method - need to implement
+        Virtual method - need to implement
 
         :param batch: output of the `prepare_item_func` func
         :return: `list[list]` a feature vector per each item in the batch
@@ -300,19 +309,22 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :return:
         """
         import dtlpymetrics
+
         compare_types = model.output_type
         if not filters:
             filters = entities.Filters()
         if filters is not None and isinstance(filters, dict):
             filters = entities.Filters(custom_filter=filters)
-        model = dtlpymetrics.scoring.create_model_score(model=model,
-                                                        dataset=dataset,
-                                                        filters=filters,
-                                                        compare_types=compare_types)
+        model = dtlpymetrics.scoring.create_model_score(
+            model=model,
+            dataset=dataset,
+            filters=filters,
+            compare_types=compare_types,
+        )
         return model
 
     def convert_from_dtlpy(self, data_path, **kwargs):
-        """ Convert Dataloop structure data to model structured
+        """Convert Dataloop structure data to model structured
 
             Virtual method - need to implement
 
@@ -356,9 +368,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         include_model_annotations = self.model_entity.configuration.get("include_model_annotations", False)
         if include_model_annotations is False:
             if annotation_filters.custom_filter is None:
-                annotation_filters.add(
-                    field="metadata.system.model.name", values=False, operator=entities.FiltersOperations.EXISTS
-                )
+                annotation_filters.add(field="metadata.system.model.name", values=False, operator=entities.FiltersOperations.EXISTS)
             else:
                 annotation_filters.custom_filter['filter']['$and'].append({'metadata.system.model.name': {'$exists': False}})
         return annotation_filters
@@ -403,11 +413,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         output_path = self.adapter_defaults.resolve("output_path", output_path)
         if root_path is None:
             now = datetime.datetime.now()
-            root_path = os.path.join(dataloop_path,
-                                     'model_data',
-                                     "{s_id}_{s_n}".format(s_id=self.model_entity.id, s_n=self.model_entity.name),
-                                     now.strftime('%Y-%m-%d-%H%M%S'),
-                                     )
+            root_path = os.path.join(
+                dataloop_path,
+                'model_data',
+                "{s_id}_{s_n}".format(s_id=self.model_entity.id, s_n=self.model_entity.name),
+                now.strftime('%Y-%m-%d-%H%M%S'),
+            )
         if data_path is None:
             data_path = os.path.join(root_path, 'datasets', self.model_entity.dataset.id)
             os.makedirs(data_path, exist_ok=True)
@@ -442,7 +453,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 annotation_filters = entities.Filters(
                     use_defaults=False,
                     resource=entities.FiltersResource.ANNOTATION,
-                    custom_filter=annotations_subsets[subset]
+                    custom_filter=annotations_subsets[subset],
                 )
             # if user provided annotation_filters, skip the default filters
             elif self.model_entity.output_type is not None and self.model_entity.output_type != "embedding":
@@ -472,7 +483,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             )
             filters = entities.Filters(custom_filter=subsets[subset])
             background_ret_list = self.__download_background_images(
-                filters=filters, data_subset_base_path=data_subset_base_path, annotation_options=annotation_options
+                filters=filters,
+                data_subset_base_path=data_subset_base_path,
+                annotation_options=annotation_options,
             )
             ret_list = list(ret_list)
             background_ret_list = list(background_ret_list)
@@ -494,7 +507,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         return root_path, data_path, output_path
 
     def load_from_model(self, model_entity=None, local_path=None, overwrite=True, **kwargs):
-        """ Loads a model from given `dl.Model`.
+        """Loads a model from given `dl.Model`.
             Reads configurations and instantiate self.model_entity
             Downloads the model_entity bucket (if available)
 
@@ -511,10 +524,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         # Point _configuration to the same object since AdapterDefaults inherits from ModelConfigurations
         self._configuration = self.adapter_defaults
         # Download
-        self.model_entity.artifacts.download(
-            local_path=local_path,
-            overwrite=overwrite
-        )
+        self.model_entity.artifacts.download(local_path=local_path, overwrite=overwrite)
         self.load(local_path, **kwargs)
 
     def save_to_model(self, local_path=None, cleanup=False, replace=True, **kwargs):
@@ -538,11 +548,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.save(local_path=local_path, **kwargs)
 
         if self.model_entity is None:
-            raise ValueError('Missing model entity on the adapter. '
-                             'Please set before saving: "adapter.model_entity=model"')
+            raise ValueError('Missing model entity on the adapter. ' 'Please set before saving: "adapter.model_entity=model"')
 
-        self.model_entity.artifacts.upload(filepath=os.path.join(local_path, '*'),
-                                           overwrite=True)
+        self.model_entity.artifacts.upload(filepath=os.path.join(local_path, '*'), overwrite=True)
         if cleanup:
             shutil.rmtree(path=local_path, ignore_errors=True)
             self.logger.info("Clean-up. deleting {}".format(local_path))
@@ -551,9 +559,11 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     # SERVICE METHODS
     # ===============
 
-    @entities.Package.decorators.function(display_name='Predict Items',
-                                          inputs={'items': 'Item[]'},
-                                          outputs={'items': 'Item[]', 'annotations': 'Annotation[]'})
+    @entities.Package.decorators.function(
+        display_name='Predict Items',
+        inputs={'items': 'Item[]'},
+        outputs={'items': 'Item[]', 'annotations': 'Annotation[]'},
+    )
     def predict_items(self, items: list, upload_annotations=None, clean_annotations=None, batch_size=None, **kwargs):
         """
         Run the predict function on the input list of items (or single) and return the items and the predictions.
@@ -571,31 +581,36 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         upload_annotations = self.adapter_defaults.resolve("upload_annotations", upload_annotations)
         clean_annotations = self.adapter_defaults.resolve("clean_annotations", clean_annotations)
         input_type = self.model_entity.input_type
-        self.logger.debug(
-            "Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
+        self.logger.debug("Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
         pool = ThreadPoolExecutor(max_workers=16)
-
+        error_counter = 0
+        fail_ids = list()
         annotations = list()
-        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None,
-                                 file=sys.stdout):
-            batch_items = items[i_batch: i_batch + batch_size]
+        for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None, file=sys.stdout):
+            batch_items = items[i_batch : i_batch + batch_size]
             batch = list(pool.map(self.prepare_item_func, batch_items))
-            batch_collections = self.predict(batch, **kwargs)
-            _futures = list(pool.map(partial(self._update_predictions_metadata),
-                                     batch_items,
-                                     batch_collections))
+            try:
+                batch_collections = self.predict(batch, **kwargs)
+            except Exception as e:
+                item_ids = [item.id for item in batch_items]
+                self.logger.error(f"Failed to predict batch {i_batch} for items {item_ids}. Error: {e}\n{traceback.format_exc()}")
+                error_counter += 1
+                fail_ids.extend(item_ids)
+                continue
+            _futures = list(pool.map(partial(self._update_predictions_metadata), batch_items, batch_collections))
             # Loop over the futures to make sure they are all done to avoid race conditions
             _ = [_f for _f in _futures]
             if upload_annotations is True:
-                self.logger.debug(
-                    "Uploading items' annotation for model {!r}.".format(self.model_entity.name))
+                self.logger.debug("Uploading items' annotation for model {!r}.".format(self.model_entity.name))
                 try:
-                    batch_collections = list(pool.map(partial(self._upload_model_annotations,
-                                                              clean_annotations=clean_annotations),
-                                                      batch_items,
-                                                      batch_collections))
+                    batch_collections = list(
+                        pool.map(partial(self._upload_model_annotations, clean_annotations=clean_annotations), batch_items, batch_collections)
+                    )
                 except Exception as err:
-                    self.logger.exception("Failed to upload annotations items.")
+                    item_ids = [item.id for item in batch_items]
+                    self.logger.error(f"Failed to upload annotations for items {item_ids}. Error: {err}\n{traceback.format_exc()}")
+                    error_counter += 1
+                    fail_ids.extend(item_ids)
 
             for collection in batch_collections:
                 # function needs to return `List[List[dl.Annotation]]`
@@ -608,12 +623,16 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             # TODO call the callback
 
         pool.shutdown()
+        if error_counter > 0:
+            raise Exception(f"Failed to predict all items. Failed IDs: {fail_ids}, See logs for more details")
         return items, annotations
 
-    @entities.Package.decorators.function(display_name='Embed Items',
-                                          inputs={'items': 'Item[]'},
-                                          outputs={'items': 'Item[]', 'features': 'Json[]'})
-    def embed_items(self, items: list, upload_features=None, batch_size=None, progress:utilities.Progress=None, **kwargs):
+    @entities.Package.decorators.function(
+        display_name='Embed Items',
+        inputs={'items': 'Item[]'},
+        outputs={'items': 'Item[]', 'features': 'Json[]'},
+    )
+    def embed_items(self, items: list, upload_features=None, batch_size=None, progress: utilities.Progress = None, **kwargs):
         """
         Extract feature from an input list of items (or single) and return the items and the feature vector.
 
@@ -627,150 +646,141 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             batch_size = self.configuration.get('batch_size', 4)
         upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
         input_type = self.model_entity.input_type
-        self.logger.debug(
-            "Embedding {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
+        self.logger.debug("Embedding {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
+        error_counter = 0
+        fail_ids = list()
 
-        # Search for existing feature set for this model id
-        feature_set = self.model_entity.feature_set
-        if feature_set is None:
-            logger.info('Feature Set not found. creating... ')
-            try:
-                self.model_entity.project.feature_sets.get(feature_set_name=self.model_entity.name)
-                feature_set_name = f"{self.model_entity.name}-{''.join(random.choices(string.ascii_letters + string.digits, k=5))}"
-                logger.warning(
-                    f"Feature set with the model name already exists. Creating new feature set with name {feature_set_name}")
-            except exceptions.NotFound:
-                feature_set_name = self.model_entity.name
-            feature_set = self.model_entity.project.feature_sets.create(name=feature_set_name,
-                                                                        entity_type=entities.FeatureEntityType.ITEM,
-                                                                        model_id=self.model_entity.id,
-                                                                        project_id=self.model_entity.project_id,
-                                                                        set_type=self.model_entity.name,
-                                                                        size=self.configuration.get('embeddings_size',
-                                                                                                    256))
-            logger.info(f'Feature Set created! name: {feature_set.name}, id: {feature_set.id}')
-        else:
-            logger.info(f'Feature Set found! name: {feature_set.name}, id: {feature_set.id}')
+        feature_set = self._get_feature_set()
 
         # upload the feature vectors
         pool = ThreadPoolExecutor(max_workers=16)
         vectors = list()
-        for i_batch in tqdm.tqdm(range(0, len(items), batch_size),
-                                 desc='embedding',
-                                 unit='bt',
-                                 leave=None,
-                                 file=sys.stdout):
-            batch_items = items[i_batch: i_batch + batch_size]
+        _items = list()
+        for i_batch in tqdm.tqdm(
+            range(0, len(items), batch_size),
+            desc='embedding',
+            unit='bt',
+            leave=None,
+            file=sys.stdout,
+        ):
+            batch_items = items[i_batch : i_batch + batch_size]
             batch = list(pool.map(self.prepare_item_func, batch_items))
-            batch_vectors = self.embed(batch, **kwargs)
+            try:
+                batch_vectors = self.embed(batch, **kwargs)
+            except Exception as err:
+                item_ids = [item.id for item in batch_items]
+                self.logger.error(f"Failed to embed batch {i_batch} for items {item_ids}. Error: {err}\n{traceback.format_exc()}")
+                error_counter += 1
+                fail_ids.extend(item_ids)
+                continue
             vectors.extend(batch_vectors)
-            if upload_features is True:
-                self.logger.debug(
-                    "Uploading items' feature vectors for model {!r}.".format(self.model_entity.name))
-                try:
-                    list(pool.map(partial(self._upload_model_features,
-                                          progress.logger if progress is not None else self.logger,
-                                          feature_set.id,
-                                          self.model_entity.project_id),
-                                      batch_items,
-                                      batch_vectors))
-                except Exception as err:
-                    self.logger.exception("Failed to upload feature vectors to items.")
-
+            # Save the items in the order of the vectors
+            _items.extend(batch_items)
         pool.shutdown()
-        return items, vectors
 
-    @entities.Package.decorators.function(display_name='Embed Dataset with DQL',
-                                          inputs={'dataset': 'Dataset',
-                                                  'filters': 'Json'})
-    def embed_dataset(self,
-                      dataset: entities.Dataset,
-                      filters: entities.Filters = None,
-                      upload_features=None,
-                      batch_size=None,
-                      progress:utilities.Progress=None,
-                      **kwargs):
+        if upload_features is True:
+            _indicies_to_remove = list()
+            embeddings_size = self.configuration.get('embeddings_size', 256)
+            for idx, vector in enumerate(vectors):
+                if vector is None or len(vector) != embeddings_size:
+                    self.logger.warning(f"Vector generated for item {_items[idx].id} is None or has wrong size. Skipping...")
+                    _indicies_to_remove.append(idx)
+
+            # Remove indices in descending order to avoid IndexError
+            # When removing items, indices shift down, so we must remove from highest to lowest
+            for index in sorted(_indicies_to_remove, reverse=True):
+                _items.pop(index)
+                vectors.pop(index)
+
+            if len(_items) != len(vectors):
+                raise ValueError(f"The number of items ({len(_items)}) is not equal to the number of vectors ({len(vectors)}).")
+            self.logger.debug(f"Uploading {len(_items)} items' feature vectors for model {self.model_entity.name}.")
+            try:
+                start_time = time.time()
+                feature_set.features.create(entity=_items, value=vectors, feature_set_id=feature_set.id, project_id=self.model_entity.project_id)
+                self.logger.debug(f"Uploaded {len(_items)} items' feature vectors for model {self.model_entity.name} in {time.time() - start_time} seconds.")
+            except Exception as err:
+                self.logger.error(f"Failed to upload feature vectors. Error: {err}\n{traceback.format_exc()}")
+                error_counter += 1
+        if error_counter > 0:
+            raise Exception(f"Failed to embed all items. Failed IDs: {fail_ids}, See logs for more details")
+        return _items, vectors
+
+    @entities.Package.decorators.function(
+        display_name='Embed Dataset with DQL',
+        inputs={'dataset': 'Dataset', 'filters': 'Json'},
+    )
+    def embed_dataset(
+        self,
+        dataset: entities.Dataset,
+        filters: Optional[entities.Filters] = None,
+        upload_features: Optional[bool] = None,
+        batch_size: Optional[int] = None,
+        progress: Optional[utilities.Progress] = None,
+        **kwargs,
+    ):
         """
-        Extract feature from all items given
+        Run model embedding on all items in a dataset
+
+        :param dataset: Dataset entity to embed
+        :param filters: Filters entity for filtering before embedding
+        :param upload_features: bool whether to upload features back to platform
+        :param batch_size: int size of batch to run a single embedding
+        :param progress: dl.Progress object to track progress
+        :return: bool indicating if embedding completed successfully
+        """
+
+        status = self._execute_dataset_operation(
+            dataset=dataset,
+            operation_type='embed',
+            filters=filters,
+            progress=progress,
+            batch_size=batch_size,
+        )
+        if status is False:
+            raise ValueError(f"Failed to embed entire dataset, please check the logs for more details")
+
+    @entities.Package.decorators.function(
+        display_name='Predict Dataset with DQL',
+        inputs={'dataset': 'Dataset', 'filters': 'Json'},
+    )
+    def predict_dataset(
+        self,
+        dataset: entities.Dataset,
+        filters: Optional[entities.Filters] = None,
+        upload_annotations: Optional[bool] = None,
+        clean_annotations: Optional[bool] = None,
+        batch_size: Optional[int] = None,
+        progress: Optional[utilities.Progress] = None,
+        **kwargs,
+    ):
+        """
+        Run model prediction on all items in a dataset
 
         :param dataset: Dataset entity to predict
-        :param filters: Filters entity for a filtering before embedding
-        :param upload_features: `bool` uploads the features back to the given items
-        :param batch_size: `int` size of batch to run a single embed
-
-        :return: `bool` indicating if the embedding process completed successfully
+        :param filters: Filters entity for filtering before prediction
+        :param upload_annotations: bool whether to upload annotations back to platform
+        :param clean_annotations: bool whether to clean existing annotations
+        :param batch_size: int size of batch to run a single prediction
+        :param progress: dl.Progress object to track progress
+        :return: bool indicating if prediction completed successfully
         """
-        if batch_size is None:
-            batch_size = self.configuration.get('batch_size', 4)
-        upload_features = self.adapter_defaults.resolve("upload_features", upload_features)
+        status = self._execute_dataset_operation(
+            dataset=dataset,
+            operation_type='predict',
+            filters=filters,
+            progress=progress,
+            batch_size=batch_size,
+        )
+        if status is False:
+            raise ValueError(f"Failed to predict entire dataset, please check the logs for more details")
 
-        self.logger.debug("Creating embeddings for dataset (name:{}, id:{}), using batch size {}".format(dataset.name,
-                                                                                                         dataset.id,
-                                                                                                         batch_size))
-        if not filters:
-            filters = entities.Filters()
-        if filters is not None and isinstance(filters, dict):
-            filters = entities.Filters(custom_filter=filters)
-        pages = dataset.items.list(filters=filters, page_size=batch_size)
-        # Item type is 'file' only, can be deleted if default filters are added to custom filters
-        items = [item for page in pages for item in page if item.type == 'file']
-        self.embed_items(items=items,
-                         upload_features=upload_features,
-                         batch_size=batch_size,
-                         progress=progress,
-                         **kwargs)
-        return True
-
-    @entities.Package.decorators.function(display_name='Predict Dataset with DQL',
-                                          inputs={'dataset': 'Dataset',
-                                                  'filters': 'Json'})
-    def predict_dataset(self,
-                        dataset: entities.Dataset,
-                        filters: entities.Filters = None,
-                        upload_annotations=None,
-                        clean_annotations=None,
-                        batch_size=None,
-                        **kwargs):
-        """
-        Predicts all items given
-
-        :param dataset: Dataset entity to predict
-        :param filters: Filters entity for a filtering before predicting
-        :param upload_annotations: `bool` uploads the predictions back to the given items
-        :param clean_annotations: `bool` if set removes existing predictions with the same package-model name (default: False)
-        :param batch_size: `int` size of batch to run a single inference
-
-        :return: `bool` indicating if the prediction process completed successfully
-        """
-
-        if batch_size is None:
-            batch_size = self.configuration.get('batch_size', 4)
-
-        self.logger.debug("Predicting dataset (name:{}, id:{}, using batch size {}".format(dataset.name,
-                                                                                           dataset.id,
-                                                                                           batch_size))
-        if not filters:
-            filters = entities.Filters()
-        if filters is not None and isinstance(filters, dict):
-            filters = entities.Filters(custom_filter=filters)
-        pages = dataset.items.list(filters=filters, page_size=batch_size)
-        # Item type is 'file' only, can be deleted if default filters are added to custom filters
-        items = [item for page in pages for item in page if item.type == 'file']
-        self.predict_items(items=items,
-                           upload_annotations=upload_annotations,
-                           clean_annotations=clean_annotations,
-                           batch_size=batch_size,
-                           **kwargs)
-        return True
-
-    @entities.Package.decorators.function(display_name='Train a Model',
-                                          inputs={'model': entities.Model},
-                                          outputs={'model': entities.Model})
-    def train_model(self,
-                    model: entities.Model,
-                    cleanup=False,
-                    progress: utilities.Progress = None,
-                    context: utilities.Context = None):
+    @entities.Package.decorators.function(
+        display_name='Train a Model',
+        inputs={'model': entities.Model},
+        outputs={'model': entities.Model},
+    )
+    def train_model(self, model: entities.Model, cleanup=False, progress: utilities.Progress = None, context: utilities.Context = None):
         """
         Train on existing model.
         data will be taken from dl.Model.datasetId
@@ -804,27 +814,19 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             ################
             # prepare data #
             ################
-            root_path, data_path, output_path = self.prepare_data(
-                dataset=self.model_entity.dataset,
-                root_path=os.path.join('tmp', model.id)
-            )
+            root_path, data_path, output_path = self.prepare_data(dataset=self.model_entity.dataset, root_path=os.path.join('tmp', model.id))
             # Start the Train
-            logger.info("Training {p_name!r} with model {m_name!r} on data {d_path!r}".
-                        format(p_name=self.package_name, m_name=model.id, d_path=data_path))
+            logger.info("Training {p_name!r} with model {m_name!r} on data {d_path!r}".format(p_name=self.package_name, m_name=model.id, d_path=data_path))
             if progress is not None:
                 progress.update(message='starting training')
 
             def on_epoch_end_callback(i_epoch, n_epoch):
                 if progress is not None:
-                    progress.update(progress=int(100 * (i_epoch + 1) / n_epoch),
-                                    message='finished epoch: {}/{}'.format(i_epoch, n_epoch))
+                    progress.update(progress=int(100 * (i_epoch + 1) / n_epoch), message='finished epoch: {}/{}'.format(i_epoch, n_epoch))
 
-            self.train(data_path=data_path,
-                       output_path=output_path,
-                       on_epoch_end_callback=on_epoch_end_callback)
+            self.train(data_path=data_path, output_path=output_path, on_epoch_end_callback=on_epoch_end_callback)
             if progress is not None:
-                progress.update(message='saving model',
-                                progress=99)
+                progress.update(message='saving model', progress=99)
 
             self.save_to_model(local_path=output_path, replace=True)
             model.status = 'trained'
@@ -842,20 +844,20 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             raise
         return model
 
-    @entities.Package.decorators.function(display_name='Evaluate a Model',
-                                          inputs={'model': entities.Model,
-                                                  'dataset': entities.Dataset,
-                                                  'filters': 'Json'},
-                                          outputs={'model': entities.Model,
-                                                   'dataset': entities.Dataset
-                                                   })
-    def evaluate_model(self,
-                       model: entities.Model,
-                       dataset: entities.Dataset,
-                       filters: entities.Filters = None,
-                       #
-                       progress: utilities.Progress = None,
-                       context: utilities.Context = None):
+    @entities.Package.decorators.function(
+        display_name='Evaluate a Model',
+        inputs={'model': entities.Model, 'dataset': entities.Dataset, 'filters': 'Json'},
+        outputs={'model': entities.Model, 'dataset': entities.Dataset},
+    )
+    def evaluate_model(
+        self,
+        model: entities.Model,
+        dataset: entities.Dataset,
+        filters: entities.Filters = None,
+        #
+        progress: utilities.Progress = None,
+        context: utilities.Context = None,
+    ):
         """
         Evaluate a model.
         data will be downloaded from the dataset and query
@@ -869,14 +871,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param context:
         :return:
         """
-        logger.info(
-            f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.id}")
+        logger.info(f"Received model: {model.id} for evaluation on dataset (name: {dataset.name}, id: {dataset.id}")
         ##########################
         # load model and weights #
         ##########################
         logger.info(f"Loading Adapter with: {model.name} ({model.id!r})")
-        self.load_from_model(dataset=dataset,
-                             model_entity=model)
+        self.load_from_model(dataset=dataset, model_entity=model)
 
         ##############
         # Predicting #
@@ -884,42 +884,181 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         logger.info(f"Calling prediction, dataset: {dataset.name!r} ({model.id!r}), filters: {filters}")
         if not filters:
             filters = entities.Filters()
-        self.predict_dataset(dataset=dataset,
-                             filters=filters,
-                             with_upload=True)
+        self.predict_dataset(dataset=dataset, filters=filters, with_upload=True)
 
         ##############
         # Evaluating #
         ##############
         logger.info(f"Starting adapter.evaluate()")
         if progress is not None:
-            progress.update(message='calculating metrics',
-                            progress=98)
-        model = self.evaluate(model=model,
-                              dataset=dataset,
-                              filters=filters)
+            progress.update(message='calculating metrics', progress=98)
+        model = self.evaluate(model=model, dataset=dataset, filters=filters)
         #########
         # Done! #
         #########
         if progress is not None:
-            progress.update(message='finishing evaluation',
-                            progress=99)
+            progress.update(message='finishing evaluation', progress=99)
         return model, dataset
 
     # =============
     # INNER METHODS
     # =============
+    def _get_feature_set(self):
+        # Ensure feature set creation/retrieval is thread-safe across the class
+        with self.__class__._feature_set_lock:
+            # Search for existing feature set for this model id
+            feature_set = self.model_entity.feature_set
+            if feature_set is None:
+                logger.info('Feature Set not found. creating... ')
+                try:
+                    self.model_entity.project.feature_sets.get(feature_set_name=self.model_entity.name)
+                    feature_set_name = f"{self.model_entity.name}-{''.join(random.choices(string.ascii_letters + string.digits, k=5))}"
+                    logger.warning(
+                        f"Feature set with the model name already exists. Creating new feature set with name {feature_set_name}"
+                    )
 
-    @staticmethod
-    def _upload_model_features(logger, feature_set_id, project_id, item: entities.Item, vector):
+                except exceptions.NotFound:
+                    feature_set_name = self.model_entity.name
+                feature_set = self.model_entity.project.feature_sets.create(
+                    name=feature_set_name,
+                    entity_type=entities.FeatureEntityType.ITEM,
+                    model_id=self.model_entity.id,
+                    project_id=self.model_entity.project_id,
+                    set_type=self.model_entity.name,
+                    size=self.configuration.get('embeddings_size', 256),
+                )
+                logger.info(f'Feature Set created! name: {feature_set.name}, id: {feature_set.id}')
+            else:
+                logger.info(f'Feature Set found! name: {feature_set.name}, id: {feature_set.id}')
+            return feature_set
+
+    def _execute_dataset_operation(
+        self,
+        dataset: entities.Dataset,
+        operation_type: str,
+        filters: Optional[entities.Filters] = None,
+        progress: Optional[utilities.Progress] = None,
+        batch_size: Optional[int] = None,
+    ) -> bool:
+        """
+        Execute dataset operation (predict/embed) with batching and filtering support.
+
+        :param dataset: Dataset entity to run operation on
+        :param operation_type: Type of operation to execute ('predict' or 'embed')
+        :param filters: Filters entity to filter items, default None
+        :param progress: Progress object for tracking progress, default None
+        :param batch_size: Size of batches to process items, default None (uses model config)
+        :return: True if operation completes successfully
+        :raises ValueError: If operation_type is not 'predict' or 'embed'
+        """
+        self.logger.debug(f"Running {operation_type} for dataset (name:{dataset.name}, id:{dataset.id})")
+
+        if not filters:
+            self.logger.debug("No filters provided, using default filters")
+            filters = entities.Filters()
+        if filters is not None and isinstance(filters, dict):
+            self.logger.debug(f"Received custom filters {filters}")
+            filters = entities.Filters(custom_filter=filters)
+
+        if operation_type == 'embed':
+            feature_set = self._get_feature_set()
+            logger.info(f"Feature set found! name: {feature_set.name}, id: {feature_set.id}")
+
+        predict_embed_subset_limit = self.configuration.get('predict_embed_subset_limit', PREDICT_EMBED_DEFAULT_SUBSET_LIMIT)
+        predict_embed_timeout = self.configuration.get('predict_embed_timeout', PREDICT_EMBED_DEFAULT_TIMEOUT)
+        self.logger.debug(f"Inputs: predict_embed_subset_limit: {predict_embed_subset_limit}, predict_embed_timeout: {predict_embed_timeout}")
+        tmp_filters = copy.deepcopy(filters.prepare())
+        tmp_filters['pageSize'] = 0
+        num_items = dataset.items.list(filters=entities.Filters(custom_filter=tmp_filters)).items_count
+        self.logger.debug(f"Number of items for current filters: {num_items}")
+
+        # One-item lookahead on generator: if only one subset, run locally; else create executions for all
+        gen = entities.Filters._get_split_filters(dataset, filters, predict_embed_subset_limit)
         try:
-            if vector is not None:
-                item.features.create(value=vector,
-                                     project_id=project_id,
-                                     feature_set_id=feature_set_id,
-                                     entity=item)
-        except Exception as e:
-            logger.error(f'Failed to upload feature vector of length {len(vector)} to item {item.id}, Error: {e}')
+            first_filter = next(gen)
+        except StopIteration:
+            self.logger.info("Filters is empty, nothing to run")
+            return True
+
+        try:
+            second_filter = next(gen)
+            multiple = True
+        except StopIteration:
+            multiple = False
+
+        if not multiple:
+            self.logger.info("Split filters has only one subset, running locally")
+            if batch_size is None:
+                batch_size = self.configuration.get('batch_size', 4)
+            first_filter["pageSize"] = 1000
+            single_filters = entities.Filters(custom_filter=first_filter)
+            pages = dataset.items.list(filters=single_filters)
+            self.logger.info(f"Single run pages on: {pages.items_count} items")
+            items = [item for page in pages for item in page if item.type == 'file']
+            self.logger.debug(f"Single run items length: {len(items)}")
+            if operation_type == 'embed':
+                self.embed_items(items=items, batch_size=batch_size, progress=progress)
+            elif operation_type == 'predict':
+                self.predict_items(items=items, batch_size=batch_size, progress=progress)
+            else:
+                raise ValueError(f"Unsupported operation type: {operation_type}")
+            return True
+
+        executions = []
+        for filter_dict in chain([first_filter, second_filter], gen):
+            self.logger.debug(f"Creating execution for models {operation_type} with dataset id {dataset.id} and filter_dict {filter_dict}")
+            if operation_type == 'embed':
+                execution = self.model_entity.models.embed(
+                    model=self.model_entity,
+                    dataset_id=dataset.id,
+                    filters=entities.Filters(custom_filter=filter_dict),
+                )
+            elif operation_type == 'predict':
+                execution = self.model_entity.models.predict(
+                    model=self.model_entity, dataset_id=dataset.id, filters=entities.Filters(custom_filter=filter_dict)
+                )
+            else:
+                raise ValueError(f"Unsupported operation type: {operation_type}")
+            executions.append(execution)
+
+        if executions:
+            self.logger.info(f'Created {len(executions)} executions for {operation_type}, ' f'execution ids: {[ex.id for ex in executions]}')
+
+            wait_time = 5
+            start_time = time.time()
+            last_perc = 0
+            self.logger.debug(f"Waiting for executions with timeout {predict_embed_timeout}")
+            while time.time() - start_time < predict_embed_timeout:
+                continue_loop = False
+                total_perc = 0
+
+                for ex in executions:
+                    execution = dataset.project.executions.get(execution_id=ex.id)
+                    perc = execution.latest_status.get('percentComplete', 0)
+                    total_perc += perc
+                    if execution.in_progress():
+                        continue_loop = True
+
+                avg_perc = round(total_perc / len(executions), 0)
+                if progress is not None and last_perc != avg_perc:
+                    last_perc = avg_perc
+                    progress.update(progress=last_perc, message=f'running {operation_type}')
+
+                if not continue_loop:
+                    break
+
+                time.sleep(wait_time)
+            self.logger.debug("End waiting for executions")
+            # Check if any execution failed
+            executions_filter = entities.Filters(resource=entities.FiltersResource.EXECUTION)
+            executions_filter.add(field="id", values=[ex.id for ex in executions], operator=entities.FiltersOperations.IN)
+            executions_filter.add(field='latestStatus.status', values='failed')
+            executions_filter.page_size = 0
+            failed_executions_count = dataset.project.executions.list(filters=executions_filter).items_count
+            if failed_executions_count > 0:
+                self.logger.error(f"Failed to {operation_type} for {failed_executions_count} executions")
+                return False
+        return True
 
     def _upload_model_annotations(self, item: entities.Item, predictions, clean_annotations):
         """
@@ -928,8 +1067,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param cleanup: `bool` if set removes existing predictions with the same package-model name
         """
         if not (isinstance(predictions, entities.AnnotationCollection) or isinstance(predictions, list)):
-            raise TypeError('predictions was expected to be of type {}, but instead it is {}'.
-                            format(entities.AnnotationCollection, type(predictions)))
+            raise TypeError(f'predictions was expected to be of type {entities.AnnotationCollection}, but instead it is {type(predictions)}')
         if clean_annotations:
             clean_filter = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
             clean_filter.add(field='metadata.user.model.name', values=self.model_entity.name)
@@ -947,8 +1085,12 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param item:
         :return:
         """
-        buffer = item.download(save_locally=False)
-        image = np.asarray(Image.open(buffer))
+        try:
+            buffer = item.download(save_locally=False)
+            image = np.asarray(Image.open(buffer))
+        except Exception as e:
+            logger.error(f"Failed to convert image to np.array, Error: {e}\n{traceback.format_exc()}")
+            image = None
         return image
 
     @staticmethod
@@ -1004,8 +1146,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 if color is None:
                     if self.model_entity._dataset is not None:
                         try:
-                            color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label,
-                                                                                            (255, 255, 255))
+                            color = self.model_entity.dataset._get_ontology().color_map.get(prediction.label, (255, 255, 255))
                         except (exceptions.BadRequest, exceptions.NotFound):
                             ...
                 if color is None:
@@ -1025,7 +1166,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             prediction.metadata['system']['model'] = {
                 'model_id': self.model_entity.id,
                 'name': self.model_entity.name,
-                'confidence': confidence
+                'confidence': confidence,
             }
 
     ##############################
@@ -1042,8 +1183,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         try:
             import keras
         except (ImportError, ModuleNotFoundError) as err:
-            raise RuntimeError(
-                '{} depends on extenral package. Please install '.format(self.__class__.__name__)) from err
+            raise RuntimeError(f'{self.__class__.__name__} depends on extenral package. Please install ') from err
 
         import os
         import time
@@ -1053,8 +1193,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             def __init__(self, dump_path):
                 super().__init__()
                 if os.path.isdir(dump_path):
-                    dump_path = os.path.join(dump_path,
-                                             '__view__training-history__{}.json'.format(time.strftime("%F-%X")))
+                    dump_path = os.path.join(dump_path, f'__view__training-history__{time.strftime("%F-%X")}.json')
                 self.dump_file = dump_path
                 self.data = dict()
 
@@ -1075,9 +1214,14 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                     "title": "training loss",
                     "ylabel": "val",
                     "type": "metric",
-                    "data": [{"name": name,
-                              "x": values['x'],
-                              "y": values['y']} for name, values in self.data.items()]
+                    "data": [
+                        {
+                            "name": name,
+                            "x": values['x'],
+                            "y": values['y'],
+                        }
+                        for name, values in self.data.items()
+                    ],
                 }
 
                 with open(self.dump_file, 'w') as f:

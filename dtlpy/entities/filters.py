@@ -1,10 +1,17 @@
+import numpy as np
 import urllib.parse
 import logging
 import json
 import os
 import io
-from enum import Enum
+import copy
+from typing import Generator, Tuple, Optional
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from bson import ObjectId
 
+
+from enum import Enum
 from .. import exceptions, entities
 
 logger = logging.getLogger(name="dtlpy")
@@ -62,6 +69,8 @@ class FiltersOperations(str, Enum):
     EXISTS = "exists"
     MATCH = "match"
     NIN = "nin"
+    GREATER_THAN_OR_EQUAL = "gte"
+    LESS_THAN_OR_EQUAL = "lte"
 
 
 class FiltersMethod(str, Enum):
@@ -215,9 +224,15 @@ class Filters:
 
     def __override(self, field, values, operator=None):
         if field in self._unique_fields:
+            indices_to_remove = []
             for i_single_filter, single_filter in enumerate(self.and_filter_list):
                 if single_filter.field == field:
-                    self.and_filter_list.pop(i_single_filter)
+                    indices_to_remove.append(i_single_filter)
+            
+            # Remove indices in descending order to avoid IndexError
+            # When removing items, indices shift down, so we must remove from highest to lowest
+            for index in sorted(indices_to_remove, reverse=True):
+                self.and_filter_list.pop(index)
         self.and_filter_list.append(SingleFilter(field=field, values=values, operator=operator))
 
     def generate_url_query_params(self, url):
@@ -366,7 +381,11 @@ class Filters:
             query_dict["join"] = self.join
         if "join" in query_dict and "on" not in query_dict["join"]:
             if self.resource == FiltersResource.ITEM:
-                query_dict["join"]["on"] = {"resource": FiltersResource.ANNOTATION.value, "local": "itemId", "forigen": "id"}
+                query_dict["join"]["on"] = {
+                    "resource": FiltersResource.ANNOTATION.value,
+                    "local": "itemId",
+                    "forigen": "id",
+                }
             else:
                 query_dict["join"]["on"] = {"resource": FiltersResource.ITEM.value, "local": "id", "forigen": "itemId"}
 
@@ -598,6 +617,140 @@ class Filters:
         all_filter_items = list(pages.all())
         names = [i.name for i in all_filter_items]
         return names
+
+    @staticmethod
+    def _get_split_filters(dataset, filters, max_items, max_workers=4, max_depth=None) -> Generator[dict, None, None]:
+        """
+        Generator that yields filter chunks for large datasets using a bounded
+        thread pool. Splits ranges by id until each subset holds <= max_items.
+
+        :param dataset: Dataset object to get filters for
+        :param filters: Base filters to apply
+        :param max_items: Maximum number of items per filter chunk
+        :param max_workers: Maximum number of threads for parallel processing
+        :param max_depth: Maximum depth of the filter tree. Default calculated by the formula: np.ceil(np.log2(count/max_items) + 3).
+        :yield: Filter payloads covering subsets of items
+        """
+        if max_items <= 0:
+            raise ValueError("_get_split_filters : max_items must be greater than 0")
+
+        if filters is None:
+            filters = entities.Filters()
+
+        from_id, count = Filters._get_first_last_item(
+            items_repo=dataset.items, filters=filters, order_by_direction=FiltersOrderByDirection.ASCENDING
+        )
+        to_id, count = Filters._get_first_last_item(
+            items_repo=dataset.items, filters=filters, order_by_direction=FiltersOrderByDirection.DESCENDING
+        )
+
+        if from_id is None or to_id is None or count == 0:
+            return
+
+        max_depth = max_depth if max_depth is not None else np.ceil(np.log2(count / max_items) + 3)
+
+        def make_filter_dict(range_from_id, range_to_id, strict_from: bool = False):
+            fdict = copy.deepcopy(filters.prepare())
+            lower_op = "$gt" if strict_from else "$gte"
+            fdict["filter"].setdefault("$and", []).extend(
+                [{"id": {lower_op: range_from_id}}, {"id": {"$lte": range_to_id}}]
+            )
+            return fdict
+
+        def task(range_from_id, range_to_id, depth, strict_from: bool):
+            fdict = make_filter_dict(range_from_id, range_to_id, strict_from)
+            range_filters = entities.Filters(custom_filter=fdict, page_size=1)
+            actual_from, count = Filters._get_first_last_item(
+                dataset.items, range_filters, FiltersOrderByDirection.ASCENDING
+            )
+            if count == 0:
+                return ("none", None, None)
+            if count <= max_items or depth >= max_depth:
+                return ("yield", fdict, None)
+            actual_to, count = Filters._get_first_last_item(
+                dataset.items, range_filters, FiltersOrderByDirection.DESCENDING
+            )
+            if not actual_from or not actual_to or actual_from == actual_to:
+                return ("yield", fdict, None)
+            mid = Filters._get_middle_id(actual_from, actual_to)
+            if not mid or mid == actual_from or mid == actual_to:
+                return ("yield", fdict, None)
+            # Left child: [actual_from, mid] inclusive; Right child: (mid, actual_to] exclusive lower bound
+            return (
+                "split",
+                None,
+                (
+                    (actual_from, mid, depth + 1, False),  # left child includes lower bound
+                    (mid, actual_to, depth + 1, True),  # right child excludes midpoint
+                ),
+            )
+
+        pending = deque([(from_id, to_id, 0, False)])
+        futures = set()
+
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            while futures or pending:
+                # Submit all pending tasks
+                while pending:
+                    fr, to, d, strict = pending.popleft()
+                    futures.add(pool.submit(task, fr, to, d, strict))
+
+                if not futures:
+                    break
+
+                done, futures = wait(futures, return_when=FIRST_COMPLETED)
+                for fut in done:
+                    try:
+                        kind, fdict, ranges = fut.result()
+                    except Exception as e:
+                        logger.warning(f"split filters task failed: {e}")
+                        continue
+                    if kind == "yield" and fdict is not None:
+                        yield fdict
+                    elif kind == "split" and ranges is not None:
+                        left, right = ranges
+                        pending.append(left)
+                        pending.append(right)
+
+    @staticmethod
+    def _get_first_last_item(
+        items_repo, filters, order_by_direction=FiltersOrderByDirection.ASCENDING
+    ) -> Tuple[Optional[str], int]:
+        filters_dict = copy.deepcopy(filters.prepare())
+        filters_dict["sort"] = {"id": order_by_direction.value}
+        filters_dict["page"] = 0
+        filters_dict["pageSize"] = 1
+        cloned_filters = entities.Filters(custom_filter=filters_dict)
+
+        try:
+            pages = items_repo.list(filters=cloned_filters)
+            return (pages.items[0].id if pages.items else None, pages.items_count)
+        except Exception:
+            return None, 0
+
+    @staticmethod
+    def _get_middle_id(from_id, to_id):
+        """Calculate middle ObjectId between two ObjectIds with sub-second precision.
+
+        Computes the midpoint in the full 12-byte ObjectId numeric space to avoid
+        second-level rounding inherent to datetime-based construction.
+        """
+        try:
+            # Convert ObjectId strings to integers using base 16 (hexadecimal)
+            start_int = int(str(ObjectId(from_id)), base=16)  
+            end_int = int(str(ObjectId(to_id)), base=16)
+            if start_int >= end_int:
+                return from_id
+            mid_int = (start_int + end_int) // 2
+            if mid_int <= start_int:
+                mid_int = start_int + 1
+            if mid_int > end_int:
+                mid_int = end_int
+            # Convert back to 12-byte ObjectId format
+            mid_bytes = mid_int.to_bytes(length=12, byteorder="big")
+            return str(ObjectId(mid_bytes))
+        except Exception:
+            return from_id  # Fallback to from_id if calculation fails
 
 
 class SingleFilter:

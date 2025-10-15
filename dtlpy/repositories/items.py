@@ -524,7 +524,8 @@ class Items:
             export_version=entities.ExportVersion.V1,
             dataset_lock: bool = False,
             lock_timeout_sec: int = None,
-            export_summary: bool = False,    
+            export_summary: bool = False,
+            raise_on_error: bool = False,
     ):
         """
         Download dataset items by filters.
@@ -557,6 +558,7 @@ class Items:
         :param bool filter_output_annotations: default - False, given an export by filter - determine if to filter out annotations
         :param float alpha: opacity value [0 1], default 1
         :param str export_version:  exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param bool raise_on_error: raise an exception if an error occurs
         :return: generator of local_path per each downloaded item
         :rtype: generator or single item
 
@@ -596,7 +598,8 @@ class Items:
             export_version=export_version,
             dataset_lock=dataset_lock,
             lock_timeout_sec=lock_timeout_sec,
-            export_summary=export_summary
+            export_summary=export_summary,
+            raise_on_error=raise_on_error
         )
 
     def upload(

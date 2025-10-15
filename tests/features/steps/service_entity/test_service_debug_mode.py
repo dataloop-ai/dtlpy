@@ -22,8 +22,6 @@ def step_impl(context, instance_number, flag="None", num_try_input=60):
                     assert context.service.name in instance['replicaId'], "TEST FAILED: Expected {} in {}, Got {}".format(
                         context.service.name, instance['replicaId'], instance)
             break
-        context.dl.logger.debug(
-            "Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval,
-                                                                                    interval))
+        context.dl.logger.debug(f"Step is running for {(i + 1) * interval:.2f}[s]. Sleeping for {interval:.2f}[s]")
 
     assert success, "TEST FAILED: Expected {}, Got {}".format(instance_number, len(context.service_instances))

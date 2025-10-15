@@ -135,6 +135,7 @@ class KubernetesRuntime(ServiceRuntime):
                  pod_type: InstanceCatalog = DEFAULT_POD_TYPE,
                  num_replicas=DEFAULT_NUM_REPLICAS,
                  concurrency=DEFAULT_CONCURRENCY,
+                 dynamic_concurrency=None,
                  runner_image=None,
                  autoscaler=None,
                  **kwargs):
@@ -147,6 +148,7 @@ class KubernetesRuntime(ServiceRuntime):
         self._proxy_image = kwargs.get('proxyImage', None)
         self.single_agent = kwargs.get('singleAgent', None)
         self.preemptible = kwargs.get('preemptible', None)
+        self.dynamic_concurrency = kwargs.get('dynamicConcurrency', dynamic_concurrency)
 
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
         if self.autoscaler is not None and isinstance(self.autoscaler, dict):
@@ -177,6 +179,9 @@ class KubernetesRuntime(ServiceRuntime):
 
         if self.preemptible is not None:
             _json['preemptible'] = self.preemptible
+
+        if self.dynamic_concurrency is not None:
+            _json['dynamicConcurrency'] = self.dynamic_concurrency
 
         return _json
 

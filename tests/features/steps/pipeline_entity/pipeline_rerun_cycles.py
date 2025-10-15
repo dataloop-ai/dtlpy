@@ -117,7 +117,7 @@ def step_impl(context, save):
         if i + 1 % 5 == 0:
             # Print the cycle URL every 5 intervals
             context.dl.logger.info(f"Cycle URL : {pipeline.url}/executions/{cycle.id}")
-        context.dl.logger.info("Step is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format((i + 1) * interval, interval))
+        context.dl.logger.info(f"Step is running for {(i + 1) * interval:.2f}[s]. Sleeping for {interval:.2f}[s]")
 
     assert completed > 0 and len(cycles), "TEST FAILED: cycle was not completed"
 

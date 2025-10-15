@@ -153,10 +153,10 @@ class Features:
         """
         Create a new Feature vector
 
-        :param immutable value: actual vector - immutable (list of floats [1,2,3])
+        :param immutable value: actual vector - immutable (list of floats [1,2,3]) or list of lists of floats
         :param str project_id: the id of the project where feature will be created
         :param str feature_set_id: ref to a featureSet this vector is a part of
-        :param entity: the entity the featureVector is linked to (item, annotation, etc)
+        :param entity: the entity the featureVector is linked to (item, annotation, etc) or list of entities
         :param str version: version of the featureSet generator
         :param str parent_id: optional: parent FeatureSet id - used when FeatureVector is a subFeature
         :param str org_id: the id of the org where featureVector will be created
@@ -175,19 +175,33 @@ class Features:
                 raise ValueError(
                     'Missing feature_set_id. Must insert the variable or create from context, e.g. feature_set.features.create()')
             feature_set_id = self._feature_set.id
-
-        payload = {'project': project_id,
-                   'entityId': entity.id,
-                   'value': value,
-                   'featureSetId': feature_set_id,
-                   'datasetId': entity.dataset.id}
-
+        
+        # Additional payload info
+        additional_payload = {}
         if version is not None:
-            payload['version'] = version
+            additional_payload['version'] = version
         if parent_id is not None:
-            payload['parentId'] = parent_id
+            additional_payload['parentId'] = parent_id
         if org_id is not None:
-            payload['org'] = org_id
+            additional_payload['org'] = org_id
+        additional_payload['project'] = project_id
+        additional_payload['featureSetId'] = feature_set_id
+
+        if not isinstance(entity, list):
+            entity = [entity]
+            value = [value]
+
+        if len(value) != len(entity):
+            raise ValueError('The number of vectors must be equal to the number of entities')
+
+        payload = []
+        for (single_entity, single_value) in zip(entity, value):
+            entry = {'entityId': single_entity.id,
+                            'value': single_value,
+                            'datasetId': single_entity.dataset.id
+                        }
+            entry.update(additional_payload)
+            payload.append(entry)
 
         success, response = self._client_api.gen_request(req_type="post",
                                                          json_req=payload,
@@ -197,9 +211,12 @@ class Features:
         if not success:
             raise exceptions.PlatformException(response)
 
+        features = [entities.Feature.from_json(client_api=self._client_api,
+                                          _json=feature) for feature in response.json()]
         # return entity
-        return entities.Feature.from_json(client_api=self._client_api,
-                                          _json=response.json()[0])
+        if len(features) == 1:
+            return features[0]
+        return features
 
     @_api_reference.add(path='/features/vectors/{id}', method='delete')
     def delete(self, feature_id: str):

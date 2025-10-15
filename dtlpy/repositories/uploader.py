@@ -90,6 +90,8 @@ class Uploader:
         if isinstance(local_path, pandas.DataFrame):
             futures = self._build_elements_from_df(local_path)
         else:
+            start_time = time.time()
+            logger.debug(f"Building elements from inputs started: start time: {start_time}")
             futures = self._build_elements_from_inputs(local_path=local_path,
                                                        local_annotations_path=local_annotations_path,
                                                        # upload options
@@ -99,6 +101,7 @@ class Uploader:
                                                        item_metadata=item_metadata,
                                                        export_version=export_version,
                                                        item_description=item_description)
+            logger.debug(f"Building elements from inputs completed:  time taken: {time.time() - start_time}")
         num_files = len(futures)
         while futures:
             futures.popleft().result()
@@ -114,14 +117,22 @@ class Uploader:
         # log error
         errors_count = self.reporter.failure_count
         if errors_count > 0:
+            error_text = ""
             log_filepath = self.reporter.generate_log_files()
+            # Get up to 5 error examples for the exception message
+            if self.reporter._errors:
+                error_examples = list(self.reporter._errors.values())[:5]
+                error_text = " | ".join(error_examples)
+            error_message = f"Errors in {errors_count} files. Errors: {error_text}" 
             if log_filepath is not None:
-                logger.warning("Errors in {n_error} files. See {log_filepath} for full log".format(
-                    n_error=errors_count, log_filepath=log_filepath))
+                error_message += f", see {log_filepath} for full log"
             if raise_on_error is True:
-                raise PlatformException(error="400",
-                                        message=f"Errors in {errors_count} files. See above trace for more information")
-        
+                raise PlatformException(
+                    error="400", message=error_message
+                )
+            else:
+                logger.warning(error_message)
+
         if return_as_list is True:
             # return list of items
             return list(self.reporter.output)
@@ -217,12 +228,6 @@ class Uploader:
         if remote_name is None:
             remote_name_list = [None] * len(local_path_list)
 
-        try:
-            driver_path = self.items_repository.dataset.project.drivers.get(
-                driver_id=self.items_repository.dataset.driver).path
-        except Exception:
-            driver_path = None
-
         futures = deque()
         total_size = 0
         for upload_item_element, remote_name, upload_annotations_element in zip(local_path_list,
@@ -264,7 +269,7 @@ class Uploader:
                 'root': None,
                 'export_version': export_version,
                 'item_description': item_description,
-                'driver_path': driver_path
+                'driver_path': None
             }
             if isinstance(upload_item_element, str):
                 with_head_folder = True
@@ -290,6 +295,11 @@ class Uploader:
                     upload_elem = upload_element.FileUploadElement(all_upload_elements=all_upload_elements)
 
                 elif upload_item_element.startswith('external://'):
+                    try:
+                        driver_path = repositories.Drivers.get(driver_id=self.items_repository.dataset.driver).path
+                        all_upload_elements['driver_path'] = driver_path
+                    except Exception:
+                        logger.error("Attempting to upload external item without driver path. This may cause issues.")
                     upload_elem = upload_element.ExternalItemUploadElement(all_upload_elements=all_upload_elements)
 
                 elif self.is_url(upload_item_element):

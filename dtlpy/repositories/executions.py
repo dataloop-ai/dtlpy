@@ -660,9 +660,7 @@ class Executions:
                     f"execution wait() got timeout. id: {execution.id!r}, status: {execution.latest_status}")
             sleep_time = np.min([timeout - elapsed, backoff_factor * (2 ** num_tries), MAX_SLEEP_TIME])
             num_tries += 1
-            logger.debug("Execution {!r} is running for {:.2f}[s] and now Going to sleep {:.2f}[s]".format(execution.id,
-                                                                                                           elapsed,
-                                                                                                           sleep_time))
+            logger.debug(f"Execution {execution.id} is running for {elapsed:.2f}[s]. Sleeping for {sleep_time:.2f}[s]")
             time.sleep(sleep_time)
 
         return execution

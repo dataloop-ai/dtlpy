@@ -217,7 +217,8 @@ class ComputeCluster:
             node_pools: Optional[List[NodePool]] = None,
             metadata: Optional[Dict] = None,
             authentication: Optional[Authentication] = None,
-            plugins: Optional[dict] = None
+            plugins: Optional[dict] = None,
+            deployment_configuration: Optional[Dict] = None
     ):
         self.name = name
         self.endpoint = endpoint
@@ -228,6 +229,9 @@ class ComputeCluster:
         self.authentication = authentication if authentication is not None else Authentication(
             AuthenticationIntegration("", ""))
         self.plugins = plugins
+        self.deployment_configuration = deployment_configuration if deployment_configuration is not None else {}
+
+
 
     @classmethod
     def from_json(cls, _json):
@@ -239,7 +243,8 @@ class ComputeCluster:
             node_pools=[NodePool.from_json(np) for np in _json.get('nodePools', list())],
             metadata=_json.get('metadata'),
             authentication=Authentication.from_json(_json.get('authentication', dict())),
-            plugins=_json.get('plugins')
+            plugins=_json.get('plugins'),
+            deployment_configuration=_json.get('deploymentConfiguration'),
         )
 
     def to_json(self):
@@ -251,7 +256,8 @@ class ComputeCluster:
             'nodePools': [np.to_json() for np in self.node_pools],
             'metadata': self.metadata,
             'authentication': self.authentication.to_json(),
-            'plugins': self.plugins
+            'plugins': self.plugins,
+            'deploymentConfiguration':  self.deployment_configuration
         }
 
     @classmethod
@@ -265,7 +271,8 @@ class ComputeCluster:
             node_pools=node_pools,
             metadata={},
             authentication=Authentication(AuthenticationIntegration(integration.id, integration.type)),
-            plugins=devops_output['config'].get('plugins')
+            plugins=devops_output['config'].get('plugins'),
+            deployment_configuration=devops_output['config'].get('deploymentConfiguration', {})
         )
 
 
@@ -422,7 +429,7 @@ class KubernetesCompute(Compute):
             metadata=_json.get('metadata'),
             client_api=client_api,
             settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None,
-            url=_json.get('url'),
+            url=_json.get('url')
         )
 
     def to_json(self):

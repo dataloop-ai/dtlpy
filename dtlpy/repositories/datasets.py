@@ -8,14 +8,17 @@ import time
 import copy
 import tqdm
 import logging
+import zipfile
 import json
-from typing import Union
+from typing import Union, Generator, Optional
 
 from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException, _api_reference
 from ..services.api_client import ApiClient
+from ..entities.dataset import OutputExportType, ExportType
 
 logger = logging.getLogger(name='dtlpy')
 
+MAX_ITEMS_PER_SUBSET = 50000
 
 class Datasets:
     """
@@ -155,8 +158,7 @@ class Datasets:
         payload['annotations'] = {"include": include_annotations, "convertSemantic": False}
 
         if annotation_filters is not None:
-            payload['annotationsQuery'] = annotation_filters.prepare()['filter']
-            payload['annotations']['filter'] = True
+            payload['annotationsQuery'] = annotation_filters.prepare()
 
         if dataset_lock:
             payload['datasetLock'] = dataset_lock
@@ -166,29 +168,37 @@ class Datasets:
 
         if lock_timeout_sec:
             payload['lockTimeoutSec'] = lock_timeout_sec
-   
+
         return payload
 
-    def _download_exported_item(self, item_id, export_type, local_path=None):
+    def _download_exported_item(self, item_id, export_type, local_path=None, unzip=True):
+        logger.debug(f"start downloading exported item {item_id} with export_type {export_type} and local_path {local_path} and unzip {unzip}")
         export_item = repositories.Items(client_api=self._client_api).get(item_id=item_id)
-        export_item_path = export_item.download(local_path=local_path)
+        export_item_path = export_item.download(local_path=local_path)        
 
-        if export_type == entities.ExportType.ZIP:
-            # unzipping annotations to directory
-            if isinstance(export_item_path, list) or not os.path.isfile(export_item_path):
-                raise exceptions.PlatformException(
-                    error='404',
-                    message='error downloading annotation zip file. see above for more information. item id: {!r}'.format(
-                        export_item.id))
+        # Common validation check for both JSON and other export types
+        if isinstance(export_item_path, list) or not os.path.isfile(export_item_path):
+            raise exceptions.PlatformException(
+                error='404',
+                message='error downloading annotation zip file. see above for more information. item id: {!r}'.format(
+                    export_item.id))
+
+        result = None
+        if unzip is False or export_type == entities.ExportType.JSON:
+            result = export_item_path
+        else:
             try:
                 miscellaneous.Zipping.unzip_directory(zip_filename=export_item_path,
-                                                      to_directory=local_path)
+                                                        to_directory=local_path)
+                result = local_path
             except Exception as e:
                 logger.warning("Failed to extract zip file error: {}".format(e))
             finally:
-                # cleanup
+                # cleanup only for zip files to avoid removing needed results
                 if isinstance(export_item_path, str) and os.path.isfile(export_item_path):
                     os.remove(export_item_path)
+        logger.debug(f"end downloading, result {result}")
+        return result
 
     @property
     def platform_url(self):
@@ -480,7 +490,7 @@ class Datasets:
             return dataset
         else:
             raise exceptions.PlatformException(response)
-        
+
     @_api_reference.add(path='/datasets/{id}/unlock', method='patch')
     def unlock(self, dataset: entities.Dataset ) -> entities.Dataset:
         """
@@ -625,22 +635,137 @@ class Datasets:
                                                .format(response))
         return self.get(dataset_id=command.spec['returnedModelId'])
 
+    def _export_recursive(
+        self,
+        dataset: entities.Dataset = None,
+        dataset_name: str = None,
+        dataset_id: str = None,
+        local_path: str = None,
+        filters: Union[dict, entities.Filters] = None,
+        annotation_filters: entities.Filters = None,
+        feature_vector_filters: entities.Filters = None,
+        include_feature_vectors: bool = False,
+        include_annotations: bool = False,
+        timeout: int = 0,
+        dataset_lock: bool = False,
+        lock_timeout_sec: int = None,
+        export_summary: bool = False,
+        max_items_per_subset: int = MAX_ITEMS_PER_SUBSET,
+        export_type: ExportType = ExportType.JSON,
+        output_export_type: OutputExportType = OutputExportType.JSON,
+    ) -> Generator[str, None, None]:
+        """
+        Export dataset items recursively by splitting large datasets into smaller subsets.
+
+        Args:
+            dataset (entities.Dataset, optional): Dataset entity to export
+            dataset_name (str, optional): Name of the dataset to export
+            dataset_id (str, optional): ID of the dataset to export
+            local_path (str, optional): Local path to save the exported data
+            filters (Union[dict, entities.Filters], optional): Filters to apply on the items
+            annotation_filters (entities.Filters, optional): Filters to apply on the annotations
+            feature_vector_filters (entities.Filters, optional): Filters to apply on the feature vectors
+            include_feature_vectors (bool, optional): Whether to include feature vectors in export. Defaults to False
+            include_annotations (bool, optional): Whether to include annotations in export. Defaults to False
+            timeout (int, optional): Timeout in seconds for the export operation. Defaults to 0
+            dataset_lock (bool, optional): Whether to lock the dataset during export. Defaults to False
+            lock_timeout_sec (int, optional): Timeout for dataset lock in seconds. Defaults to None
+            export_summary (bool, optional): Whether to include export summary. Defaults to False
+            max_items_per_subset (int, optional): Maximum items per subset for recursive export. Defaults to MAX_ITEMS_PER_SUBSET
+            export_type (ExportType, optional): Type of export (JSON or ZIP). Defaults to ExportType.JSON
+            output_export_type (OutputExportType, optional): Output format type. Defaults to OutputExportType.JSON
+
+        Returns:
+            Generator[str, None, None]: Generator yielding export paths
+
+        Raises:
+            NotImplementedError: If ZIP export type is used with JSON output type
+            exceptions.PlatformException: If API request fails or command response is invalid
+        """
+        logger.debug(f"exporting dataset with export_type {export_type} and output_export_type {output_export_type}")
+        if export_type == ExportType.ZIP and output_export_type == OutputExportType.JSON:
+            raise NotImplementedError(
+                "Zip export type is not supported for JSON output type.\n"
+                "If Json output is required, please use the export_type = JSON"
+            )
+
+        # Get dataset entity for recursive filtering
+        dataset_entity = self.get(dataset_id=self._resolve_dataset_id(dataset, dataset_name, dataset_id))
+        if export_type != ExportType.JSON:
+            filters_list = [filters]
+        else:
+            # Generate filter subsets using recursive_get_filters
+            filters_list = entities.Filters._get_split_filters(
+                dataset=dataset_entity, filters=filters, max_items=max_items_per_subset
+            )
+        # First loop: Make all API requests without waiting
+        commands = []
+        logger.debug("start making all API requests without waiting")
+        for filter_i in filters_list:
+            # Build payload for this subset
+            payload = self._build_payload(
+                filters=filter_i,
+                include_feature_vectors=include_feature_vectors,
+                include_annotations=include_annotations,
+                export_type=export_type,
+                annotation_filters=annotation_filters,
+                feature_vector_filters=feature_vector_filters,
+                dataset_lock=dataset_lock,
+                lock_timeout_sec=lock_timeout_sec,
+                export_summary=export_summary,
+            )
+
+            # Make API request for this subset
+            success, response = self._client_api.gen_request(
+                req_type='post', path=f'/datasets/{dataset_entity.id}/export', json_req=payload
+            )
+
+            if not success:
+                logger.error(f"failed to make API request /datasets/{dataset_entity.id}/export with payload {payload} response {response}")
+                raise exceptions.PlatformException(response)
+
+            # Handle command execution
+            commands.append( entities.Command.from_json(_json=response.json(), client_api=self._client_api))
+
+        time.sleep(2)  # as the command have wrong progress in the beginning
+        logger.debug("start waiting for all commands")
+        # Second loop: Wait for all commands and process results
+        for command in commands:
+            command = command.wait(timeout=timeout)
+
+            if 'outputItemId' not in command.spec:
+                raise exceptions.PlatformException(
+                    error='400', message="outputItemId key is missing in command response"
+                )
+
+            item_id = command.spec['outputItemId']
+            # Download and process the exported item
+            yield self._download_exported_item(
+                item_id=item_id,
+                export_type=export_type,
+                local_path=local_path,
+                unzip=output_export_type != OutputExportType.ZIP,
+            )
+
     @_api_reference.add(path='/datasets/{id}/export', method='post')
-    def export(self,
-               dataset: entities.Dataset = None,
-               dataset_name: str = None,
-               dataset_id: str = None,
-               local_path: str = None,
-               filters: Union[dict, entities.Filters] = None,
-               annotation_filters: entities.Filters = None,
-               feature_vector_filters: entities.Filters = None,
-               include_feature_vectors: bool = False,
-               include_annotations: bool = False,
-               export_type: entities.ExportType = entities.ExportType.JSON,
-               timeout: int = 0,
-               dataset_lock: bool = False,
-               lock_timeout_sec: int = None,
-               export_summary: bool = False):
+    def export(
+        self,
+        dataset: entities.Dataset = None,
+        dataset_name: str = None,
+        dataset_id: str = None,
+        local_path: str = None,
+        filters: Union[dict, entities.Filters] = None,
+        annotation_filters: entities.Filters = None,
+        feature_vector_filters: entities.Filters = None,
+        include_feature_vectors: bool = False,
+        include_annotations: bool = False,
+        export_type: ExportType = ExportType.JSON,
+        timeout: int = 0,
+        dataset_lock: bool = False,
+        lock_timeout_sec: int = None,
+        export_summary: bool = False,
+        output_export_type: OutputExportType = None,
+    ) -> Optional[str]:
         """
         Export dataset items and annotations.
 
@@ -648,12 +773,55 @@ class Datasets:
 
         You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
 
+        **Export Behavior by Parameter Combination:**
+
+        The behavior of this method depends on the combination of `export_type` and `output_export_type`:
+
+        **When export_type = ExportType.JSON:**
+
+        - **output_export_type = OutputExportType.JSON (default when None):**
+          - Exports data in JSON format, split into subsets of max 500 items
+          - Downloads all subset JSON files and concatenates them into a single `result.json` file
+          - Returns the path to the concatenated JSON file
+          - Cleans up individual subset files after concatenation
+
+        - **output_export_type = OutputExportType.ZIP:**
+          - Same as JSON export, but zips the final `result.json` file
+          - Returns the path to the zipped file (`result.json.zip`)
+          - Cleans up the unzipped JSON file after zipping
+
+        - **output_export_type = OutputExportType.FOLDERS:**
+          - Exports data in JSON format, split into subsets of max 500 items
+          - Downloads all subset JSON files and creates individual JSON files for each item
+          - Creates a folder structure mirroring the remote dataset structure
+          - Returns the path to the base directory containing the folder structure
+          - Each item gets its own JSON file named after the original filename
+
+        **When export_type = ExportType.ZIP:**
+
+        - **output_export_type = OutputExportType.ZIP:**
+          - Exports data as a ZIP file containing the dataset
+          - Returns the downloaded ZIP item directly
+          - No additional processing or concatenation
+
+        - **output_export_type = OutputExportType.JSON:**
+          - **NOT SUPPORTED** - Raises NotImplementedError
+          - Use export_type=ExportType.JSON instead for JSON output
+
+        - **output_export_type = OutputExportType.FOLDERS:**
+          - **NOT SUPPORTED** - Raises NotImplementedError
+          - Use export_type=ExportType.JSON instead for folder output
+
+        **When output_export_type = None (legacy behavior):**
+        - Defaults to OutputExportType.JSON
+        - Maintains backward compatibility with existing code
+
         :param dtlpy.entities.dataset.Dataset dataset: Dataset object
         :param str dataset_name: The name of the dataset
         :param str dataset_id: The ID of the dataset
-        :param str local_path: Local path to save the exported dataset 
+        :param str local_path: Local path to save the exported dataset
         :param Union[dict, dtlpy.entities.filters.Filters] filters: Filters entity or a query dictionary
-        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for export       
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for export
         :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity to filter feature vectors for export
         :param bool include_feature_vectors: Include item feature vectors in the export
         :param bool include_annotations: Include item annotations in the export
@@ -661,45 +829,92 @@ class Datasets:
         :param bool export_summary: Get Summary of the dataset export
         :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds
         :param entities.ExportType export_type: Type of export ('json' or 'zip')
+        :param entities.OutputExportType output_export_type: Output format ('json', 'zip', or 'folders'). If None, defaults to 'json'
         :param int timeout: Maximum time in seconds to wait for the export to complete
-        :return: Exported item
-        :rtype: dtlpy.entities.item.Item
-
-        **Example**:
-
-        .. code-block:: python
-
-            export_item = project.datasets.export(dataset_id='dataset_id',
-                                                  filters=filters,
-                                                  include_feature_vectors=True,
-                                                  include_annotations=True,
-                                                  export_type=dl.ExportType.JSON,
-                                                  dataset_lock=True,
-                                                  lock_timeout_sec=300,
-                                                  export_summary=False)
+        :return: Path to exported file/directory, or None if export result is empty
+        :rtype: Optional[str]
         """
-        dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
-        payload = self._build_payload(filters, include_feature_vectors, include_annotations,
-                                       export_type, annotation_filters, feature_vector_filters, 
-                                       dataset_lock, lock_timeout_sec, export_summary)
+        export_result = list(
+            self._export_recursive(
+                dataset=dataset,
+                dataset_name=dataset_name,
+                dataset_id=dataset_id,
+                local_path=local_path,
+                filters=filters,
+                annotation_filters=annotation_filters,
+                feature_vector_filters=feature_vector_filters,
+                include_feature_vectors=include_feature_vectors,
+                include_annotations=include_annotations,
+                timeout=timeout,
+                dataset_lock=dataset_lock,
+                lock_timeout_sec=lock_timeout_sec,
+                export_summary=export_summary,
+                export_type=export_type,
+                output_export_type=output_export_type,
+            )
+        )
+        if all(x is None for x in export_result):
+            logger.error("export result is empty")
+            return None
 
-        success, response = self._client_api.gen_request(req_type='post', path=f'/datasets/{dataset_id}/export',
-                                                         json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if export_type == ExportType.ZIP:
+            # if export type is zip, then return the _export_recursive result as it
+            return export_result[0]
 
-        command = entities.Command.from_json(_json=response.json(),
-                                             client_api=self._client_api)
+        # if user didn't provide output_export_type, keep the previous behavior
+        if output_export_type is None:
+            output_export_type = OutputExportType.JSON
 
-        time.sleep(2)  # as the command have wrong progress in the beginning
-        command = command.wait(timeout=timeout)
-        if 'outputItemId' not in command.spec:
-            raise exceptions.PlatformException(
-                error='400',
-                message="outputItemId key is missing in command response: {}".format(response))
-        item_id = command.spec['outputItemId']
-        self._download_exported_item(item_id=item_id, export_type=export_type, local_path=local_path)
-        return local_path
+        # export type is jsos :
+        # Load all items from subset JSON files and clean them up
+        all_items = []
+        logger.debug("start loading all items from subset JSON files")
+        for json_file in export_result:
+            if json_file is None:
+                continue
+            if os.path.isfile(json_file):
+                with open(json_file, 'r') as f:
+                    items = json.load(f)                    
+                    if isinstance(items, list):
+                        all_items.extend(items)
+                os.remove(json_file)
+
+        base_dir = os.path.dirname(export_result[0])
+        if output_export_type != OutputExportType.FOLDERS:
+            dataset_id=self._resolve_dataset_id(dataset, dataset_name, dataset_id)
+            result_file_name = f"{dataset_id}.json"
+            result_file = os.path.join(base_dir, result_file_name)
+            logger.debug(f"start writing all items to result file {result_file}")
+            with open(result_file, 'w') as f:
+                json.dump(all_items, f)
+            if output_export_type == OutputExportType.ZIP:
+                # Zip the result file
+                zip_filename = result_file + '.zip'
+                # Create zip file
+                logger.debug(f"start zipping result file {zip_filename}")
+                with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    zf.write(result_file, arcname=os.path.basename(result_file))
+
+                # Remove original json after zipping
+                os.remove(result_file)
+                result_file = zip_filename
+            return result_file
+        logger.debug("start building per-item JSON files under local_path mirroring remote structure")
+        # Build per-item JSON files under local_path mirroring remote structure
+        for item in all_items:
+            rel_json_path = os.path.splitext(item.get('filename'))[0] + '.json'
+            # Remove leading slash to make it a relative path
+            if rel_json_path.startswith('/'):
+                rel_json_path = rel_json_path[1:]
+            out_path = os.path.join(base_dir, rel_json_path)
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            try:
+                with open(out_path, 'w') as outf:
+                    json.dump(item, outf)
+            except Exception:
+                logger.exception(f'Failed writing export item JSON to {out_path}')
+        logger.debug("end building per-item JSON files under local_path mirroring remote structure")
+        return base_dir
 
     @_api_reference.add(path='/datasets/merge', method='post')
     def merge(self,
@@ -1185,7 +1400,6 @@ class Datasets:
         import warnings
         warnings.warn("`readonly` flag on dataset is deprecated, doing nothing.", DeprecationWarning)
 
-
     @_api_reference.add(path='/datasets/{id}/split', method='post')
     def split_ml_subsets(self,
                         dataset_id: str,
@@ -1201,10 +1415,10 @@ class Datasets:
         :rtype: bool
         :raises: PlatformException on failure and ValueError if percentages do not sum to 100 or invalid keys/values.
         """
-         # Validate percentages
+        # Validate percentages
         if not ml_split_list:
             ml_split_list = {'train': 80, 'validation': 10, 'test': 10}
-          
+
         if not items_query:
             items_query = entities.Filters()
 
@@ -1237,7 +1451,6 @@ class Datasets:
             return True
         else:
             raise exceptions.PlatformException(response)
-
 
     @_api_reference.add(path='/datasets/{id}/items/bulk-update-metadata', method='post')
     def bulk_update_ml_subset(self, dataset_id: str, items_query: dict, subset: str = None, deleteTag: bool = False) -> bool:

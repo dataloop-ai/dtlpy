@@ -108,7 +108,7 @@ from .entities import (
     # compute
     ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources,
     NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute,
-    ServiceDriver
+    ServiceDriver, ExportType, OutputExportType
 )
 from .ml import BaseModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat

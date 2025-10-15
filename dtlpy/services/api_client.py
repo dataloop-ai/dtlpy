@@ -144,7 +144,7 @@ class Verbose:
         self._disable_progress_bar = dictionary.get('disable_progress_bar', self.__DEFAULT_DISABLE_PROGRESS_BAR)
         self._print_all_responses = dictionary.get('print_all_responses', self.__DEFAULT_PRINT_ALL_RESPONSES)
         self._print_error_logs = dictionary.get('print_error_logs', self.__PRINT_ERROR_LOGS)
-        progress_bar_settings = dictionary.get('progress_bar_setting',  None)
+        progress_bar_settings = dictionary.get('progress_bar_setting', None)
         if progress_bar_settings is None:
             self._progress_bar_settings = self.__DEFAULT_PROGRESS_BAR_SETTINGS
         else:
@@ -430,6 +430,7 @@ class Attributes2:
         os.environ["USE_ATTRIBUTE_2"] = json.dumps(val)
         self.to_cookie()
 
+
 class Decorators:
     @staticmethod
     def token_expired_decorator(method):
@@ -545,6 +546,8 @@ class ApiClient:
         self.event_tracker = Events(client_api=self)
         self.event_tracker.daemon = True
         self.event_tracker.start()
+        self.upload_session_timeout = int(os.environ.get('UPLOAD_SESSION_TIMEOUT', 0))
+        self.upload_chunk_timeout = int(os.environ.get('UPLOAD_CHUNK_TIMEOUT', 2 * 60))
 
     @property
     def event_loop(self):
@@ -1208,7 +1211,7 @@ class ApiClient:
                 def callback(bytes_read):
                     pass
 
-        timeout = aiohttp.ClientTimeout(total=0)
+        timeout = aiohttp.ClientTimeout(total=self.upload_session_timeout)
         async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
             try:
                 form = aiohttp.FormData({})
@@ -1221,7 +1224,7 @@ class ApiClient:
                 form.add_field('file', AsyncUploadStream(buffer=to_upload,
                                                          callback=callback,
                                                          name=uploaded_filename,
-                                                         chunk_timeout=2 * 60))
+                                                         chunk_timeout=self.upload_chunk_timeout))
                 url = '{}?mode={}'.format(self.base_gate_url + remote_url, mode)
 
                 # use SSL context

@@ -22,6 +22,10 @@ class ExportType(str, Enum):
     JSON = "json"
     ZIP = "zip"
 
+class OutputExportType(str, Enum):
+    JSON = "json"
+    ZIP = "zip"
+    FOLDERS = "folders"
 
 class ExpirationOptions:
     """
@@ -703,7 +707,8 @@ class Dataset(entities.BaseEntity):
                timeout: int = 0,
                dataset_lock: bool = False,
                lock_timeout_sec: int = None,
-               export_summary: bool = False):
+               export_summary: bool = False,
+               output_export_type: OutputExportType = None):
         """
         Export dataset items and annotations.
 
@@ -721,6 +726,7 @@ class Dataset(entities.BaseEntity):
         :param bool export_summary: Download dataset export summary
         :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds
         :param entities.ExportType export_type: Type of export ('json' or 'zip')
+        :param entities.OutputExportType output_export_type: Output format ('json', 'zip', or 'folders'). If None, defaults to 'json'
         :param int timeout: Maximum time in seconds to wait for the export to complete
         :return: Exported item
         :rtype: dtlpy.entities.item.Item
@@ -732,7 +738,8 @@ class Dataset(entities.BaseEntity):
             export_item = dataset.export(filters=filters,
                                          include_feature_vectors=True,
                                          include_annotations=True,
-                                         export_type=dl.ExportType.JSON)
+                                         export_type=dl.ExportType.JSON,
+                                         output_export_type=dl.OutputExportType.JSON)
         """
 
         return self.datasets.export(dataset=self,
@@ -746,7 +753,8 @@ class Dataset(entities.BaseEntity):
                                     timeout=timeout,
                                     dataset_lock=dataset_lock,
                                     lock_timeout_sec=lock_timeout_sec,
-                                    export_summary=export_summary)
+                                    export_summary=export_summary,
+                                    output_export_type=output_export_type)
 
     def upload_annotations(self,
                            local_path,
@@ -984,6 +992,7 @@ class Dataset(entities.BaseEntity):
             dataset_lock=False,
             lock_timeout_sec=None,
             export_summary=False,
+            raise_on_error=False
     ):
         """
         Download dataset by filters.
@@ -1007,6 +1016,7 @@ class Dataset(entities.BaseEntity):
         :param bool without_relative_path: bool - download items without the relative path from platform
         :param float alpha: opacity value [0 1], default 1
         :param str export_version:  `V2` - exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param bool raise_on_error: raise an exception if an error occurs
         :return: `List` of local_path per each downloaded item
 
         **Example**:
@@ -1038,7 +1048,8 @@ class Dataset(entities.BaseEntity):
                                    export_version=export_version,
                                    dataset_lock=dataset_lock,
                                    lock_timeout_sec=lock_timeout_sec,
-                                   export_summary=export_summary
+                                   export_summary=export_summary,
+                                   raise_on_error=raise_on_error
                                    )
 
     def download_folder(
@@ -1059,6 +1070,7 @@ class Dataset(entities.BaseEntity):
             dataset_lock=False,
             lock_timeout_sec=None,
             export_summary=False,
+            raise_on_error=False
     ):
         """
         Download dataset folder.
@@ -1082,6 +1094,7 @@ class Dataset(entities.BaseEntity):
         :param bool without_relative_path: bool - download items without the relative path from platform
         :param float alpha: opacity value [0 1], default 1
         :param str export_version:  `V2` - exported items will have original extension in filename, `V1` - no original extension in filenames
+        :param bool raise_on_error: raise an exception if an error occurs
         :return: `List` of local_path per each downloaded item
 
         **Example**:
@@ -1116,7 +1129,8 @@ class Dataset(entities.BaseEntity):
                                    export_version=export_version,
                                    dataset_lock=dataset_lock,
                                    lock_timeout_sec=lock_timeout_sec,
-                                    export_summary=export_summary
+                                    export_summary=export_summary,
+                                    raise_on_error=raise_on_error
                                    )
 
     def delete_labels(self, label_names):

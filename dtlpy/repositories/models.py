@@ -781,13 +781,14 @@ class Models:
                                             client_api=self._client_api,
                                             project=self._project)
 
-    def predict(self, model, item_ids, dataset_id=None):
+    def predict(self, model, item_ids=None, dataset_id=None,filters=None):
         """
         Run model prediction with items
 
         :param model: dl.Model entity to run the prediction.
         :param item_ids: a list of item id to run the prediction.
         :param dataset_id: a dataset id to run the prediction.
+        :param filters_dict: dict of filters to run the prediction.
         :return:
         """
         if len(model.metadata['system'].get('deploy', {}).get('services', [])) == 0:
@@ -795,30 +796,36 @@ class Models:
             raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
         if item_ids is None and dataset_id is None:
             raise ValueError("Need to provide either item_ids or dataset_id")
+        if filters is not None and dataset_id is None:
+            raise ValueError("If filters are provided, dataset_id is mandatory.")
         payload_input = {}
         if item_ids is not None:
             payload_input['itemIds'] = item_ids
         if dataset_id is not None:
             payload_input['datasetId'] = dataset_id
+        if filters is not None:
+            payload_input['datasetQuery'] = filters.prepare()['filter']
         payload = {'input': payload_input,
                    'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
-
+        logger.debug(f"generate post request to predict with payload {payload}")
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model.id}/predict",
                                                          json_req=payload)
         if not success:
+            logger.error(f"failed to make API request /ml/models/{model.id}/predict with payload {payload} response {response}")
             raise exceptions.PlatformException(response)
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
                                             project=self._project)
 
-    def embed(self, model, item_ids=None, dataset_id=None):
+    def embed(self, model, item_ids=None, dataset_id=None, filters=None):
         """
         Run model embed with items
 
         :param model: dl.Model entity to run the prediction.
         :param item_ids: a list of item id to run the embed.
         :param dataset_id: a dataset id to run the embed.
+        :param filters_dict: dict of filters to run the embed.
         :return: Execution
         :rtype: dtlpy.entities.execution.Execution
         """
@@ -827,18 +834,23 @@ class Models:
             raise ValueError("Model doesnt have any associated services. Need to deploy before predicting")
         if item_ids is None and dataset_id is None:
             raise ValueError("Need to provide either item_ids or dataset_id")
+        if filters is not None and dataset_id is None:
+            raise ValueError("If filters are provided, dataset_id is mandatory.")
         payload_input = {}
         if item_ids is not None:
             payload_input['itemIds'] = item_ids
         if dataset_id is not None:
             payload_input['datasetId'] = dataset_id
+        if filters is not None:
+            payload_input['datasetQuery'] = filters.prepare()['filter']
         payload = {'input': payload_input,
                    'config': {'serviceId': model.metadata['system']['deploy']['services'][0]}}
-
+        logger.debug(f"generate post request to embed with payload {payload}")
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model.id}/embed",
                                                          json_req=payload)
         if not success:
+            logger.error(f"failed to make API request /ml/models/{model.id}/embed with payload {payload} response {response}")
             raise exceptions.PlatformException(response)
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
