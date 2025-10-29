@@ -20,7 +20,6 @@ class AttributesTypes:
     YES_NO = "boolean"
     FREE_TEXT = "freeText"
 
-
 class AttributesRange:
     def __init__(self, min_range, max_range, step):
         self.min_range = min_range
@@ -82,6 +81,14 @@ class Ontology(entities.BaseEntity):
 
     @property
     def recipe(self):
+        if self._recipe is None:
+            filters = entities.Filters(resource=entities.FiltersResource.RECIPE)
+            filters.add(field="ontologies", values=self.id)
+            recipes = self.project.recipes.list(filters=filters)
+            if recipes.items_count > 0:
+                self._recipe = recipes.items[0]
+            else:
+                logger.warning(f"Ontology ID: {self.id} Does not belong to a recipe")
         if self._recipe is not None:
             assert isinstance(self._recipe, entities.Recipe)
         return self._recipe

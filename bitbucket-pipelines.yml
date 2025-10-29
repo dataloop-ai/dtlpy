@@ -121,3 +121,59 @@ pipelines:
                  -d grant_type=client_credentials -d scopes="repository"| jq --raw-output '.access_token')
              - bumpversion patch
              - git push https://x-token-auth:${access_token}@bitbucket.org/dataloop-ai/dtlpy.git --follow-tags
+  custom:
+    release-branch-prod:
+      - variables:
+          - name: FIX_VERSION
+            description: "Fix version for release"
+          - name: EXPECTED_VERSION
+            description: "Validation field, which sdk version is expected"
+      - step:
+          image: python:3.10
+          name: create-release-branch
+          script:
+            - pip install bumpversion
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy.git sdk
+            - cd sdk
+            - git config --global user.email "devops@dataloop.ai"
+            - git config --global user.name "sdk-pipeline"
+            - git checkout -b rc origin/rc
+            - git pull
+            - git checkout master
+            - git pull
+            - git checkout -b ${FIX_VERSION}
+            - git push -u origin ${FIX_VERSION}
+            - git fetch origin rc
+            - git merge origin/rc --no-commit -X theirs
+            - git add -A
+            - git commit -m "Merge rc into ${FIX_VERSION}"
+            - bumpversion patch
+            - python3 validate_version.py --expected_version $EXPECTED_VERSION
+            - git push --follow-tags
+            - git checkout rc
+            - bumpversion minor
+            - git push --follow-tags
+
+    release-to-prod:
+      - variables:
+          - name: FIX_VERSION
+            description: "Fix version for release"
+      - step:
+          image: python:3.10
+          name: prod-release
+          script:
+            - pip install bumpversion twine
+            - git clone git@bitbucket.org:dataloop-ai/dtlpy.git sdk
+            - git clone https://x-access-token:${GITHUB_TOKEN}@github.com/dataloop-ai/dtlpy.git github-sdk
+            - cd github-sdk
+            - rm -rf .pylintrc .bumpversion.cfg .readthedocs.yml .gitignore bitbucket-pipelines.yml build-docker.sh Dockerfile Dockerfile.docs docs dtlpy LICENSE MANIFEST.in README.md release_notes.txt requirements.txt requirements-full.txt setup.py tests
+            - cp -r ../sdk/.pylintrc ../sdk/.bumpversion.cfg ../sdk/.readthedocs.yml ../sdk/.gitignore ../sdk/bitbucket-pipelines.yml ../sdk/build-docker.sh ../sdk/Dockerfile ../sdk/Dockerfile.docs ../sdk/LICENSE ../sdk/MANIFEST.in ../sdk/README.md ../sdk/release_notes.txt ../sdk/requirements.txt ../sdk/requirements-full.txt ../sdk/setup.py ../sdk/docs ../sdk/dtlpy ../sdk/tests .
+            - git add -A
+            - git commit -m "Release ${FIX_VERSION}"
+            - git tag -a ${FIX_VERSION} -m "Release ${FIX_VERSION}"
+            - git push --follow-tags
+            - python3 setup.py bdist_wheel
+            - twine check dist/*
+            - export TWINE_USERNAME="__token__"
+            - export TWINE_PASSWORD="${PYPI_TOKEN}"
+            - twine upload dist/*

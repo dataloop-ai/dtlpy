@@ -104,6 +104,19 @@ class ExecutionEventContext:
         self.item_status_event = ItemStatusEvent(_json.get('itemStatusEvent', dict()))
 
 
+    @property
+    def command_data(self):
+        if self.body is not None:
+            return self.body.get('commandData', None)
+        return None
+
+    @property
+    def command_id(self):
+        if self.command_data is not None:
+            return self.command_data.get('commandId', None)
+        return None
+
+
 class Context:
     """
     Contex of the service state
@@ -165,6 +178,14 @@ class Context:
         self._node = None
         self._execution = None
         self._pipeline_execution = None
+
+    @property
+    def command_id(self):
+        return self.event.command_id
+
+    @property
+    def command_data(self):
+        return self.event.command_data
 
     @property
     def package(self):

@@ -1,9 +1,10 @@
+from pathlib import Path
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from PIL import Image
 import numpy as np
 import traceback
-import warnings
+from urllib.parse import urlparse, unquote
 import requests
 import logging
 import shutil
@@ -709,6 +710,7 @@ class Downloader:
             need_to_download = overwrite
 
         item, url, is_url = self.__get_link_source(item=item)
+        is_local_link = isinstance(url, str) and url.startswith('file://')
 
         # save as byte stream
         data = io.BytesIO()
@@ -742,7 +744,12 @@ class Downloader:
                         os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
 
                     # decide if create progress bar for item
-                    total_length = response.headers.get("content-length")
+                    if not is_local_link:
+                        total_length = response.headers.get("content-length")
+                    else:
+                        response.seek(0, 2)
+                        total_length = response.tell()
+                        response.seek(0)
                     one_file_pbar = None
                     try:
                         one_file_progress_bar = total_length is not None and int(
@@ -777,13 +784,23 @@ class Downloader:
                             temp_file_path = local_filepath + '.download'
                             with open(temp_file_path, "ab") as f:
                                 try:
-                                    for chunk in response.iter_content(chunk_size=chunk_size):
+                                    if is_local_link and isinstance(response, io.BufferedReader):
+                                        generator = iter(lambda: response.read(chunk_size), b'')
+                                    else:
+                                        generator = response.iter_content(chunk_size=chunk_size)
+                                    for chunk in generator:
                                         if chunk:  # filter out keep-alive new chunks
                                             f.write(chunk)
                                             if one_file_progress_bar:
                                                 one_file_pbar.update(len(chunk))
                                 except Exception as err:
                                     pass
+                                finally:
+                                    if is_local_link and isinstance(response, io.BufferedReader):
+                                        try:
+                                            response.close()
+                                        except Exception as err:
+                                            pass
 
                             file_validation = True
                             if not is_url:
@@ -828,7 +845,11 @@ class Downloader:
                         download_done = True
                     else:
                         try:
-                            for chunk in response.iter_content(chunk_size=chunk_size):
+                            if is_local_link and isinstance(response, io.BufferedReader):
+                                generator = iter(lambda: response.read(chunk_size), b'')
+                            else:
+                                generator = response.iter_content(chunk_size=chunk_size)
+                            for chunk in generator:
                                 if chunk:  # filter out keep-alive new chunks
                                     data.write(chunk)
 
@@ -843,6 +864,12 @@ class Downloader:
                                 continue
                         except Exception as err:
                             raise err
+                        finally:
+                            if is_local_link and isinstance(response, io.BufferedReader):
+                                try:
+                                    response.close()
+                                except Exception as err:
+                                    pass
                     # go back to the beginning of the stream
                     data.seek(0)
                     data.name = item.name
@@ -906,7 +933,33 @@ class Downloader:
         """
         :param url:
         """
-        # This will download the binaries from the URL user provided
+
+        if url.startswith('file://'):
+            parsed = urlparse(url)
+            path = unquote(parsed.path)
+            if parsed.netloc:
+                path = f"/{parsed.netloc}{path}"
+            path = Path(path).expanduser().resolve()
+
+            if not path.exists():
+                raise PlatformException(
+                    error='404',
+                    message=f'Local file not found: {url}'
+                )
+            if not path.is_file():
+                raise PlatformException(
+                    error='400',
+                    message=f'Path is not a file: {url}'
+                )
+
+            try:
+                return io.BufferedReader(io.FileIO(path, 'rb'))
+            except PermissionError as e:
+                raise PlatformException(
+                    error='403',
+                    message=f'Permission denied accessing file: {url}'
+                ) from e
+
         prepared_request = requests.Request(method='GET', url=url).prepare()
         with requests.Session() as s:
             retry = Retry(

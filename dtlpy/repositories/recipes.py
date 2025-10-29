@@ -40,6 +40,36 @@ class Recipes:
         return self._client_api._get_resource_url("projects/{}/recipes".format(project_id))
 
     @property
+    def project(self) -> entities.Project:
+        if self._project is None:
+            project = self._client_api.state_io.get('project')
+            if project is not None:
+                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
+                self._project_id = self._project.id
+            if self._project_id is None:
+                if self._dataset is None:
+                    raise exceptions.PlatformException(
+                        error='2001',
+                        message='Missing "Project". need to set a Project entity or use project.recipes repository'
+                    )
+                else:
+                    self._project = self._dataset.project
+                    self._project_id = self._project.id
+            else:
+                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
+                self._project_id = self._project.id
+
+        assert isinstance(self._project, entities.Project)
+        return self._project
+
+    @project.setter
+    def project(self, project: entities.Project):
+        if not isinstance(project, entities.Project):
+            raise ValueError('Must input a valid Project entity')
+        self._project = project
+        self._project_id = project.id
+
+    @property
     def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             raise exceptions.PlatformException(
@@ -92,17 +122,7 @@ class Recipes:
         if attributes is None:
             attributes = list()
         if project_ids is None:
-            if self._dataset is not None:
-                project_ids = [self._dataset.project.id]
-            else:
-                # get from cache
-                project = self._client_api.state_io.get('project')
-                if project is not None:
-                    # build entity from json
-                    p = entities.Project.from_json(_json=project, client_api=self._client_api)
-                    project_ids = [p.id]
-                else:
-                    raise exceptions.PlatformException('Must provide project_ids')
+            project_ids = [self.project.id]
         if ontology_ids is None:
             ontolgies = repositories.Ontologies(client_api=self._client_api,
                                                 recipe=None)

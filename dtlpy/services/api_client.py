@@ -35,7 +35,7 @@ from .calls_counter import CallsCounter
 from .cookie import CookieIO
 from .logins import login, logout, login_secret, login_m2m, gate_url_from_host
 from .async_utils import AsyncResponse, AsyncUploadStream, AsyncResponseError, AsyncThreadEventLoop
-from .events import Events
+# from .events import Events
 from .service_defaults import DEFAULT_ENVIRONMENTS, DEFAULT_ENVIRONMENT
 from .aihttp_retry import RetryClient
 from .. import miscellaneous, exceptions, __version__
@@ -543,9 +543,9 @@ class ApiClient:
         self.cache = None
         #######################
         # start event tracker #
-        self.event_tracker = Events(client_api=self)
-        self.event_tracker.daemon = True
-        self.event_tracker.start()
+        # self.event_tracker = Events(client_api=self)
+        # self.event_tracker.daemon = True
+        # self.event_tracker.start()
         self.upload_session_timeout = int(os.environ.get('UPLOAD_SESSION_TIMEOUT', 0))
         self.upload_chunk_timeout = int(os.environ.get('UPLOAD_CHUNK_TIMEOUT', 2 * 60))
 
@@ -999,9 +999,9 @@ class ApiClient:
                     logger.warning("Cache error {}".format(e))
                     self.cache = None
         # only for projects events
-        if success:
-            if 'stack' in kwargs:
-                self.event_tracker.put(event=kwargs.get('stack'), resp=resp, path=path)
+        # if success:
+        #     if 'stack' in kwargs:
+        #         self.event_tracker.put(event=kwargs.get('stack'), resp=resp, path=path)
         return success, resp
 
     def _gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
@@ -1569,8 +1569,8 @@ class ApiClient:
                         client_id=client_id,
                         client_secret=client_secret,
                         force=force)
-        if res:
-            self._send_login_event(user_type='human', login_type='m2m')
+        # if res:
+        #     self._send_login_event(user_type='human', login_type='m2m')
         return res
 
     def login_token(self, token):
@@ -1628,19 +1628,19 @@ class ApiClient:
             login_domain=self.login_domain,
             callback_port=callback_port
         )
-        if res:
-            self._send_login_event(user_type='human', login_type='interactive')
+        # if res:
+        #     self._send_login_event(user_type='human', login_type='interactive')
         return res
 
-    def _send_login_event(self, user_type, login_type):
-        event_payload = {
-            'event': 'dtlpy:login',
-            'properties': {
-                'login_type': login_type,
-                'user_type': user_type
-            }
-        }
-        self.event_tracker.put(event=event_payload)
+    # def _send_login_event(self, user_type, login_type):
+    #     event_payload = {
+    #         'event': 'dtlpy:login',
+    #         'properties': {
+    #             'login_type': login_type,
+    #             'user_type': user_type
+    #         }
+    #     }
+    #     self.event_tracker.put(event=event_payload)
 
     def logout(self):
         """
@@ -1670,8 +1670,8 @@ class ApiClient:
             res = self._renew_token_in_dual_agent()
         else:
             res = self._renew_token_with_refresh_token()
-        if res:
-            self._send_login_event(user_type='human', login_type='refresh')
+        # if res:
+        #     self._send_login_event(user_type='human', login_type='refresh')
         return res
 
     def generate_api_key(self, description: str = None, login: bool = False):
