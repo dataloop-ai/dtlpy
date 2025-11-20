@@ -44,7 +44,7 @@ from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotD
 from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .time_series import TimeSeries
 from .service import Service, KubernetesAutoscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRPSAutoscaler, \
-    InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType
+    InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType, DynamicConcurrencyUpdateMethod
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit

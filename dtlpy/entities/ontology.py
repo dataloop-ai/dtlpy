@@ -290,7 +290,7 @@ class Ontology(entities.BaseEntity):
 
     def update(self, system_metadata=False):
         """
-        Update items metadata
+        Update Ontology attribute
 
         :param bool system_metadata: bool - True, if you want to change metadata system
         :return: Ontology object

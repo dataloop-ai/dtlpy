@@ -136,7 +136,7 @@ pipelines:
             - git clone git@bitbucket.org:dataloop-ai/dtlpy.git sdk
             - cd sdk
             - git config --global user.email "devops@dataloop.ai"
-            - git config --global user.name "sdk-pipeline"
+            - git config --global user.name "devops"
             - git checkout -b rc origin/rc
             - git pull
             - git checkout master
@@ -168,10 +168,13 @@ pipelines:
             - cd github-sdk
             - rm -rf .pylintrc .bumpversion.cfg .readthedocs.yml .gitignore bitbucket-pipelines.yml build-docker.sh Dockerfile Dockerfile.docs docs dtlpy LICENSE MANIFEST.in README.md release_notes.txt requirements.txt requirements-full.txt setup.py tests
             - cp -r ../sdk/.pylintrc ../sdk/.bumpversion.cfg ../sdk/.readthedocs.yml ../sdk/.gitignore ../sdk/bitbucket-pipelines.yml ../sdk/build-docker.sh ../sdk/Dockerfile ../sdk/Dockerfile.docs ../sdk/LICENSE ../sdk/MANIFEST.in ../sdk/README.md ../sdk/release_notes.txt ../sdk/requirements.txt ../sdk/requirements-full.txt ../sdk/setup.py ../sdk/docs ../sdk/dtlpy ../sdk/tests .
+            - git config --global user.email "shadi.m@dataloop.ai"
+            - git config --global user.name "ShadiMah"
             - git add -A
             - git commit -m "Release ${FIX_VERSION}"
             - git tag -a ${FIX_VERSION} -m "Release ${FIX_VERSION}"
-            - git push --follow-tags
+            - git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/dataloop-ai/dtlpy.git
+            - git push origin --follow-tags
             - python3 setup.py bdist_wheel
             - twine check dist/*
             - export TWINE_USERNAME="__token__"

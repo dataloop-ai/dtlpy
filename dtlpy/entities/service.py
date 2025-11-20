@@ -11,6 +11,12 @@ from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
+class DynamicConcurrencyUpdateMethod(str, Enum):
+    """ The method of updating the dynamic concurrency.
+    """
+    RESTART = 'restart',
+    SYNC = 'sync'
+
 
 class ServiceType(str, Enum):
     """ The type of the service (SYSTEM).
@@ -136,6 +142,7 @@ class KubernetesRuntime(ServiceRuntime):
                  num_replicas=DEFAULT_NUM_REPLICAS,
                  concurrency=DEFAULT_CONCURRENCY,
                  dynamic_concurrency=None,
+                 concurrency_update_method=None,
                  runner_image=None,
                  autoscaler=None,
                  **kwargs):
@@ -149,6 +156,7 @@ class KubernetesRuntime(ServiceRuntime):
         self.single_agent = kwargs.get('singleAgent', None)
         self.preemptible = kwargs.get('preemptible', None)
         self.dynamic_concurrency = kwargs.get('dynamicConcurrency', dynamic_concurrency)
+        self.concurrency_update_method = kwargs.get('concurrencyUpdateMethod', concurrency_update_method)
 
         self.autoscaler = kwargs.get('autoscaler', autoscaler)
         if self.autoscaler is not None and isinstance(self.autoscaler, dict):
@@ -182,6 +190,9 @@ class KubernetesRuntime(ServiceRuntime):
 
         if self.dynamic_concurrency is not None:
             _json['dynamicConcurrency'] = self.dynamic_concurrency
+
+        if self.concurrency_update_method is not None:
+            _json['concurrencyUpdateMethod'] = self.concurrency_update_method
 
         return _json
 

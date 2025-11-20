@@ -1,18 +1,22 @@
+import copy
+import io
+import json
+import logging
+import multiprocessing
+import os
+import shutil
+import sys
+import tempfile
+import traceback
 from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+import numpy as np
+import requests
+import tqdm
+from PIL import Image
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from PIL import Image
-import numpy as np
-import traceback
-from urllib.parse import urlparse, unquote
-import requests
-import logging
-import shutil
-import json
-import tqdm
-import sys
-import os
-import io
 
 from .. import entities, repositories, miscellaneous, PlatformException, exceptions
 from ..services import Reporter
@@ -20,11 +24,256 @@ from ..services import Reporter
 logger = logging.getLogger(name='dtlpy')
 
 NUM_TRIES = 3  # try to download 3 time before fail on item
-
+DOWNLOAD_MAX_ITEMS_PER_SUBSET = 1000
 
 class Downloader:
     def __init__(self, items_repository):
         self.items_repository = items_repository
+
+    def _process_download_results(self, reporter, raise_on_error=False):
+        """
+        Process download results and generate summary report.
+
+        :param reporter: Reporter instance containing download results
+        :param raise_on_error: If True, raise exception on download errors
+        :return: Output from reporter
+        """
+        # reporting
+        n_download = reporter.status_count(status='download')
+        n_exist = reporter.status_count(status='exist')
+        n_error = reporter.status_count(status='error')
+        logger.info(f"Number of files downloaded:{n_download}")
+        logger.info(f"Number of files exists: {n_exist}")
+        logger.info(f"Total number of files: {n_download + n_exist}")
+
+        # log error
+        if n_error > 0:
+            log_filepath = reporter.generate_log_files()
+            # Get up to 5 error examples for the exception message
+            error_text = ""
+            error_counter = 0
+            if reporter._errors:
+                for _id, error in reporter._errors.items():
+                    error_counter += 1
+                    error_text += f"Item ID: {_id}, Error: {error} | "
+                    if error_counter >= 5:
+                        break
+            error_message = f"Errors in {n_error} files. Errors: {error_text}"
+            if log_filepath is not None:
+                error_message += f", see {log_filepath} for full log"
+            if raise_on_error is True:
+                raise PlatformException(
+                    error="400", message=error_message
+                )
+            else:
+                logger.warning(error_message)
+        
+        if int(n_download) <= 1 and int(n_exist) <= 1:
+            try:
+                return next(reporter.output)
+            except StopIteration:
+                return None
+        return reporter.output
+
+    def _process_item_json(self, local_path, item_json, reporter, pbar, overwrite=False):
+        """
+        Process a single item JSON for download, saving both the item file and metadata.
+
+        :param local_path: Local path to save files
+        :param item_json: Item JSON metadata
+        :param reporter: Reporter instance for tracking progress
+        :param pbar: Progress bar instance
+        :param overwrite: Whether to overwrite existing files
+        :return: Error message, traceback, and downloaded filepath
+        """
+        err = None
+        trace = None
+        downloaded_filepath = None
+        item_id = item_json['id']
+        filename = item_json['filename'].lstrip('/')
+        
+        for i_try in range(NUM_TRIES):
+            try:
+                # Download the image
+                image_path = Path(local_path) / 'items' / filename
+                # Ensure the directory for the image file exists (in case filename has subdirectories)
+                image_path.parent.mkdir(parents=True, exist_ok=True)
+                item = entities.Item.from_json(_json = item_json, client_api=self.items_repository._client_api, is_fetched=False)
+                downloaded_data = self.__thread_download(
+                    item=item,
+                    local_path=str(image_path.parent),
+                    local_filepath=str(image_path),
+                    save_locally=True,
+                    to_array=False,
+                    overwrite=overwrite,
+                    annotation_options=[],
+                    annotation_filters=None,
+                )
+
+                if downloaded_data is None:
+                    err = 'Failed to download image'
+                    trace = ''
+                else:
+                    # Save the item JSON directly
+                    json_filename = Path(filename).stem + '.json'
+                    json_path = Path(local_path) / 'json' / Path(filename).parent / json_filename
+
+                    # Ensure the directory for the JSON file exists (in case filename has subdirectories)
+                    json_path.parent.mkdir(parents=True, exist_ok=True)
+
+                    # Save the original item_json directly
+                    with open(json_path, 'w', encoding='utf-8') as f:
+                        json.dump(item_json, f, indent=2, ensure_ascii=False)
+
+                    downloaded_filepath = str(image_path)
+                
+                if downloaded_filepath is not None:
+                    break
+
+            except Exception as e:
+                logger.debug(f"Download item: {filename}. Try {i_try + 1}/{NUM_TRIES}. Fail.")
+                err = e
+                trace = traceback.format_exc()
+
+        pbar.update()
+        if downloaded_filepath is None:
+            if err is None:
+                err = self.items_repository._client_api.platform_exception
+            reporter.set_index(status="error", ref=item_id, success=False, error=f"{err}\n{trace}")
+        else:
+            reporter.set_index(ref=item_id, status="download", output=downloaded_filepath, success=True)
+
+    def _download_recursive(
+        self,
+        local_path=None,
+        filters: entities.Filters = None,
+        annotation_filters: entities.Filters = None,
+        file_types=None,
+        overwrite=False,
+        raise_on_error=False,
+        dataset_lock=False,
+        lock_timeout_sec=None,
+    ):
+        """
+        Download items recursively from a dataset.
+        
+        :param local_path: Local path to save downloaded items
+        :param filters: Filters entity to filter items
+        :param annotation_filters: Filters entity to filter annotations
+        :param file_types: List of file types to download
+        :param overwrite: Whether to overwrite existing files
+        :param raise_on_error: Raise error if download fails
+        :param dataset_lock: Lock dataset during download
+        :param lock_timeout_sec: Lock timeout in seconds
+        """
+        filters, annotation_filters = self._prepare_filters(filters=filters,annotation_filters=annotation_filters,file_types=file_types)
+        filter_copy = copy.deepcopy(filters)
+        filter_copy.page_size = 0
+        num_items = self.items_repository.list(filters=filter_copy).items_count
+        if num_items == 0:
+            return list()
+        client_api = self.items_repository._client_api
+        reporter = Reporter(
+            num_workers=num_items,
+            resource=Reporter.ITEMS_DOWNLOAD,
+            print_error_logs=client_api.verbose.print_error_logs,
+            client_api=client_api,
+        )
+
+        # Create directories once using pathlib
+        local_path_obj = Path(local_path)
+        items_dir = local_path_obj / 'items'
+        jsons_dir = local_path_obj / 'json'
+        items_dir.mkdir(parents=True, exist_ok=True)
+        jsons_dir.mkdir(parents=True, exist_ok=True)
+
+        jobs = [None for _ in range(num_items)]
+        # crrently keep the thread count to default.
+        # client_api._thread_pools_names['item.download'] = 5 * multiprocessing.cpu_count()
+        pool = client_api.thread_pools(pool_name='item.download')
+        pbar = tqdm.tqdm(
+            total=num_items,
+            disable=client_api.verbose.disable_progress_bar_download_dataset,
+            file=sys.stdout,
+            desc='Download Items',
+        )
+        try:
+            i_item = 0
+            import time
+            start_time = time.time()
+            for json_file in self.items_repository.dataset.project.datasets._export_recursive(
+                dataset=self.items_repository.dataset,
+                local_path=tempfile.mkdtemp(prefix='download_recursive_jsons_'),
+                max_items_per_subset=DOWNLOAD_MAX_ITEMS_PER_SUBSET,
+                include_annotations=True,
+                filters=filters,
+                annotation_filters=annotation_filters,
+                dataset_lock=dataset_lock,
+                lock_timeout_sec=lock_timeout_sec,
+            ):
+                end_time = time.time()
+                with open(json_file, 'r') as f:
+                    data = json.load(f)
+                for item_json in data:
+                    jobs[i_item] = pool.submit(
+                        self._process_item_json,
+                        **{
+                            "local_path": local_path,
+                            "item_json": item_json,
+                            "reporter": reporter,
+                            "pbar": pbar,
+                            "overwrite": overwrite,
+                        },
+                    )
+                    i_item += 1
+        finally:
+            _ = [j.result() for j in jobs if j is not None]
+            pbar.close()
+        return self._process_download_results(reporter=reporter, raise_on_error=raise_on_error)
+
+    @staticmethod
+    def _prepare_filters(filters: entities.Filters = None,
+                        annotation_filters: entities.Filters = None,
+                        file_types=None):
+        """
+        Prepare and merge filters with annotation filters.
+
+        :param filters: Filters entity or None
+        :param annotation_filters: Annotation filters to merge with item filters
+        :param file_types: List of file types to filter
+        :return: Prepared filters entity
+        """
+        # filters
+        if filters is None:
+            filters = entities.Filters()
+            filters._user_query = 'false'
+        # file types
+        if file_types is not None:
+            filters.add(field='metadata.system.mimetype', values=file_types, operator=entities.FiltersOperations.IN)
+        if annotation_filters is not None:
+            if len(annotation_filters.and_filter_list) > 0 or len(annotation_filters.or_filter_list) > 0:
+                for annotation_filter_and in annotation_filters.and_filter_list:
+                    filters.add_join(field=annotation_filter_and.field,
+                                    values=annotation_filter_and.values,
+                                    operator=annotation_filter_and.operator,
+                                    method=entities.FiltersMethod.AND)
+                for annotation_filter_or in annotation_filters.or_filter_list:
+                    filters.add_join(field=annotation_filter_or.field,
+                                    values=annotation_filter_or.values,
+                                    operator=annotation_filter_or.operator,
+                                    method=entities.FiltersMethod.OR)
+            elif annotation_filters.custom_filter is not None:
+                annotation_query_dict = annotation_filters.prepare()
+                items_query_dict = filters.prepare()
+                items_query_dict["join"] = annotation_query_dict
+                filters.reset()
+                filters.custom_filter = items_query_dict
+
+        else:
+            annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
+            filters._user_query = 'false'
+
+        return filters, annotation_filters
 
     def download(self,
                  # filter options
@@ -131,35 +380,12 @@ class Downloader:
             items_to_download = [items]
             num_items = len(items)
         else:
-            # filters
-            if filters is None:
-                filters = entities.Filters()
-                filters._user_query = 'false'
-            # file types
-            if file_types is not None:
-                filters.add(field='metadata.system.mimetype', values=file_types, operator=entities.FiltersOperations.IN)
-            if annotation_filters is not None:
-                if len(annotation_filters.and_filter_list) > 0 or len(annotation_filters.or_filter_list) > 0:
-                    for annotation_filter_and in annotation_filters.and_filter_list:
-                        filters.add_join(field=annotation_filter_and.field,
-                                        values=annotation_filter_and.values,
-                                        operator=annotation_filter_and.operator,
-                                        method=entities.FiltersMethod.AND)
-                    for annotation_filter_or in annotation_filters.or_filter_list:
-                        filters.add_join(field=annotation_filter_or.field,
-                                        values=annotation_filter_or.values,
-                                        operator=annotation_filter_or.operator,
-                                        method=entities.FiltersMethod.OR)
-                elif annotation_filters.custom_filter is not None:
-                    annotation_query_dict = annotation_filters.prepare()
-                    items_query_dict = filters.prepare()
-                    items_query_dict["join"] = annotation_query_dict
-                    filters.reset()
-                    filters.custom_filter = items_query_dict
-
-            else:
-                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION)
-                filters._user_query = 'false'
+            # Prepare and merge filters
+            filters, annotation_filters = self._prepare_filters(
+                filters=filters,
+                annotation_filters=annotation_filters,
+                file_types=file_types
+            )
 
             items_to_download = self.items_repository.list(filters=filters)
             num_items = items_to_download.items_count
@@ -234,7 +460,8 @@ class Downloader:
         # pool
         pool = client_api.thread_pools(pool_name='item.download')
         # download
-        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar_download_dataset, file=sys.stdout,
+        pbar = tqdm.tqdm(total=num_items, disable=client_api.verbose.disable_progress_bar_download_dataset,
+                         file=sys.stdout,
                          desc='Download Items')
         try:
             i_item = 0
@@ -305,41 +532,8 @@ class Downloader:
         finally:
             _ = [j.result() for j in jobs if j is not None]
             pbar.close()
-        # reporting
-        n_download = reporter.status_count(status='download')
-        n_exist = reporter.status_count(status='exist')
-        n_error = reporter.status_count(status='error')
-        logger.info("Number of files downloaded:{}".format(n_download))
-        logger.info("Number of files exists: {}".format(n_exist))
-        logger.info("Total number of files: {}".format(n_download + n_exist))
 
-        # log error
-        if n_error > 0:
-            log_filepath = reporter.generate_log_files()
-            # Get up to 5 error examples for the exception message
-            error_text = ""
-            error_counter = 0
-            if reporter._errors:
-                for _id, error in reporter._errors.items():
-                    error_counter += 1
-                    error_text += f"Item ID: {_id}, Error: {error} | "
-                    if error_counter >= 5:
-                        break
-            error_message = f"Errors in {n_error} files. Errors: {error_text}"
-            if log_filepath is not None:
-                error_message += f", see {log_filepath} for full log"
-            if raise_on_error is True:
-                raise PlatformException(
-                    error="400", message=error_message
-                )
-            else:
-                logger.warning(error_message)
-        if int(n_download) <= 1 and int(n_exist) <= 1:
-            try:
-                return next(reporter.output)
-            except StopIteration:
-                return None
-        return reporter.output
+        return self._process_download_results(reporter=reporter, raise_on_error=raise_on_error)
 
     def __thread_download_wrapper(self, i_item,
                                   # item params
@@ -403,7 +597,7 @@ class Downloader:
                              export_version=entities.ExportVersion.V1,
                              dataset_lock=False,
                              lock_timeout_sec=None,
-                             export_summary=False                         
+                             export_summary=False
                              ):
         """
         Download annotations json for entire dataset
@@ -633,27 +827,12 @@ class Downloader:
     @staticmethod
     def __get_link_source(item):
         assert isinstance(item, entities.Item)
-        if not item.is_fetched:
-            return item, '', False
+        is_url = False
+        url = item.resolved_stream
+        if item.metadata.get('system', {}).get('shebang', {}).get('linkInfo', {}).get('type', '') == 'url':
+            is_url = True
 
-        if not item.filename.endswith('.json') or \
-                item.metadata.get('system', {}).get('shebang', {}).get('dltype', '') != 'link':
-            return item, '', False
-
-        # recursively get next id link item
-        while item.filename.endswith('.json') and \
-                item.metadata.get('system', {}).get('shebang', {}).get('dltype', '') == 'link' and \
-                item.metadata.get('system', {}).get('shebang', {}).get('linkInfo', {}).get('type', '') == 'id':
-            item = item.dataset.items.get(item_id=item.metadata['system']['shebang']['linkInfo']['ref'])
-
-        # check if link
-        if item.filename.endswith('.json') and \
-                item.metadata.get('system', {}).get('shebang', {}).get('dltype', '') == 'link' and \
-                item.metadata.get('system', {}).get('shebang', {}).get('linkInfo', {}).get('type', '') == 'url':
-            url = item.metadata['system']['shebang']['linkInfo']['ref']
-            return item, url, True
-        else:
-            return item, '', False
+        return item, url, is_url, url.startswith('file://')
 
     def __file_validation(self, item, downloaded_file):
         res = False
@@ -688,7 +867,7 @@ class Downloader:
         """
         Get a single item's binary data
         Calling this method will returns the item body itself , an image for example with the proper mimetype.
-
+  
         :param item: Item entity to download
         :param save_locally: bool. save to file or return buffer
         :param local_path: item local folder to save to.
@@ -709,8 +888,7 @@ class Downloader:
         if save_locally and os.path.isfile(local_filepath):
             need_to_download = overwrite
 
-        item, url, is_url = self.__get_link_source(item=item)
-        is_local_link = isinstance(url, str) and url.startswith('file://')
+        item, url, is_url, is_local_link = self.__get_link_source(item=item)
 
         # save as byte stream
         data = io.BytesIO()
@@ -804,9 +982,11 @@ class Downloader:
 
                             file_validation = True
                             if not is_url:
-                                file_validation, start_point, chunk_resume = self.__get_next_chunk(item=item,
-                                                                                                  download_progress=temp_file_path,
-                                                                                                  chunk_resume=chunk_resume)
+                                file_validation, start_point, chunk_resume = self.__get_next_chunk(
+                                    item=item,
+                                    download_progress=temp_file_path,
+                                    chunk_resume=chunk_resume
+                                )
                             if file_validation:
                                 shutil.move(temp_file_path, local_filepath)
                                 download_done = True
@@ -933,6 +1113,7 @@ class Downloader:
         """
         :param url:
         """
+        response = None
 
         if url.startswith('file://'):
             parsed = urlparse(url)
@@ -953,24 +1134,24 @@ class Downloader:
                 )
 
             try:
-                return io.BufferedReader(io.FileIO(path, 'rb'))
+                response = io.BufferedReader(io.FileIO(path, 'rb'))
             except PermissionError as e:
                 raise PlatformException(
                     error='403',
                     message=f'Permission denied accessing file: {url}'
                 ) from e
-
-        prepared_request = requests.Request(method='GET', url=url).prepare()
-        with requests.Session() as s:
-            retry = Retry(
-                total=3,
-                read=3,
-                connect=3,
-                backoff_factor=1,
-            )
-            adapter = HTTPAdapter(max_retries=retry)
-            s.mount('http://', adapter)
-            s.mount('https://', adapter)
-            response = s.send(request=prepared_request, stream=True)
+        else:
+            prepared_request = requests.Request(method='GET', url=url).prepare()
+            with requests.Session() as s:
+                retry = Retry(
+                    total=3,
+                    read=3,
+                    connect=3,
+                    backoff_factor=1,
+                )
+                adapter = HTTPAdapter(max_retries=retry)
+                s.mount('http://', adapter)
+                s.mount('https://', adapter)
+                response = s.send(request=prepared_request, stream=True)
 
         return response

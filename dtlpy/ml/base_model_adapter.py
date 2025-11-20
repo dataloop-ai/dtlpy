@@ -368,14 +368,41 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 annotation_filters.custom_filter['filter']['$and'].append({'metadata.system.model.name': {'$exists': False}})
         return annotation_filters
 
+    def __download_items(self, dataset, filters, local_path, annotation_options, annotation_filters=None):
+        """
+        Download items from dataset with optional annotation filters.
+
+        :param dataset: Dataset to download from
+        :param filters: Filters to apply
+        :param local_path: Local path to save files
+        :param annotation_options: Annotation download options
+        :param annotation_filters: Optional filters for annotations
+        :return: List of downloaded items
+        """
+        if annotation_options == entities.ViewAnnotationOptions.JSON:
+            downloader = repositories.Downloader(dataset.items)
+            return downloader._download_recursive(
+                local_path=local_path,
+                filters=filters,
+                annotation_filters=annotation_filters
+            )
+        else:
+            return dataset.items.download(
+                filters=filters,
+                local_path=local_path,
+                annotation_options=annotation_options,
+                annotation_filters=annotation_filters
+            )
+
     def __download_background_images(self, filters, data_subset_base_path, annotation_options):
         background_list = list()
         if self.configuration.get('include_background', False) is True:
             filters.custom_filter["filter"]["$and"].append({"annotated": False})
-            background_list = self.model_entity.dataset.items.download(
+            background_list = self.__download_items(
+                dataset=self.model_entity.dataset,
                 filters=filters,
                 local_path=data_subset_base_path,
-                annotation_options=annotation_options,
+                annotation_options=annotation_options
             )
         return background_list
 
@@ -434,13 +461,14 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         if subsets is None:
             raise ValueError("Model (id: {}) must have subsets in metadata.system.subsets".format(self.model_entity.id))
         for subset, filters_dict in subsets.items():
+            _filters_dict = filters_dict.copy()
             data_subset_base_path = os.path.join(data_path, subset)
             if os.path.isdir(data_subset_base_path) and not overwrite:
                 # existing and dont overwrite
                 self.logger.debug("Subset {!r} already exists (and overwrite=False). Skipping.".format(subset))
                 continue
 
-            filters = entities.Filters(custom_filter=filters_dict)
+            filters = entities.Filters(custom_filter=_filters_dict)
             self.logger.debug("Downloading subset {!r} of {}".format(subset, self.model_entity.dataset.name))
 
             annotation_filters = None
@@ -470,13 +498,15 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             annotation_filters = self.__include_model_annotations(annotation_filters)
             annotations_subsets[subset] = annotation_filters.prepare()
 
-            ret_list = dataset.items.download(
+            ret_list = self.__download_items(
+                dataset=dataset,
                 filters=filters,
                 local_path=data_subset_base_path,
                 annotation_options=annotation_options,
-                annotation_filters=annotation_filters,
+                annotation_filters=annotation_filters
             )
-            filters = entities.Filters(custom_filter=subsets[subset])
+            _filters_dict = subsets[subset].copy()
+            filters = entities.Filters(custom_filter=_filters_dict)
             background_ret_list = self.__download_background_images(
                 filters=filters,
                 data_subset_base_path=data_subset_base_path,

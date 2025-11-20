@@ -135,6 +135,13 @@ class FeatureSet(entities.BaseEntity):
 
         return _json
 
+    def update(self):
+        """
+        Update feature set
+
+        :return: entities.FeatureSet
+        """
+        return self.feature_sets.update(self)
     def delete(self):
         """
         Delete the feature set

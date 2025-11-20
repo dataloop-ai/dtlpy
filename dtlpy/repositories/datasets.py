@@ -2,23 +2,28 @@
 Datasets Repository
 """
 
+import copy
+import json
+import logging
 import os
 import sys
+import tempfile
 import time
-import copy
-import tqdm
-import logging
 import zipfile
-import json
-from typing import Union, Generator, Optional
+from pathlib import Path
+from typing import Generator, Optional, Union
 
-from .. import entities, repositories, miscellaneous, exceptions, services, PlatformException, _api_reference
+import tqdm
+
+from .. import _api_reference, entities, exceptions, miscellaneous, PlatformException, repositories, services
+from ..entities.dataset import ExportType, OutputExportType
+from ..services import service_defaults
 from ..services.api_client import ApiClient
-from ..entities.dataset import OutputExportType, ExportType
 
 logger = logging.getLogger(name='dtlpy')
 
 MAX_ITEMS_PER_SUBSET = 50000
+DOWNLOAD_ANNOTATIONS_MAX_ITEMS_PER_SUBSET = 1000
 
 class Datasets:
     """
@@ -128,6 +133,54 @@ class Datasets:
                 dataset = self.get(dataset_name=dataset_name)
             dataset_id = dataset.id
         return dataset_id
+
+    @staticmethod
+    def _save_item_json_file(item_data, base_path: Path, export_version=None):
+        """
+        Save a single item's JSON data to a file, creating the directory structure as needed.
+        
+        :param dict item_data: The item data dictionary (must have 'filename' key)
+        :param Path base_path: Base directory path where JSON files should be saved
+        :param entities.ExportVersion export_version: Optional export version (V1 or V2) affecting filename handling
+        :return: Path to the saved JSON file
+        :rtype: Path
+        """
+        # Get filename and remove leading slash
+        filename = item_data.get('filename', '')
+        if not filename:
+            raise ValueError("item_data must have a 'filename' key")
+        filename = filename.lstrip('/')
+        
+        # Determine relative JSON path based on export version
+        if export_version == entities.ExportVersion.V1:
+            # V1: Replace extension with .json (e.g., "file.jpg" -> "file.json")
+            rel_json_path = str(Path(filename).with_suffix('.json'))
+        elif export_version == entities.ExportVersion.V2:
+            # V2: Append .json (e.g., "file.jpg" -> "file.jpg.json")
+            rel_json_path = filename + '.json'
+        else:
+            # Default/None: Replace extension with .json (backward compatible with section 1)
+            rel_json_path = os.path.splitext(filename)[0] + '.json'
+        
+        # Remove leading slash if present
+        if rel_json_path.startswith('/'):
+            rel_json_path = rel_json_path[1:]
+        
+        # Build output path
+        out_path = base_path / rel_json_path
+        
+        # Create parent directories
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Write JSON file
+        try:
+            with open(out_path, 'w') as outf:
+                json.dump(item_data, outf, indent=2)
+        except Exception:
+            logger.exception(f'Failed writing export item JSON to {out_path}')
+            raise
+        
+        return out_path
 
     @staticmethod
     def _build_payload(filters, include_feature_vectors, include_annotations,
@@ -902,17 +955,7 @@ class Datasets:
         logger.debug("start building per-item JSON files under local_path mirroring remote structure")
         # Build per-item JSON files under local_path mirroring remote structure
         for item in all_items:
-            rel_json_path = os.path.splitext(item.get('filename'))[0] + '.json'
-            # Remove leading slash to make it a relative path
-            if rel_json_path.startswith('/'):
-                rel_json_path = rel_json_path[1:]
-            out_path = os.path.join(base_dir, rel_json_path)
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            try:
-                with open(out_path, 'w') as outf:
-                    json.dump(item, outf)
-            except Exception:
-                logger.exception(f'Failed writing export item JSON to {out_path}')
+            self._save_item_json_file(item_data=item, base_path=Path(base_dir), export_version=None)
         logger.debug("end building per-item JSON files under local_path mirroring remote structure")
         return base_dir
 
@@ -1159,7 +1202,7 @@ class Datasets:
                              include_annotations_in_output: bool = True,
                              export_png_files: bool = False,
                              filter_output_annotations: bool = False,
-                             alpha: float = None,
+                             alpha: float = 1,
                              export_version=entities.ExportVersion.V1,
                              dataset_lock: bool = False, 
                              lock_timeout_sec: int = None,
@@ -1216,33 +1259,26 @@ class Datasets:
         elif not isinstance(annotation_options, list):
             annotation_options = [annotation_options]
         for ann_option in annotation_options:
-            if not isinstance(ann_option, entities.ViewAnnotationOptions):
-                if ann_option not in list(entities.ViewAnnotationOptions):
-                    raise PlatformException(
-                        error='400',
-                        message='Unknown annotation download option: {}, please choose from: {}'.format(
-                            ann_option, list(entities.ViewAnnotationOptions)))
-
+            if ann_option not in entities.ViewAnnotationOptions:
+                raise PlatformException(
+                    error='400',
+                    message=f'Unknown annotation download option: {ann_option}, please choose from: {list(entities.ViewAnnotationOptions)}',
+                )
         if remote_path is not None:
-            logger.warning(
-                '"remote_path" is ignored. Use "filters=dl.Filters(field="dir, values={!r}"'.format(remote_path))
+            logger.warning(f'"remote_path" is ignored. Use "filters=dl.Filters(field="dir, values={remote_path!r}"')
+        if filter_output_annotations is True:
+            logger.warning("'filter_output_annotations' is ignored but kept for legacy support")
+        if include_annotations_in_output is False:
+            logger.warning("include_annotations_in_output was False, but was set to True since this function downloads annotations.")
+            include_annotations_in_output = True
+
         if local_path is None:
             if dataset.project is None:
                 # by dataset name
-                local_path = os.path.join(
-                    services.service_defaults.DATALOOP_PATH,
-                    "datasets",
-                    "{}_{}".format(dataset.name, dataset.id),
-                )
+                local_path = str(Path(service_defaults.DATALOOP_PATH) / "datasets" / f"{dataset.name}_{dataset.id}")
             else:
                 # by dataset and project name
-                local_path = os.path.join(
-                    services.service_defaults.DATALOOP_PATH,
-                    "projects",
-                    dataset.project.name,
-                    "datasets",
-                    dataset.name,
-                )
+                local_path = str(Path(service_defaults.DATALOOP_PATH) / "projects" / dataset.project.name / "datasets" / dataset.name)
 
         if filters is None:
             filters = entities.Filters()
@@ -1260,53 +1296,98 @@ class Datasets:
                                  method=entities.FiltersMethod.OR)
 
         downloader = repositories.Downloader(items_repository=dataset.items)
-        downloader.download_annotations(dataset=dataset,
-                                        filters=filters,
-                                        annotation_filters=annotation_filters,
-                                        local_path=local_path,
-                                        overwrite=overwrite,
-                                        include_annotations_in_output=include_annotations_in_output,
-                                        export_png_files=export_png_files,
-                                        filter_output_annotations=filter_output_annotations,
-                                        export_version=export_version,
-                                        dataset_lock=dataset_lock,
-                                        lock_timeout_sec=lock_timeout_sec,
-                                        export_summary=export_summary                                      
-                                        )
-        if annotation_options:
-            pages = dataset.items.list(filters=filters)
-            if not isinstance(annotation_options, list):
-                annotation_options = [annotation_options]
-            # convert all annotations to annotation_options
+
+        # Setup for incremental processing
+        if len(annotation_options) == 0 :
+            pool = None
+            progress = None
+            jobs = []
+        else:             
+            # Get total count for progress bar
+            filter_copy = copy.deepcopy(filters)
+            filter_copy.page_size = 0
+            pages = dataset.items.list(filters=filter_copy)
+            total_items = pages.items_count
+
+            # Setup thread pool and progress bar
             pool = dataset._client_api.thread_pools(pool_name='dataset.download')
-            jobs = [None for _ in range(pages.items_count)]
-            progress = tqdm.tqdm(total=pages.items_count,
-                                 disable=dataset._client_api.verbose.disable_progress_bar_download_annotations,
-                                 file=sys.stdout, desc='Download Annotations')
-            i_item = 0
-            for page in pages:
-                for item in page:
-                    jobs[i_item] = pool.submit(
-                        Datasets._convert_single,
-                        **{
-                            'downloader': downloader,
-                            'item': item,
-                            'img_filepath': None,
-                            'local_path': local_path,
-                            'overwrite': overwrite,
-                            'annotation_options': annotation_options,
-                            'annotation_filters': annotation_filters,
-                            'thickness': thickness,
-                            'with_text': with_text,
-                            'progress': progress,
-                            'alpha': alpha,
-                            'export_version': export_version
-                        }
-                    )
-                    i_item += 1
-            # get all results
+            progress = tqdm.tqdm(
+                total=total_items,
+                disable=dataset._client_api.verbose.disable_progress_bar_download_annotations,
+                file=sys.stdout,
+                desc='Download Annotations'
+            )
+            jobs = []
+            
+
+        # Call _export_recursive as generator
+        export_generator = dataset.project.datasets._export_recursive(
+            dataset=dataset,
+            local_path=tempfile.mkdtemp(prefix='annotations_jsons_'),
+            filters=filters,
+            annotation_filters=annotation_filters,
+            include_annotations=True,
+            export_type=ExportType.JSON,
+            dataset_lock=dataset_lock,
+            lock_timeout_sec=lock_timeout_sec,
+            export_summary=export_summary,
+            timeout=0,
+            max_items_per_subset=DOWNLOAD_ANNOTATIONS_MAX_ITEMS_PER_SUBSET
+        )
+
+        # Process each subset JSON file incrementally
+        for subset_json_file in export_generator:
+            if subset_json_file is None or not Path(subset_json_file).is_file():
+                continue
+
+            try:
+                # Open and load the items array
+                with open(subset_json_file, 'r') as f:
+                    items_data = json.load(f)
+
+                # Process each item immediately
+                for item_data in items_data:
+                    # Split and save individual JSON file
+                    Datasets._save_item_json_file(item_data=item_data, base_path=Path(local_path) / 'json', export_version=export_version)
+
+                    # If annotation_options are provided, submit to thread pool immediately
+                    if annotation_options:
+                        # Create Item entity from item_data
+                        item = entities.Item.from_json(
+                            _json=item_data,
+                            client_api=dataset._client_api,
+                            dataset=dataset
+                        )
+
+                        job = pool.submit(
+                            Datasets._convert_single,
+                            **{
+                                'downloader': downloader,
+                                'item': item,
+                                'img_filepath': None,
+                                'local_path': local_path,
+                                'overwrite': overwrite,
+                                'annotation_options': annotation_options,
+                                'annotation_filters': annotation_filters,
+                                'thickness': thickness,
+                                'with_text': with_text,
+                                'progress': progress,
+                                'alpha': alpha,
+                                'export_version': export_version
+                            }
+                        )
+                        jobs.append(job)
+
+                # Clean up temporary subset JSON file
+                os.remove(subset_json_file)
+            except Exception as e:
+                logger.exception(f'Failed processing subset JSON file {subset_json_file}: {e}')
+
+        # Wait for all thread pool jobs to complete
+        if annotation_options:
             _ = [j.result() for j in jobs]
             progress.close()
+
         return local_path
 
     def _upload_single_item_annotation(self, item, file, pbar):

@@ -80,6 +80,22 @@ class Item(entities.BaseEntity):
     def datasetId(self):
         return self.dataset_id
 
+    @property
+    def resolved_stream(self):
+        stream = self.metadata.get('system', dict()).get('shebang', dict()).get('linkInfo', dict()).get('ref', None)
+        if stream is None:
+            stream = self.stream
+            api_url = self._client_api.environment
+            if api_url != self._client_api.base_gate_url:
+                stream = stream.replace(api_url, self._client_api.base_gate_url)
+        else:
+            link_item_url_override = os.environ.get('LINK_ITEM_URL_OVERRIDE', None)
+            if link_item_url_override is not None:
+                src, target = link_item_url_override.split(',')
+                stream = stream.replace(src, target)
+
+        return stream
+
     @staticmethod
     def _protected_from_json(_json, client_api, dataset=None):
         """

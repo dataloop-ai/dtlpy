@@ -200,7 +200,7 @@ class FeatureSets:
         """
 
         success, response = self._client_api.gen_request(req_type="delete",
-                                                         path="{}/{}".format(self.URL, feature_set_id))
+                                                         path=f"{self.URL}/{feature_set_id}")
 
         # check response
         if success:
@@ -208,6 +208,36 @@ class FeatureSets:
             return success
         else:
             raise exceptions.PlatformException(response)
+
+    @_api_reference.add(path='/features/set/{id}', method='patch')
+    def update(self, feature_set: entities.FeatureSet) -> entities.FeatureSet:
+        """
+        Update a Feature Set
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+       :param dtlpy.entities.FeatureSet feature_set: FeatureSet object
+       :return: FeatureSet
+       :rtype: dtlpy.entities.FeatureSet
+
+       **Example**:
+
+        .. code-block:: python
+
+            dl.feature_sets.update(feature_set='feature_set')
+       """
+        success, response = self._client_api.gen_request(req_type="patch",
+                                                         path=f"{self.URL}/{feature_set.id}",
+                                                         json_req=feature_set.to_json())
+        if not success:
+            raise exceptions.PlatformException(response)
+
+        logger.debug("feature_set updated successfully")
+        # update dataset labels
+        feature_set = entities.FeatureSet.from_json(_json=response.json(),
+                                                    client_api=self._client_api,
+                                                    is_fetched=True)
+        return feature_set
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Item]:
         pool = self._client_api.thread_pools(pool_name='entity.create')

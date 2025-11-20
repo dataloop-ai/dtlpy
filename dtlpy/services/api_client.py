@@ -830,10 +830,11 @@ class ApiClient:
         environments = self.environments
         if environment in environments:
             logger.warning('Environment exists. Overwriting. env: {}'.format(environment))
-        if token is None:
-            token = None
-        if alias is None:
-            alias = None
+        if alias is not None:
+            keys_to_remove = [e for e, v in environments.items() if v.get('alias') == alias]
+            for e in keys_to_remove:
+                logger.warning('Alias exists. Overwriting. alias: {}'.format(alias))
+                environments.pop(e)
         environments[environment] = {'audience': audience,
                                      'client_id': client_id,
                                      'auth0_url': auth0_url,
