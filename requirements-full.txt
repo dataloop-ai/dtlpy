@@ -19,14 +19,14 @@ pathspec>=0.8.1
 filelock>=3.0.12
 diskcache>=5.4
 redis>=3.5
-urllib3>=1.26
+urllib3>=2.6.3
 
 # extra requirements
 google-cloud-storage
 google-cloud-core
 protobuf>=3.17.3
 opencv-python
-torch>=1.8
+torch>=2.9.0
 torchvision>0.9
 tensorflow-gpu
 imgaug
