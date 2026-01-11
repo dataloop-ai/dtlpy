@@ -86,6 +86,9 @@ class Dataset(entities.BaseEntity):
     # api
     _client_api = attr.ib(type=ApiClient, repr=False)
 
+    # syncing status
+    is_syncing = attr.ib(default=False, repr=False)
+
     # entities
     _project = attr.ib(default=None, repr=False)
 
@@ -183,6 +186,7 @@ class Dataset(entities.BaseEntity):
                    expiration_options=expiration_options,
                    index_driver=_json.get('indexDriver', None),
                    enable_sync_with_cloned=_json.get('enableSyncWithCloned', None),
+                   is_syncing=_json.get('isSyncing', False),
                    src_dataset=_json.get('srcDataset', None))
         inst.is_fetched = is_fetched
         return inst
@@ -215,6 +219,7 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).items_count,
                                                               attr.fields(Dataset).index_driver,
                                                               attr.fields(Dataset).enable_sync_with_cloned,
+                                                              attr.fields(Dataset).is_syncing,
                                                               attr.fields(Dataset).src_dataset,
                                                               ))
         _json.update({'items': self.items_url})
@@ -231,6 +236,7 @@ class Dataset(entities.BaseEntity):
             _json['expirationOptions'] = self.expiration_options.to_json()
         if self.enable_sync_with_cloned is not None:
             _json['enableSyncWithCloned'] = self.enable_sync_with_cloned
+        _json['isSyncing'] = self.is_syncing
         if self.src_dataset is not None:
             _json['srcDataset'] = self.src_dataset
         return _json
@@ -288,12 +294,15 @@ class Dataset(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
-                                       'ontologies', 'features', 'settings', 'schema', 'collections'])
+                                       'ontologies', 'features', 'feature_sets', 'settings', 'schema', 'collections'])
+        _project_id = None
         if self._project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
+            if self.projects is not None and len(self.projects) > 0:
+                _project_id = self.projects[0]
         else:
             datasets = self._project.datasets
-
+            _project_id = self._project.id
         return reps(
             items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
             recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
@@ -303,6 +312,7 @@ class Dataset(entities.BaseEntity):
             datasets=datasets,
             ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
             features=repositories.Features(client_api=self._client_api, project=self._project, dataset=self),
+            feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self._project, project_id=_project_id, dataset=self),
             settings=repositories.Settings(client_api=self._client_api, dataset=self),
             schema=repositories.Schema(client_api=self._client_api, dataset=self),
             collections=repositories.Collections(client_api=self._client_api, dataset=self)
@@ -352,6 +362,11 @@ class Dataset(entities.BaseEntity):
     def features(self):
         assert isinstance(self._repositories.features, repositories.Features)
         return self._repositories.features
+
+    @property
+    def feature_sets(self):
+        assert isinstance(self._repositories.feature_sets, repositories.FeatureSets)
+        return self._repositories.feature_sets
 
     @property
     def collections(self):

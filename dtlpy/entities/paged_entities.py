@@ -9,7 +9,7 @@ from typing import Optional, List, Any
 import attr
 
 from .filters import FiltersOperations, FiltersOrderByDirection, FiltersResource
-from .. import miscellaneous
+from .. import miscellaneous, exceptions
 from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
@@ -243,8 +243,12 @@ class PagedEntities:
         :param page_offset: page offset (for offset-based)
         :param page_size: page size
         """
-        items = self.return_page(page_offset=page_offset, page_size=page_size)
-        self.items = items
+        try:
+            items = self.return_page(page_offset=page_offset, page_size=page_size)
+            self.items = items
+        except exceptions.BadRequest as e:
+            logger.warning(f"BadRequest error received: {str(e)}")
+            self.items = miscellaneous.List(list())
 
     def next_page(self) -> None:
         """

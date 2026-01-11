@@ -472,31 +472,32 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             self.logger.debug("Downloading subset {!r} of {}".format(subset, self.model_entity.dataset.name))
 
             annotation_filters = None
-            if subset in annotations_subsets:
-                annotation_filters = entities.Filters(
-                    use_defaults=False,
-                    resource=entities.FiltersResource.ANNOTATION,
-                    custom_filter=annotations_subsets[subset],
-                )
-            # if user provided annotation_filters, skip the default filters
-            elif self.model_entity.output_type is not None and self.model_entity.output_type != "embedding":
-                annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, use_defaults=False)
-                if self.model_entity.output_type in [
-                    entities.AnnotationType.SEGMENTATION,
-                    entities.AnnotationType.POLYGON,
-                ]:
-                    model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
-                else:
-                    model_output_types = [self.model_entity.output_type]
+            if self.model_entity.output_type != "embedding":
+                if subset in annotations_subsets:
+                    annotation_filters = entities.Filters(
+                        use_defaults=False,
+                        resource=entities.FiltersResource.ANNOTATION,
+                        custom_filter=annotations_subsets[subset],
+                    )
+                # if user provided annotation_filters, skip the default filters
+                elif self.model_entity.output_type is not None:
+                    annotation_filters = entities.Filters(resource=entities.FiltersResource.ANNOTATION, use_defaults=False)
+                    if self.model_entity.output_type in [
+                        entities.AnnotationType.SEGMENTATION,
+                        entities.AnnotationType.POLYGON,
+                    ]:
+                        model_output_types = [entities.AnnotationType.SEGMENTATION, entities.AnnotationType.POLYGON]
+                    else:
+                        model_output_types = [self.model_entity.output_type]
 
-                annotation_filters.add(
-                    field=entities.FiltersKnownFields.TYPE,
-                    values=model_output_types,
-                    operator=entities.FiltersOperations.IN,
-                )
+                    annotation_filters.add(
+                        field=entities.FiltersKnownFields.TYPE,
+                        values=model_output_types,
+                        operator=entities.FiltersOperations.IN,
+                    )
 
-            annotation_filters = self.__include_model_annotations(annotation_filters)
-            annotations_subsets[subset] = annotation_filters.prepare()
+                annotation_filters = self.__include_model_annotations(annotation_filters)
+                annotations_subsets[subset] = annotation_filters.prepare()
 
             ret_list = self.__download_items(
                 dataset=dataset,
@@ -709,7 +710,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             valid_vectors = []
             items_to_upload = []
             vectors_to_upload = []
-            
+
             for item, vector in zip(_items, vectors):
                 # Check if vector is valid
                 if vector is None or len(vector) != embeddings_size:
@@ -719,25 +720,25 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 # Item and vector are valid
                 valid_items.append(item)
                 valid_vectors.append(vector)
-                
+
                 # Check if item should be skipped (prompt items)
                 _system_metadata = getattr(item, 'system', dict())
                 is_prompt = _system_metadata.get('shebang', dict()).get('dltype', '') == 'prompt'
                 if skip_default_items and is_prompt:
                     self.logger.debug(f"Skipping feature upload for prompt item {item.id}")
                     continue
-                
+
                 # Items were not skipped - should be uploaded
                 items_to_upload.append(item)
                 vectors_to_upload.append(vector)
-            
+
             # Update the original lists with valid items only
             _items[:] = valid_items
             vectors[:] = valid_vectors
-            
+
             if len(_items) != len(vectors):
                 raise ValueError(f"The number of items ({len(_items)}) is not equal to the number of vectors ({len(vectors)}).")
-            
+
             self.logger.debug(f"Uploading {len(items_to_upload)} items' feature vectors for model {self.model_entity.name}.")
             try:
                 start_time = time.time()
@@ -830,7 +831,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             logger.info("Received {s} for training".format(s=model.id))
             model = model.wait_for_model_ready()
             if model.status == 'failed':
-                raise ValueError("Model is in failed state, cannot train.")
+                logger.warning("Model failed. New training will attempt to resume from previous checkpoints.")
 
             ##############
             # Set status #

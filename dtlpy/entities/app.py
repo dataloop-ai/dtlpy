@@ -93,7 +93,7 @@ class App(entities.BaseEntity):
         .. code-block:: python
             succeed = app.uninstall()
         """
-        return self.apps.uninstall(self.id)
+        return self.apps.uninstall(app=self)
 
     def update(self):
         """

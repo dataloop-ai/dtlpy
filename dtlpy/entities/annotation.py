@@ -1827,7 +1827,7 @@ class FrameAnnotation(entities.BaseEntity):
         return frame
 
     @classmethod
-    def from_snapshot(cls, annotation, _json, fps):
+    def from_snapshot(cls, annotation, _json, fps=None):
         """
         new frame state to annotation
 

@@ -423,7 +423,7 @@ class Model(entities.BaseEntity):
         # default
         if 'id_to_label_map' not in self.configuration:
             if not (self.dataset_id == 'null' or self.dataset_id is None):
-                self.labels = [label.tag for label in self.dataset.labels]
+                self.labels = [flat_key for flat_key, _ in self.dataset.labels_flat_dict.items()]
             self.configuration['id_to_label_map'] = {int(idx): lbl for idx, lbl in enumerate(self.labels)}
         # use existing
         else:

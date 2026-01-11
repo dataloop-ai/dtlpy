@@ -13,6 +13,7 @@ class ClusterProvider(str, Enum):
     LOCAL = 'local'
     RANCHER_K3S = 'rancher-k3s'
     RANCHER_RKE = 'rancher-rke'
+    OPENSHIFT = 'openshift'
 
 
 class ComputeType(str, Enum):

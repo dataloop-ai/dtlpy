@@ -13,7 +13,8 @@ pipelines:
             # Make changes and commit back.
             - case "$BITBUCKET_TAG" in "") export BITBUCKET_TAG="build-$BITBUCKET_BUILD_NUMBER"; esac
             - apt-get -y update && apt-get install -y python3-pip
-            - python3 setup.py bdist_wheel
+            - pip3 install build --break-system-packages
+            - python3 -m build
             - docker login -u _json_key -p "$GCP_KEY" https://gcr.io
             - cp dist/dtlpy-$BITBUCKET_TAG-py3-none-any.whl dist/dtlpy-latest-py3-none-any.whl
             - echo "$GCP_KEY" >> k.json
@@ -93,7 +94,7 @@ pipelines:
      rc:
        - step:
            name: Create RC Tag
-           image: python:3.9-slim
+           image: python:3.10-slim
            script:
              - apt-get update && apt-get install -y git curl jq
              - pip install bumpversion
@@ -175,7 +176,8 @@ pipelines:
             - git tag -a ${FIX_VERSION} -m "Release ${FIX_VERSION}"
             - git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/dataloop-ai/dtlpy.git
             - git push origin --follow-tags
-            - python3 setup.py bdist_wheel
+            - pip install build
+            - python3 -m build
             - twine check dist/*
             - export TWINE_USERNAME="__token__"
             - export TWINE_PASSWORD="${PYPI_TOKEN}"

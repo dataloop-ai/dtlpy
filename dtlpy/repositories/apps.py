@@ -272,15 +272,16 @@ class Apps:
 
         return app
 
-    def uninstall(self, app_id: str = None, app_name: str = None, wait: bool = True) -> bool:
+    def uninstall(self, app_id: str = None, app_name: str = None, wait: bool = True, app: entities.App = None) -> bool:
         """
         Delete an app entity.
 
         Note: You are required to add either app_id or app_name.
 
         :param str app_id: optional - the id of the app.
-        :param str app_name: optional - the name of the app.
+        :param str app_name: [DEPRECATED] - the name of the app.
         :param bool wait: optional - wait for the operation to finish.
+        :param entities.App app: optional - the app entity.
         :return whether we succeed uninstalling the specified app.
         :rtype bool
 
@@ -288,12 +289,12 @@ class Apps:
         .. code-block:: python
             # succeed = dl.apps.delete(app_id='app_id')
         """
-        if app_id is None and app_name is None:
+        if app is None and app_id is None:
             raise exceptions.PlatformException(
                 error='400',
                 message='You must provide an identifier in inputs')
-        if app_name is not None:
-            app = self.__get_by_name(app_name)
+
+        if app is not None:
             app_id = app.id
 
         success, response = self._client_api.gen_request(req_type='delete', path='/apps/{}'.format(app_id))
@@ -302,18 +303,16 @@ class Apps:
 
         try:
             app = self.get(app_id=app_id)
-        except Exception as e:
-            if e.status_code == '404':
-                return success
-            else:
-                raise e
-        if app.metadata:
+        except exceptions.NotFound:
+            return success
+
+        if wait and app.status == entities.CompositionStatus.TERMINATING and app.metadata is not None:
             command_id = app.metadata.get('system', {}).get('commands', {}).get('uninstall', None)
-            if wait and app.status == entities.CompositionStatus.TERMINATING and command_id is not None:
+            if command_id is not None:
                 command = self.commands.get(command_id=command_id, url='api/v1/commands/faas/{}'.format(command_id))
                 command.wait()
 
-        logger.debug(f"App deleted successfully (id: {app_id}, name: {app_name}")
+        logger.debug(f"App deleted successfully (id: {app.id}, name: {app.name}")
         return success
 
     def resume(self, app: entities.App = None, app_id: str = None) -> bool:
