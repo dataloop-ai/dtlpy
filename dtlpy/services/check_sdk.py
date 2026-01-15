@@ -2,7 +2,6 @@ import time
 import logging
 import threading
 import traceback
-import jwt
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -21,9 +20,7 @@ def check_in_thread(version, client_api):
 
         # try read token for email
         try:
-            payload = jwt.decode(client_api.token, algorithms=['HS256'],
-                                 verify=False, options={'verify_signature': False})
-            user_email = payload['email']
+            user_email = client_api.info()['user_email']
         except Exception:
             user_email = 'na'
         logger.debug('SDK info: user: {}, version: {}'.format(user_email, version))

@@ -856,8 +856,16 @@ class ApiClient:
         """
         user_email = 'null'
         if self.token is not None:
-            payload = jwt.decode(self.token, algorithms=['HS256'],
-                                 verify=False, options={'verify_signature': False})
+            # oxsec-disable jwt-signature-disabled - Client-side SDK: signature verification disabled intentionally to extract user email; server validates on API calls
+            payload = jwt.decode(
+                self.token,
+                options={
+                    "verify_signature": False,
+                    "verify_exp": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                }
+            )
             user_email = payload['email']
         information = {'environment': self.environment,
                        'user_email': user_email}
@@ -1353,8 +1361,16 @@ class ApiClient:
             if self.token is None or self.token == '':
                 expired = True
             else:
-                payload = jwt.decode(self.token, algorithms=['HS256'],
-                                     options={'verify_signature': False}, verify=False)
+                # oxsec-disable jwt-signature-disabled - Client-side SDK: signature verification disabled intentionally to check token expiration; server validates on API calls
+                payload = jwt.decode(
+                    self.token,
+                    options={
+                        "verify_signature": False,
+                        "verify_exp": False,
+                        "verify_aud": False,
+                        "verify_iss": False,
+                    }
+                )
                 d = datetime.datetime.now(datetime.timezone.utc)
                 epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
                 now = (d - epoch).total_seconds()

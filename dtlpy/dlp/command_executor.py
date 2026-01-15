@@ -6,7 +6,7 @@ import os
 import sys
 import jwt
 
-from .. import exceptions, entities, repositories, utilities, assets
+from .. import exceptions, entities, repositories, utilities, assets, miscellaneous
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -76,8 +76,16 @@ class CommandExecutor:
         url = 'dtlpy'
         if args.url is None:
             try:
-                payload = jwt.decode(self.dl.client_api.token, algorithms=['HS256'],
-                                     verify=False, options={'verify_signature': False})
+                # oxsec-disable jwt-signature-disabled - Client-side SDK: signature verification disabled intentionally to check admin role; server validates on API calls
+                payload = jwt.decode(
+                    self.dl.client_api.token,
+                    options={
+                        "verify_signature": False,
+                        "verify_exp": False,
+                        "verify_aud": False,
+                        "verify_iss": False,
+                    }
+                )
                 if 'admin' in payload['https://dataloop.ai/authorization']['roles']:
                     url = "https://storage.googleapis.com/dtlpy/dev/dtlpy-latest-py3-none-any.whl"
             except Exception:
@@ -235,6 +243,13 @@ class CommandExecutor:
             project = self.dl.projects.get(project_name=args.project_name)
             dataset = project.datasets.get(dataset_name=args.dataset_name)
 
+            # Validate local_path and local_annotations_path to prevent path traversal
+            miscellaneous.PathUtils.validate_paths(
+                [args.local_path, args.local_annotations_path],
+                base_path=os.getcwd(),
+                must_exist=True
+            )
+
             dataset.items.upload(local_path=args.local_path,
                                  remote_path=args.remote_path,
                                  file_types=args.file_types,
@@ -276,6 +291,13 @@ class CommandExecutor:
                             filters.add(field="dir", values=item, method='or')
                             remote_path.pop(remote_path.index(item))
                     filters.add(field="dir", values=remote_path, operator=entities.FiltersOperations.IN, method='or')
+
+            # Validate local_path to prevent path traversal
+            miscellaneous.PathUtils.validate_directory_path(
+                args.local_path,
+                base_path=os.getcwd(),
+                must_exist=False
+            )
 
             if not args.without_binaries:
                 dataset.items.download(filters=filters,
@@ -325,6 +347,9 @@ class CommandExecutor:
                     args.split_seconds = int(args.split_seconds)
                 if isinstance(args.split_times, str):
                     args.split_times = [int(sec) for sec in args.split_times.split(",")]
+                # Validate filepath to prevent path traversal
+                miscellaneous.PathUtils.validate_file_path(args.filename)
+                
                 self.dl.utilities.videos.Videos.split_and_upload(
                     project_name=args.project_name,
                     dataset_name=args.dataset_name,
@@ -407,6 +432,8 @@ class CommandExecutor:
     def deploy(self, args):
         project = self.dl.projects.get(project_name=args.project_name)
         json_filepath = args.json_file
+        # Validate file path to prevent path traversal
+        miscellaneous.PathUtils.validate_file_path(json_filepath)
         deployed_services, package = self.dl.packages.deploy_from_file(project=project, json_filepath=json_filepath)
         logger.info("Successfully deployed {} from file: {}\nServices: {}".format(len(deployed_services),
                                                                                   json_filepath,
@@ -463,6 +490,13 @@ class CommandExecutor:
 
         elif args.packages == "push":
             packages = self.utils.get_packages_repo(args=args)
+
+            # Validate src_path to prevent path traversal
+            miscellaneous.PathUtils.validate_directory_path(
+                args.src_path,
+                base_path=os.getcwd(),
+                must_exist=True
+            )
 
             package = packages.push(src_path=args.src_path,
                                     package_name=args.package_name,
@@ -568,7 +602,13 @@ class CommandExecutor:
                 answers = inquirer.prompt(questions)
                 #####
                 # create a dir for that panel
-                os.makedirs(answers.get('name'), exist_ok=True)
+                # Validate panel name to prevent path traversal
+                panel_name = answers.get('name')
+                # Validate panel name to prevent path traversal
+                miscellaneous.PathUtils.validate_directory_name(panel_name)
+                # Create directory in current working directory
+                panel_dir = os.path.join(os.getcwd(), panel_name)
+                os.makedirs(panel_dir, exist_ok=True)
                 # dump to dataloop.json
                 app_filename = assets.paths.APP_JSON_FILENAME
                 if not os.path.isfile(app_filename):
@@ -630,12 +670,22 @@ class CommandExecutor:
         directory = args.dir
         if directory == '..':
             directory = os.path.split(os.getcwd())[0]
+        # Validate path to prevent path traversal
+        miscellaneous.PathUtils.validate_directory_path(
+            directory,
+            base_path=os.getcwd(),
+            must_exist=True
+        )
         os.chdir(directory)
         print(os.getcwd())
 
     @staticmethod
     def mkdir(args):
-        os.mkdir(args.name)
+        # Validate directory name to prevent path traversal
+        miscellaneous.PathUtils.validate_directory_name(args.name)
+        # Create directory in current working directory
+        dir_path = os.path.join(os.getcwd(), args.name)
+        os.mkdir(dir_path)
 
     # noinspection PyUnusedLocal
     @staticmethod

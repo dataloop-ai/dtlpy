@@ -32,15 +32,12 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
     # TODO add deprecation warning to client_id
     # check if already logged in with SAME email
     if api_client.token is not None or api_client.token == '':
-        try:
-            payload = jwt.decode(api_client.token, algorithms=['HS256'],
-                                 options={'verify_signature': False}, verify=False)
-            if 'email' in payload and \
-                    payload['email'] == email and \
-                    not api_client.token_expired() and \
-                    not force:
-                return True
-        except jwt.exceptions.DecodeError:
+        logged_email = api_client.info()['user_email']
+        if logged_email == email and \
+            not api_client.token_expired() and \
+            not force:
+            return True
+        else:
             logger.debug('{}'.format('Cant decode token. Force login is used'))
 
     logger.info('[Start] Login Secret')
@@ -71,13 +68,12 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
             api_client.refresh_token = response_dict['refresh_token']
 
         # set new client id for refresh
-        payload = jwt.decode(api_client.token, algorithms=['HS256'],
-                             options={'verify_signature': False}, verify=False)
-        if 'email' in payload:
-            logger.info('[Done] Login Secret. User: {}'.format(payload['email']))
+        logged_email = api_client.info()['user_email']
+
+        if not logged_email == 'null':
+            logger.info(f'[Done] Login Secret. User: {logged_email}')
         else:
-            logger.info('[Done] Login Secret. User: {}'.format(email))
-            logger.info(payload)
+            logger.info(f'[Done] Login Secret. User: {email}')
     return True
 
 
@@ -206,8 +202,16 @@ def login(api_client, auth0_url=None, audience=None, client_id=None, login_domai
         success, tokens = server.process_request()
 
         if success:
-            decoded_jwt = jwt.decode(tokens['id'], verify=False,
-                                     options={'verify_signature': False})
+            # oxsec-disable jwt-signature-disabled - Client-side SDK: signature verification disabled intentionally to extract claims for display; server validates on API calls
+            decoded_jwt = jwt.decode(
+                tokens['id'],
+                options={
+                    "verify_signature": False,
+                    "verify_exp": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                }
+            )
 
             if 'email' in decoded_jwt:
                 logger.info('Logged in: {}'.format(decoded_jwt['email']))

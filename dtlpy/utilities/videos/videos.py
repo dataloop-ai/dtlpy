@@ -7,6 +7,7 @@ import os
 import logging
 import dtlpy as dl
 import shutil
+from dtlpy import miscellaneous
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -344,6 +345,9 @@ class Videos:
             raise
         # https://www.ffmpeg.org/ffmpeg-formats.html#Examples-9
 
+        # Validate filepath to prevent path traversal
+        miscellaneous.PathUtils.validate_file_path(filepath)
+        
         if not os.path.isfile(filepath):
             raise IOError('File doesnt exists: {}'.format(filepath))
         logger.info('Extracting video information...')

@@ -513,6 +513,13 @@ class Packages:
             if codebase is None:
                 src_path = os.getcwd()
                 logger.warning('No src_path is given, getting package information from cwd: {}'.format(src_path))
+        else:
+            # Validate src_path to prevent path traversal
+            miscellaneous.PathUtils.validate_directory_path(
+                src_path,
+                base_path=os.getcwd(),
+                must_exist=True
+            )
 
         # get package json
         package_from_json = dict()
@@ -941,6 +948,8 @@ class Packages:
 
             project.packages.deploy_from_file(project='project_entity', json_filepath='json_filepath')
         """
+        # Validate file path to prevent path traversal
+        miscellaneous.PathUtils.validate_file_path(json_filepath)
         with open(json_filepath, 'r') as f:
             data = json.load(f)
 

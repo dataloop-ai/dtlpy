@@ -1,6 +1,5 @@
 import logging
 from urllib.parse import quote
-import jwt
 
 from .. import entities, miscellaneous, exceptions, _api_reference
 from ..services.api_client import ApiClient
@@ -159,8 +158,7 @@ class Projects:
         assert isinstance(title, str)
         assert isinstance(content, str)
         if self._client_api.token is not None:
-            sender = jwt.decode(self._client_api.token, algorithms=['HS256'],
-                                verify=False, options={'verify_signature': False})['email']
+            sender = self._client_api.info()['user_email']
         else:
             raise exceptions.PlatformException('600', 'Token expired please log in')
 

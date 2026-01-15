@@ -342,10 +342,9 @@ def includes_yolo_line(line, lines):
 
 
 def compare_yolo_files(file_a, file_b):
-    f_src = open(file_a, 'r')
-    f_dest = open(file_b, 'r')
-    src_lines = [line.strip() for line in f_src.readlines()]
-    dest_lines = [line.strip() for line in f_dest.readlines()]
+    with open(file_a, 'r') as f_src, open(file_b, 'r') as f_dest:
+        src_lines = [line.strip() for line in f_src.readlines()]
+        dest_lines = [line.strip() for line in f_dest.readlines()]
 
     success = len(dest_lines) == len(src_lines)
 

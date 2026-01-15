@@ -2,7 +2,6 @@ from copy import deepcopy
 import traceback
 import logging
 import json
-import jwt
 import os
 from PIL import Image
 from io import BytesIO
@@ -336,9 +335,7 @@ class Annotations:
 
     def _delete_single_annotation(self, w_annotation_id):
         try:
-            creator = jwt.decode(self._client_api.token, algorithms=['HS256'],
-                                 verify=False, options={'verify_signature': False})['email']
-            payload = {'username': creator}
+            payload = {'username': self._client_api.info()['user_email']}
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path='/annotations/{}'.format(w_annotation_id),
                                                              json_req=payload)
