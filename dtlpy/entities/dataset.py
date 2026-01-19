@@ -290,6 +290,14 @@ class Dataset(entities.BaseEntity):
                     self._ontology_ids += recipe.ontology_ids
         return self._ontology_ids
 
+
+    @property
+    def project_id(self):
+        _project_id = None
+        if self.projects is not None and len(self.projects) > 0:
+            _project_id = self.projects[0]
+        return _project_id
+
     @_repositories.default
     def set_repositories(self):
         reps = namedtuple('repositories',

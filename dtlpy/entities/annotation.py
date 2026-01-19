@@ -1121,13 +1121,14 @@ class Annotation(entities.BaseEntity):
                             annotation_definition=dl.Box(top=10,left=10,bottom=100, right=100,label='labelName'))
                             )
         """
-        # handle fps
-        if self.fps is None:
-            if self._item is not None:
-                if self._item.fps is not None:
-                    self.fps = self._item.fps
-        if self.fps is None:
-            raise PlatformException('400', 'Annotation must have fps in order to perform this action')
+        # handle fps - only needed if converting from time to frames
+        if frame_num is None or (end_frame_num is None and end_time is not None):
+            if self.fps is None:
+                if self._item is not None:
+                    if self._item.fps is not None:
+                        self.fps = self._item.fps
+            if self.fps is None:
+                raise PlatformException('400', 'Annotation must have fps in order to perform this action')
 
         if frame_num is None:
             frame_num = int(np.round(start_time * self.fps))
