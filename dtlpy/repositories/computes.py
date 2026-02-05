@@ -358,7 +358,7 @@ class Computes:
             project_id = project.id
         compute = self.create(
             config['config']['name'],
-            ComputeContext([], org_id, project_id),
+            ComputeContext(labels=[], org=org_id, project=project_id),
             [],
             cluster,
             ComputeType.KUBERNETES,

@@ -11,7 +11,7 @@ class Apps:
     def __init__(self, client_api: ApiClient, project: entities.Project = None, project_id: str = None):
         self._client_api = client_api
         self._project = project
-        self._project_id = project_id 
+        self._project_id = project_id
         self._commands = None
 
     @property

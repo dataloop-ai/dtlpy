@@ -51,29 +51,6 @@ class PlotSample:
         return _json
 
 
-# class MatrixSample:
-#     def __init__(self, figure, legend, x, y):
-#         """
-#         Create a single metric sample for Model
-#
-#         :param figure: figure name identifier
-#         :param legend: line name identifier
-#         :param x: x value for the current sample
-#         :param y: y value for the current sample
-#         """
-#         self.figure = figure
-#         self.legend = legend
-#         self.x = x
-#         self.y = y
-#
-#     def to_json(self) -> dict:
-#         _json = {'figure': self.figure,
-#                  'legend': self.legend,
-#                  'data': {'x': self.x,
-#                           'y': self.y}}
-#         return _json
-
-
 @attr.s
 class Model(entities.BaseEntity):
     """

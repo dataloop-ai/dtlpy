@@ -48,6 +48,7 @@ class App(entities.BaseEntity):
     metadata = attr.ib(type=dict)
     status = attr.ib(type=entities.CompositionStatus)
     settings = attr.ib(type=dict)
+    dpk = attr.ib(type=entities.Dpk)
 
     # sdk
     _project = attr.ib(type=entities.Project, repr=False)
@@ -57,11 +58,12 @@ class App(entities.BaseEntity):
 
     @_repositories.default
     def set_repositories(self):
-        reps = namedtuple('repositories', field_names=['projects', 'apps', 'compositions'])
+        reps = namedtuple('repositories', field_names=['projects', 'apps', 'compositions', 'models'])
         return reps(
             projects=repositories.Projects(client_api=self._client_api),
             apps=repositories.Apps(client_api=self._client_api, project=self._project, project_id=self.project_id),
-            compositions=repositories.Compositions(client_api=self._client_api, project=self._project)
+            compositions=repositories.Compositions(client_api=self._client_api, project=self._project),
+            models=repositories.Models(client_api=self._client_api, app=self)
         )
 
     @property
@@ -79,6 +81,11 @@ class App(entities.BaseEntity):
     def apps(self):
         assert isinstance(self._repositories.apps, repositories.Apps)
         return self._repositories.apps
+
+    @property
+    def models(self):
+        assert isinstance(self._repositories.models, repositories.Models)
+        return self._repositories.models
 
     @property
     def compositions(self):
@@ -141,15 +148,15 @@ class App(entities.BaseEntity):
         :return:
         """
         try:
-            package = App.from_json(_json=_json,
-                                    client_api=client_api,
-                                    project=project,
-                                    is_fetched=is_fetched)
+            app = App.from_json(_json=_json,
+                                client_api=client_api,
+                                project=project,
+                                is_fetched=is_fetched)
             status = True
         except Exception:
-            package = traceback.format_exc()
+            app = traceback.format_exc()
             status = False
-        return status, package
+        return status, app
 
     def to_json(self):
         _json = {}
@@ -189,6 +196,8 @@ class App(entities.BaseEntity):
             _json['settings'] = self.settings
         if self.integrations is not None:
             _json['integrations'] = self.integrations
+        if self.dpk is not None:
+            _json['dpk'] = self.dpk.to_json()
 
         return _json
 
@@ -214,7 +223,8 @@ class App(entities.BaseEntity):
             metadata=_json.get('metadata', None),
             status=_json.get('status', None),
             settings=_json.get('settings', {}),
-            integrations=_json.get('integrations', None)
+            integrations=_json.get('integrations', None),
+            dpk=entities.Dpk.from_json(_json=_json.get('dpk', {}), client_api=client_api, project=project, is_fetched=is_fetched)
         )
         app.is_fetched = is_fetched
         return app

@@ -93,12 +93,22 @@ class Models:
                  client_api: ApiClient,
                  package: entities.Package = None,
                  project: entities.Project = None,
-                 project_id: str = None):
+                 project_id: str = None,
+                 app: entities.App = None):
+        """
+        Initialize the Models repository.
+        
+        :param client_api: The client API.
+        :param package: The package.
+        :param project: The project entity.
+        :param project_id: The project ID.
+        :param app: The app entity.
+        """
         self._client_api = client_api
         self._project = project
         self._package = package
         self._project_id = project_id
-
+        self._app = app
         if self._project is not None:
             self._project_id = self._project.id
 
@@ -112,9 +122,8 @@ class Models:
                 projects = repositories.Projects(client_api=self._client_api)
                 self._project = projects.get(project_id=self._project_id)
         if self._project is None:
-            if self._package is not None:
-                if self._package._project is not None:
-                    self._project = self._package._project
+            if self._app is not None and self._app.project is not None:
+                self._project = self.app.project
         if self._project is None:
             raise exceptions.PlatformException(
                 error='2001',
@@ -138,6 +147,17 @@ class Models:
                         ' Please use package.models or set a model')
         assert isinstance(self._package, entities.Package)
         return self._package
+        
+    @property
+    def app(self) -> entities.App:
+        if self._app is None:
+            raise exceptions.PlatformException(
+                error='2001',
+                message='Cannot perform action WITHOUT App entity in {} repository.'.format(
+                    self.__class__.__name__) +
+                        ' Please use app.models or set a model')
+        assert isinstance(self._app, entities.App)
+        return self._app
 
     ###########
     # methods #
@@ -249,6 +269,8 @@ class Models:
             filters.add(field='projectId', values=self._project.id)
         if self._package is not None:
             filters.add(field='packageId', values=self._package.id)
+        if self._app is not None:
+            filters.add(field='app.id', values=self._app.id)
 
         # assert type filters
         if not isinstance(filters, entities.Filters):
@@ -375,18 +397,18 @@ class Models:
             model_artifacts: List[entities.Artifact] = None,
             project_id=None,
             tags: List[str] = None,
-            package: entities.Package = None,
             configuration: dict = None,
             status: str = None,
             scope: entities.EntityScopeLevel = entities.EntityScopeLevel.PROJECT,
             version: str = '1.0.0',
-            input_type=None,
-            output_type=None,
+            input_type='image',
+            output_type=entities.AnnotationType.CLASSIFICATION,
             train_filter: entities.Filters = None,
             validation_filter: entities.Filters = None,
             annotations_train_filter: entities.Filters = None,
             annotations_validation_filter: entities.Filters = None,
-            app: entities.App = None
+            app: entities.App = None,
+            dpk_model_name: str = None
     ) -> entities.Model:
         """
         Create a Model entity
@@ -399,7 +421,6 @@ class Models:
         :param model_artifacts: optional list of dl.Artifact. Can be ItemArtifact, LocaArtifact or LinkArtifact
         :param str project_id: project that owns the model
         :param list tags: list of string tags
-        :param package: optional - Package object
         :param dict configuration: optional - model configuration - dict
         :param str status: `str` of the optional values of
         :param str scope: the scope level of the model dl.EntityScopeLevel
@@ -420,6 +441,21 @@ class Models:
             project.models.create(model_name='model_name', dataset_id='dataset_id', labels=['label1', 'label2'], train_filter={filter: {$and: [{dir: "/10K short videos"}]},page: 0,pageSize: 1000,resource: "items"}})
 
         """
+        if app is None and self._app is None:
+            raise exceptions.PlatformException("Must provide an app entity or set the app in the models repository")
+        if app is None:
+            app = self.app
+        dpk = app.dpk
+        model_to_create = None
+        for dpk_model in dpk.components.models:
+            if dpk_model_name == dpk_model['name']:
+                model_to_create = dpk_model
+                break
+        if model_to_create is None:
+            valid_model_names = [m['name'] for m in dpk.components.models]
+            raise exceptions.NotFound(f"Must provide a valid model name from the dpk {valid_model_names}")
+
+
 
         if ontology_id is not None:
             # take labels from ontology
@@ -427,87 +463,64 @@ class Models:
             labels = [label.tag for label in ontologies.get(ontology_id=ontology_id).labels]
 
         if labels is None:
-            # dont have to have labels. can use an empty list
-            labels = list()
-
-        if input_type is None:
-            input_type = 'image'
-
-        if output_type is None:
-            output_type = entities.AnnotationType.CLASSIFICATION
-
-        if package is None and self._package is None:
-            raise exceptions.PlatformException('Must provide a Package or create from package.models')
-        elif package is None:
-            package = self._package
+            labels = model_to_create.get('labels', list())
 
         # TODO need to remove the entire project id user interface - need to take it from dataset id (in BE)
         if project_id is None:
-            if self._project is None:
+            if self._project is None and app.project_id is None:
                 raise exceptions.PlatformException('Please provide project_id')
-            project_id = self._project.id
-        else:
-            if project_id != self._project_id:
-                if (isinstance(package, entities.Package) and not package.is_global) or \
-                        (isinstance(package, entities.Dpk) and not package.scope != 'public'):
-                    logger.warning(
-                        "Note! you are specified project_id {!r} which is different from repository context: {!r}".format(
-                            project_id, self._project_id))
+            project_id = self._project.id if self._project is not None else app.project_id
 
         if model_artifacts is None:
             model_artifacts = []
 
         if not isinstance(model_artifacts, list):
             raise ValueError('`model_artifacts` must be a list of dl.Artifact entities')
+        
 
         # create payload for request
         payload = {
-            'packageId': package.id,
             'name': model_name,
+            'scope': scope,
+            'packageId': dpk.id,
+            'outputType': output_type,
             'projectId': project_id,
             'datasetId': dataset_id,
             'labels': labels,
             'artifacts': [artifact.to_json(as_artifact=True) for artifact in model_artifacts],
-            'scope': scope,
             'version': version,
-            'inputType': input_type,
-            'outputType': output_type,
+            'inputType': input_type
         }
 
         if app is not None:
-            if not isinstance(package, entities.Dpk):
-                raise ValueError('package must be a Dpk entity')
-            if app.dpk_name != package.name or app.dpk_version != package.version:
-                raise ValueError('App and package must be the same')
-            component_name = None
-            compute_config = None
-            for model in package.components.models:
-                if model['name'] == model_name:
-                    component_name = model['name']
-                    compute_config = model.get('computeConfigs', None)
-                    break
-            if component_name is None:
-                raise ValueError('Model name not found in package')
+            payload['moduleName'] = model_to_create['moduleName']
             payload['app'] = {
                 "id": app.id,
-                "componentName": component_name,
-                "dpkName": package.name,
-                "dpkVersion": package.version
+                "componentName": model_to_create['name'],
+                "dpkName": dpk.name,
+                "dpkVersion": dpk.version,
+                "dpkId": dpk.id
             }
-            if compute_config is not None:
-                payload['app']['computeConfig'] = compute_config
 
         if configuration is not None:
             payload['configuration'] = configuration
+        else:
+            payload['configuration'] = model_to_create.get('configuration', dict())
 
         if tags is not None:
             payload['tags'] = tags
+        else:
+            payload['tags'] = model_to_create.get('tags', list())
 
         if description is not None:
             payload['description'] = description
+        else:
+            payload['description'] = model_to_create.get('description', '')
 
         if status is not None:
             payload['status'] = status
+        else:
+            payload['status'] = model_to_create.get('status', entities.ModelStatus.PRE_TRAINED)
 
         if train_filter or validation_filter or annotations_train_filter or annotations_validation_filter:
             metadata = Models._build_model_metadata(
@@ -529,8 +542,7 @@ class Models:
 
         model = entities.Model.from_json(_json=response.json(),
                                          client_api=self._client_api,
-                                         project=self._project,
-                                         package=package)
+                                         project=self._project)
 
         return model
 

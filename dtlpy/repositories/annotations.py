@@ -653,7 +653,8 @@ class Annotations:
                                 not a.get('clean', False) and a.get("metadata", {}).get('system', {}).get('objectId',
                                                                                                           None) ==
                                 annotation.get("metadata", {}).get('system', {}).get('objectId', None) and a['label'] ==
-                                annotation['label']]
+                                annotation['label']
+                                and a['type'] == annotation['type']]
                     if len(to_merge) == 0:
                         # no annotation to merge with
                         continue
@@ -677,7 +678,8 @@ class Annotations:
                     to_merge = [a for a in exist_annotations if
                                 a.object_id == ann.get("metadata", {}).get('system', {}).get('objectId',
                                                                                              None) and a.label == ann[
-                                    'label']]
+                                    'label']
+                                and a.type == ann['type']]
                     if len(to_merge) == 0:
                         # no annotation to merge with
                         continue

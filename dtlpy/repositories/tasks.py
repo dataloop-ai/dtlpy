@@ -623,6 +623,7 @@ class Tasks:
         priority=entities.TaskPriority.MEDIUM,
         consensus_percentage=None,
         consensus_assignees=None,
+        scoring=False,
         limit=None,
         wait=True,
         enforce_video_conversion=True,
@@ -644,7 +645,7 @@ class Tasks:
             consensus_task_type=entities.ConsensusTaskType.QUALIFICATION,
             consensus_percentage=consensus_percentage,
             consensus_assignees=consensus_assignees,
-            scoring=False,
+            scoring=scoring,
             limit=limit,
             wait=wait,
             enforce_video_conversion=enforce_video_conversion,
@@ -690,7 +691,7 @@ class Tasks:
         :param str consensus_task_type: consensus task type - "consensus", "qualification", or "honeypot"
         :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
         :param int consensus_assignees: the number of different annotators per item (number of copies per item)
-        :param bool scoring: create a scoring app in project
+        :param bool scoring: create a scoring app in project. Note: Scoring is no longer applied by default. Set scoring=True to enable it.
         :param int limit: the limit items that the task can include
         :param bool wait: wait until create task finish
         :param bool enforce_video_conversion: Enforce WEBM conversion on video items for frame-accurate annotations
@@ -725,6 +726,9 @@ class Tasks:
 
         if workload is None and assignee_ids is not None:
             workload = entities.Workload.generate(assignee_ids=assignee_ids)
+
+        if scoring is False:
+            logger.warning("Scoring is no longer applied by default. Set scoring=True to enable it.")
 
         # Handle metadata for consensus tasks
         if metadata is None:
@@ -1010,7 +1014,7 @@ class Tasks:
         :param entities.ConsensusTaskType consensus_task_type: consensus_task_type of the task options in entities.ConsensusTaskType
         :param int consensus_percentage: percentage of items to be copied to multiple annotators (consensus items)
         :param int consensus_assignees: the number of different annotators per item (number of copies per item)
-        :param bool scoring: create a scoring app in project
+        :param bool scoring: create a scoring app in project. Note: Scoring is no longer applied by default for consensus tasks. Set scoring=True to enable it.
         :param bool enforce_video_conversion: Enforce WEBM conversion on video items for frame-accurate annotations. WEBM Conversion will be executed as a project service and incurs compute costs. Service compute resources can be set according to planned workload.
         :return: Task object
         :rtype: dtlpy.entities.task.Task
@@ -1070,6 +1074,9 @@ class Tasks:
                 project_id = self._project_id
             else:
                 project_id = self.project.id
+
+        if scoring is False:
+            logger.warning("Scoring is no longer applied by default. Set scoring=True to enable it.")
 
         if workload is None and assignee_ids is not None:
             workload = entities.Workload.generate(assignee_ids=assignee_ids)

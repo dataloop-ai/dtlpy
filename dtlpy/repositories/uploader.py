@@ -378,10 +378,26 @@ class Uploader:
         return futures
 
     async def __single_external_sync(self, element):
-        storage_id = element.buffer.split('//')[1]
+        # Path format: anything before last "://" is scheme (external, provider s3/gs, etc.). After it: bucket_name/path_to_file.
+        # API expects storageId as "bucket:key".
+        idx = element.buffer.rfind('://')
+        if idx == -1:
+            raise PlatformException(
+                error="400",
+                message="External path must contain '://'. Got: {}".format(element.buffer)
+            )
+        path_after_schemes = element.buffer[idx + 3:]
+        # Collapse consecutive slashes so "bucket///key/path1//path2" becomes "bucket/key/path1/path2"
+        path_normalized = '/'.join(segment for segment in path_after_schemes.split('/') if segment)
+        parts = path_normalized.split('/', 1)
+        if len(parts) != 2:
+            raise PlatformException(
+                error="400",
+                message="The part after '://' must be bucket_name/path_to_file (e.g. my-bucket/folder/file.jpg). Got after '://': '{}'".format(path_after_schemes)
+            )
         req_json = dict()
         req_json['filename'] = element.remote_filepath
-        req_json['storageId'] = storage_id
+        req_json['storageId'] = f"{parts[0]}:{parts[1]}"
         success, response = self.items_repository._client_api.gen_request(req_type='post',
                                                                           path='/datasets/{}/imports'.format(
                                                                               self.items_repository.dataset.id),

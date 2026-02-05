@@ -223,7 +223,7 @@ class FeatureSets:
 
     @_api_reference.add(path='/features/sets', method='post')
     def create(
-        self, name: str, size: int, set_type: str, entity_type: entities.FeatureEntityType, project_id: str = None, model_id: set = None, org_id: str = None
+        self, name: str, size: int, set_type: str, entity_type: entities.FeatureEntityType, project_id: str = None, model_id: str = None, org_id: str = None
     ):
         """
         Create a new Feature Set

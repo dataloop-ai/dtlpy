@@ -1,8 +1,8 @@
 import traceback
 from enum import Enum
-from typing import List, Optional, Dict
+from typing import List, Dict
 from ..services.api_client import ApiClient
-from .. import repositories
+from .. import repositories, entities
 
 
 class ClusterProvider(str, Enum):
@@ -33,302 +33,164 @@ class ComputeConsumptionMethod(str, Enum):
     API = "API"
 
 
-class ComputeSettings:
-    def __init__(self, default_namespace: str, consumption_method: ComputeConsumptionMethod):
-        self.consumption_method = consumption_method
-        self.default_namespace = default_namespace
+class ComputeSettings(entities.DlEntity):
+    default_namespace: str = entities.DlProperty(location=['defaultNamespace'], _type=str)
+    consumption_method: str = entities.DlProperty(location=['consumptionMethod'], _type=str)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            default_namespace=_json.get('defaultNamespace'),
-            consumption_method=_json.get('consumptionMethod')
-        )
-
-    def to_json(self):
-        return {
-            'defaultNamespace': self.default_namespace,
-            'consumptionMethod': self.consumption_method
-        }
+        return cls(_dict=_json)
 
 
-class Toleration:
-    def __init__(self, effect: str, key: str, operator: str, value: str):
-        self.effect = effect
-        self.key = key
-        self.operator = operator
-        self.value = value
+class Toleration(entities.DlEntity):
+    effect: str = entities.DlProperty(location=['effect'], _type=str)
+    key: str = entities.DlProperty(location=['key'], _type=str)
+    operator: str = entities.DlProperty(location=['operator'], _type=str)
+    value: str = entities.DlProperty(location=['value'], _type=str)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            effect=_json.get('effect'),
-            key=_json.get('key'),
-            operator=_json.get('operator'),
-            value=_json.get('value')
-        )
-
-    def to_json(self):
-        return {
-            'effect': self.effect,
-            'key': self.key,
-            'operator': self.operator,
-            'value': self.value
-        }
+        return cls(_dict=_json)
 
 
-class DeploymentResource:
-    def __init__(self, gpu: int, cpu: int, memory: str):
-        self.gpu = gpu
-        self.cpu = cpu
-        self.memory = memory
+class DeploymentResource(entities.DlEntity):
+    gpu: int = entities.DlProperty(location=['gpu'], _type=int)
+    cpu: int = entities.DlProperty(location=['cpu'], _type=int)
+    memory: str = entities.DlProperty(location=['memory'], _type=str)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            gpu=_json.get('gpu', None),
-            cpu=_json.get('cpu', None),
-            memory=_json.get('memory', None)
-        )
-
-    def to_json(self):
-        _json = {}
-        if self.gpu is not None:
-            _json['gpu'] = self.gpu
-        if self.cpu is not None:
-            _json['cpu'] = self.cpu
-        if self.memory is not None:
-            _json['memory'] = self.memory
+        return cls(_dict=_json)
 
 
-class DeploymentResources:
-    def __init__(self, request: DeploymentResource, limit: DeploymentResource):
-        self.request = request
-        self.limit = limit
+class DeploymentResources(entities.DlEntity):
+    request: DeploymentResource = entities.DlProperty(location=['request'], _kls='DeploymentResource')
+    limit: DeploymentResource = entities.DlProperty(location=['limit'], _kls='DeploymentResource')
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            request=DeploymentResource.from_json(_json.get('request') or dict()),
-            limit=DeploymentResource.from_json(_json.get('limit') or dict())
-        )
-
-    def to_json(self):
-        return {
-            'request': self.request.to_json(),
-            'limit': self.limit.to_json()
-        }
+        return cls(_dict=_json)
 
 
-class NodePool:
-    def __init__(
-            self,
-            name: str,
-            is_dl_type_default: bool,
-            dl_types: Optional[List[str]] = None,
-            tolerations: Optional[List[Toleration]] = None,
-            description: str = "",
-            node_selector: str = "",
-            preemptible: bool = False,
-            deployment_resources: DeploymentResources = None
-    ):
-        self.name = name
-        self.is_dl_type_default = is_dl_type_default
-        self.dl_types = dl_types
-        self.tolerations = tolerations if tolerations is not None else []
-        self.description = description
-        self.node_selector = node_selector
-        self.preemptible = preemptible
-        self.deployment_resources = deployment_resources
+class NodePool(entities.DlEntity):
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    is_dl_type_default: bool = entities.DlProperty(location=['isDlTypeDefault'], _type=bool)
+    is_monitoring_configuration: bool = entities.DlProperty(location=['isMonitoringConfiguration'], _type=bool)
+    dl_types: List[str] = entities.DlProperty(location=['dlTypes'], _type=list)
+    tolerations: List[Toleration] = entities.DlProperty(location=['tolerations'], _kls='Toleration', default=[])
+    description: str = entities.DlProperty(location=['description'], _type=str, default='')
+    node_selector: str = entities.DlProperty(location=['nodeSelector'], _type=str, default='')
+    preemptible: bool = entities.DlProperty(location=['preemptible'], _type=bool, default=False)
+    deployment_resources: DeploymentResources = entities.DlProperty(location=['deploymentResources'], _kls='DeploymentResources')
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        node_pool = cls(
-            name=_json.get('name'),
-            is_dl_type_default=_json.get('isDlTypeDefault'),
-            dl_types=_json.get('dlTypes'),
-            description=_json.get('description'),
-            node_selector=_json.get('nodeSelector'),
-            preemptible=_json.get('preemptible'),
-            deployment_resources=DeploymentResources.from_json(_json.get('deploymentResources', dict())),
-            tolerations=[Toleration.from_json(t) for t in _json.get('tolerations', list())]
-        )
-
-        return node_pool
-
-    def to_json(self):
-        _json = {
-            'name': self.name,
-            'isDlTypeDefault': self.is_dl_type_default,
-            'description': self.description,
-            'nodeSelector': self.node_selector,
-            'preemptible': self.preemptible,
-            'deploymentResources': self.deployment_resources.to_json(),
-            'tolerations': [t.to_json() for t in self.tolerations]
-        }
-
-        if self.dl_types is not None:
-            _json['dlTypes'] = self.dl_types
-
-        return _json
+        return cls(_dict=_json)
 
 
-class AuthenticationIntegration:
-    def __init__(self, id: str, type: str):
-        self.id = id
-        self.type = type
+class AuthenticationIntegration(entities.DlEntity):
+    id: str = entities.DlProperty(location=['id'], _type=str)
+    type: str = entities.DlProperty(location=['type'], _type=str)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            id=_json.get('id'),
-            type=_json.get('type')
-        )
-
-    def to_json(self):
-        return {
-            'id': self.id,
-            'type': self.type
-        }
+        return cls(_dict=_json)
 
 
-class Authentication:
-    def __init__(self, integration: AuthenticationIntegration):
-        self.integration = integration
+class Authentication(entities.DlEntity):
+    integration: AuthenticationIntegration = entities.DlProperty(location=['integration'], _kls='AuthenticationIntegration')
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            integration=AuthenticationIntegration.from_json(_json.get('integration', dict()))
-        )
-
-    def to_json(self):
-        return {
-            'integration': self.integration.to_json()
-        }
+        return cls(_dict=_json)
 
 
-class ComputeCluster:
-    def __init__(
-            self,
-            name: str,
-            endpoint: str,
-            kubernetes_version: str,
-            provider: ClusterProvider,
-            node_pools: Optional[List[NodePool]] = None,
-            metadata: Optional[Dict] = None,
-            authentication: Optional[Authentication] = None,
-            plugins: Optional[dict] = None,
-            deployment_configuration: Optional[Dict] = None
-    ):
-        self.name = name
-        self.endpoint = endpoint
-        self.kubernetes_version = kubernetes_version
-        self.provider = provider
-        self.node_pools = node_pools if node_pools is not None else []
-        self.metadata = metadata if metadata is not None else {}
-        self.authentication = authentication if authentication is not None else Authentication(
-            AuthenticationIntegration("", ""))
-        self.plugins = plugins
-        self.deployment_configuration = deployment_configuration if deployment_configuration is not None else {}
+class ComputeCluster(entities.DlEntity):
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    endpoint: str = entities.DlProperty(location=['endpoint'], _type=str)
+    kubernetes_version: str = entities.DlProperty(location=['kubernetesVersion'], _type=str)
+    provider: str = entities.DlProperty(location=['provider'], _type=str)
+    node_pools: List[NodePool] = entities.DlProperty(location=['nodePools'], _kls='NodePool', default=[])
+    metadata: Dict = entities.DlProperty(location=['metadata'], _type=dict, default={})
+    authentication: Authentication = entities.DlProperty(location=['authentication'], _kls='Authentication')
+    plugins: dict = entities.DlProperty(location=['plugins'], _type=dict)
+    deployment_configuration: Dict = entities.DlProperty(location=['deploymentConfiguration'], _type=dict, default={})
 
-
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            name=_json.get('name'),
-            endpoint=_json.get('endpoint'),
-            kubernetes_version=_json.get('kubernetesVersion'),
-            provider=ClusterProvider(_json.get('provider')),
-            node_pools=[NodePool.from_json(np) for np in _json.get('nodePools', list())],
-            metadata=_json.get('metadata'),
-            authentication=Authentication.from_json(_json.get('authentication', dict())),
-            plugins=_json.get('plugins'),
-            deployment_configuration=_json.get('deploymentConfiguration'),
-        )
-
-    def to_json(self):
-        return {
-            'name': self.name,
-            'endpoint': self.endpoint,
-            'kubernetesVersion': self.kubernetes_version,
-            'provider': self.provider.value,
-            'nodePools': [np.to_json() for np in self.node_pools],
-            'metadata': self.metadata,
-            'authentication': self.authentication.to_json(),
-            'plugins': self.plugins,
-            'deploymentConfiguration':  self.deployment_configuration
-        }
+        return cls(_dict=_json)
 
     @classmethod
     def from_setup_json(cls, devops_output, integration):
-        node_pools = [NodePool.from_json(n) for n in devops_output['config']['nodePools']]
-        return cls(
-            name=devops_output['config']['name'],
-            endpoint=devops_output['config']['endpoint'],
-            kubernetes_version=devops_output['config']['kubernetesVersion'],
-            provider=ClusterProvider(devops_output['config']['provider']),
-            node_pools=node_pools,
-            metadata={},
-            authentication=Authentication(AuthenticationIntegration(integration.id, integration.type)),
-            plugins=devops_output['config'].get('plugins'),
-            deployment_configuration=devops_output['config'].get('deploymentConfiguration', {})
-        )
+        _json = {
+            'name': devops_output['config']['name'],
+            'endpoint': devops_output['config']['endpoint'],
+            'kubernetesVersion': devops_output['config']['kubernetesVersion'],
+            'provider': devops_output['config']['provider'],
+            'nodePools': devops_output['config']['nodePools'],
+            'metadata': {},
+            'authentication': {'integration': {'id': integration.id, 'type': integration.type}},
+            'plugins': devops_output['config'].get('plugins'),
+            'deploymentConfiguration': devops_output['config'].get('deploymentConfiguration', {})
+        }
+        return cls(_dict=_json)
 
 
-class ComputeContext:
-    def __init__(self, labels: List[str], org: str, project: Optional[str] = None):
-        self.labels = labels
-        self.org = org
-        self.project = project
+class ComputeContext(entities.DlEntity):
+    labels: List[str] = entities.DlProperty(location=['labels'], _type=list, default=[])
+    org: str = entities.DlProperty(location=['org'], _type=str)
+    project: str = entities.DlProperty(location=['project'], _type=str)
+
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
     @classmethod
     def from_json(cls, _json):
-        return cls(
-            labels=_json.get('labels', list()),
-            org=_json.get('org'),
-            project=_json.get('project')
-        )
-
-    def to_json(self):
-        return {
-            'labels': self.labels,
-            'org': self.org,
-            'project': self.project
-        }
+        return cls(_dict=_json)
 
 
-class Compute:
-    def __init__(
-            self,
-            id: str,
-            name: str,
-            context: ComputeContext,
-            client_api: ApiClient,
-            shared_contexts: Optional[List[ComputeContext]] = None,
-            global_: Optional[bool] = None,
-            status: ComputeStatus = ComputeStatus.INITIALIZING,
-            type: ComputeType = ComputeType.KUBERNETES,
-            features: Optional[Dict] = None,
-            metadata: Optional[Dict] = None,
-            settings: Optional[ComputeSettings] = None,
-            url: Optional[str] = None
-    ):
-        self.id = id
-        self.name = name
-        self.context = context
-        self.shared_contexts = shared_contexts if shared_contexts is not None else []
-        self.global_ = global_
-        self.status = status
-        self.type = type
-        self.features = features if features is not None else dict()
-        self.metadata = metadata if metadata is not None else dict()
+class Compute(entities.DlEntity):
+    id: str = entities.DlProperty(location=['id'], _type=str)
+    name: str = entities.DlProperty(location=['name'], _type=str)
+    context: ComputeContext = entities.DlProperty(location=['context'], _kls='ComputeContext')
+    shared_contexts: List[ComputeContext] = entities.DlProperty(location=['sharedContexts'], _kls='ComputeContext', default=[])
+    global_: bool = entities.DlProperty(location=['global'], _type=bool)
+    status: str = entities.DlProperty(location=['status'], _type=str, default=ComputeStatus.INITIALIZING.value)
+    type: str = entities.DlProperty(location=['type'], _type=str, default=ComputeType.KUBERNETES.value)
+    features: Dict = entities.DlProperty(location=['features'], _type=dict, default={})
+    metadata: Dict = entities.DlProperty(location=['metadata'], _type=dict, default={})
+    settings: ComputeSettings = entities.DlProperty(location=['settings'], _kls='ComputeSettings')
+    url: str = entities.DlProperty(location=['url'], _type=str)
+
+    def __init__(self, _dict=None, client_api: ApiClient = None, **kwargs):
+        super().__init__(_dict=_dict, **kwargs)
         self._client_api = client_api
         self._computes = None
         self._serviceDrivers = None
-        self.settings = settings
-        self.url = url
 
     @property
     def computes(self):
@@ -362,89 +224,18 @@ class Compute:
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient):
-        return cls(
-            id=_json.get('id'),
-            name=_json.get('name'),
-            context=ComputeContext.from_json(_json.get('context', dict())),
-            shared_contexts=[ComputeContext.from_json(sc) for sc in _json.get('sharedContexts', list())],
-            global_=_json.get('global'),
-            status=ComputeStatus(_json.get('status')),
-            type=ComputeType(_json.get('type')),
-            features=_json.get('features'),
-            client_api=client_api,
-            metadata=_json.get('metadata'),
-            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None,
-            url=_json.get('url'),
-        )
+        return cls(_dict=_json, client_api=client_api)
 
-    def to_json(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'context': self.context.to_json(),
-            'sharedContexts': [sc.to_json() for sc in self.shared_contexts],
-            'global': self.global_,
-            'status': self.status.value,
-            'type': self.type.value,
-            'features': self.features,
-            'metadata': self.metadata,
-            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings,
-            'url': self.url
-        }
+    def to_json(self) -> dict:
+        return self._dict.copy()
 
 
 class KubernetesCompute(Compute):
-    def __init__(
-            self,
-            id: str,
-            name: str,
-            context: ComputeContext,
-            cluster: ComputeCluster,
-            shared_contexts: Optional[List[ComputeContext]] = None,
-            global_: Optional[bool] = None,
-            status: ComputeStatus = ComputeStatus.INITIALIZING,
-            type: ComputeType = ComputeType.KUBERNETES,
-            features: Optional[Dict] = None,
-            metadata: Optional[Dict] = None,
-            client_api: ApiClient = None,
-            settings: Optional[ComputeSettings] = None,
-            url: Optional[str] = None
-    ):
-        super().__init__(id=id, context=context, shared_contexts=shared_contexts, global_=global_, status=status,
-                         type=type, features=features, metadata=metadata, client_api=client_api, settings=settings,
-                         name=name, url=url)
-        self.cluster = cluster
+    cluster: ComputeCluster = entities.DlProperty(location=['cluster'], _kls='ComputeCluster')
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient):
-        return cls(
-            id=_json.get('id'),
-            name=_json.get('name'),
-            context=ComputeContext.from_json(_json.get('context', dict())),
-            cluster=ComputeCluster.from_json(_json.get('cluster', dict())),
-            shared_contexts=[ComputeContext.from_json(sc) for sc in _json.get('sharedContexts', list())],
-            global_=_json.get('global'),
-            status=ComputeStatus(_json.get('status')),
-            type=ComputeType(_json.get('type')),
-            features=_json.get('features'),
-            metadata=_json.get('metadata'),
-            client_api=client_api,
-            settings=ComputeSettings.from_json(_json.get('settings', dict())) if _json.get('settings') else None,
-            url=_json.get('url')
-        )
+        return cls(_dict=_json, client_api=client_api)
 
-    def to_json(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'context': self.context.to_json(),
-            'cluster': self.cluster.to_json(),
-            'sharedContexts': [sc.to_json() for sc in self.shared_contexts],
-            'global': self.global_,
-            'status': self.status.value,
-            'type': self.type.value,
-            'features': self.features,
-            'metadata': self.metadata,
-            'settings': self.settings.to_json() if isinstance(self.settings, ComputeSettings) else self.settings,
-            'url': self.url
-        }
+    def to_json(self) -> dict:
+        return self._dict.copy()

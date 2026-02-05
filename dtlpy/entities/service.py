@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 import attr
 from .. import repositories, entities
 from ..services.api_client import ApiClient
+from .dpk import Dpk
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -359,6 +360,50 @@ class Service(entities.BaseEntity):
         inst.is_fetched = is_fetched
         return inst
 
+    @classmethod
+    def from_function(
+        cls,
+        func,
+        name: str = None,
+        version: str = '1.0.0',
+        description: str = None,
+        project: 'entities.Project' = None,
+        client_api: ApiClient = None,
+        scope: str = 'project',
+        runtime: dict = None,
+        execution_timeout: int = 3600,
+    ) -> 'Service':
+        """
+        Create a Service from a Python function: build DPK via Dpk.from_function, then publish, install, and return the Service.
+        """        
+        built_dpk = Dpk.from_function(
+            func=func,
+            name=name,
+            version=version,
+            description=description,
+            project=project,
+            client_api=client_api,
+            scope=scope,
+            runtime=runtime,
+            execution_timeout=execution_timeout,
+        )
+        published_dpk = project.dpks.publish(dpk=built_dpk)
+        app = project.apps.install(dpk=published_dpk, app_name=published_dpk.display_name)
+        service_name = f"{built_dpk.name}-service".replace("_", "-")
+        filters = entities.Filters(
+            resource=entities.FiltersResource.SERVICE,
+            field='name',
+            values=service_name,
+            use_defaults=False
+        )
+        services = project.services.list(filters=filters)
+        if services.items_count == 0:
+            raise RuntimeError(
+                "No service found with name %s for installed app (app id=%s). "
+                "The app was installed but the service may not be listed yet." % (service_name, app.id)
+            )
+        return services.items[0]
+
     ############
     # Entities #
     ############
@@ -397,7 +442,7 @@ class Service(entities.BaseEntity):
                         dpk_id=dpk_id,
                         version=dpk_version)
 
-                assert isinstance(self._package, entities.Dpk)
+                assert isinstance(self._package, Dpk)
             except:
                 self._package = repositories.Packages(client_api=self._client_api).get(package_id=self.package_id,
                                                                                        fetch=None,
