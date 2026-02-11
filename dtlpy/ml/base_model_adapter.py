@@ -605,7 +605,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         input_type = self.model_entity.input_type
         self.logger.debug("Predicting {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
         pool = ThreadPoolExecutor(max_workers=16)
-        error_counter = 0
+        errors = list()
         fail_ids = list()
         annotations = list()
         for i_batch in tqdm.tqdm(range(0, len(items), batch_size), desc='predicting', unit='bt', leave=None, file=sys.stdout):
@@ -615,8 +615,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 batch_collections = self.predict(batch, **kwargs)
             except Exception as e:
                 item_ids = [item.id for item in batch_items]
-                self.logger.error(f"Failed to predict batch {i_batch} for items {item_ids}. Error: {e}\n{traceback.format_exc()}")
-                error_counter += 1
+                error_message = f"Failed to predict batch {i_batch} for items {item_ids}. Error: {e}\n{traceback.format_exc()}"
+                self.logger.error(error_message)
+                errors.append(error_message)
                 fail_ids.extend(item_ids)
                 continue
             _futures = list(pool.map(partial(self._update_predictions_metadata), batch_items, batch_collections))
@@ -629,10 +630,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 )
             except Exception as err:
                 item_ids = [item.id for item in batch_items]
-                self.logger.error(
-                    f"Failed to upload annotations for items {item_ids}. Error: {err}\n{traceback.format_exc()}"
-                )
-                error_counter += 1
+                error_message = f"Failed to upload annotations for items {item_ids}. Error: {err}\n{traceback.format_exc()}"
+                self.logger.error(error_message)
+                errors.append(error_message)
                 fail_ids.extend(item_ids)
 
             for collection in batch_collections:
@@ -646,8 +646,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             # TODO call the callback
 
         pool.shutdown()
-        if error_counter > 0:
-            raise Exception(f"Failed to predict all items. Failed IDs: {fail_ids}, See logs for more details")
+        if len(errors) > 0:
+            errors_str = "\n".join(errors)
+            raise Exception(f"Failed to predict all items. Failed IDs: {fail_ids}.\nErrors:\n{errors_str}")
         return items, annotations
 
     @entities.Package.decorators.function(
@@ -673,7 +674,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             upload_features = True
         input_type = self.model_entity.input_type
         self.logger.debug("Embedding {} items, using batch size {}. input type: {}".format(len(items), batch_size, input_type))
-        error_counter = 0
+        errors = list()
         fail_ids = list()
 
         feature_set = self.feature_set
@@ -695,8 +696,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 batch_vectors = self.embed(batch, **kwargs)
             except Exception as err:
                 item_ids = [item.id for item in batch_items]
-                self.logger.error(f"Failed to embed batch {i_batch} for items {item_ids}. Error: {err}\n{traceback.format_exc()}")
-                error_counter += 1
+                error_message = f"Failed to embed batch {i_batch} for items {item_ids}. Error: {err}\n{traceback.format_exc()}"
+                self.logger.error(error_message)
+                errors.append(error_message)
                 fail_ids.extend(item_ids)
                 continue
             vectors.extend(batch_vectors)
@@ -740,15 +742,22 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 raise ValueError(f"The number of items ({len(_items)}) is not equal to the number of vectors ({len(vectors)}).")
 
             self.logger.debug(f"Uploading {len(items_to_upload)} items' feature vectors for model {self.model_entity.name}.")
-            try:
-                start_time = time.time()
-                feature_set.features.create(entity=items_to_upload, value=vectors_to_upload, feature_set_id=feature_set.id, project_id=self.model_entity.project_id)
-                self.logger.debug(f"Uploaded {len(items_to_upload)} items' feature vectors for model {self.model_entity.name} in {time.time() - start_time} seconds.")
-            except Exception as err:
-                self.logger.error(f"Failed to upload feature vectors. Error: {err}\n{traceback.format_exc()}")
-                error_counter += 1
-        if error_counter > 0:
-            raise Exception(f"Failed to embed all items. Failed IDs: {fail_ids}, See logs for more details")
+            if len(vectors_to_upload) == 0:
+                self.logger.warning(f"No feature vectors to upload for model {self.model_entity.name}. Skipping feature upload.")
+            else:
+                try:
+                    start_time = time.time()
+                    feature_set.features.create(entity=items_to_upload, value=vectors_to_upload, feature_set_id=feature_set.id, project_id=self.model_entity.project_id)
+                    self.logger.debug(f"Uploaded {len(items_to_upload)} items' feature vectors for model {self.model_entity.name} in {time.time() - start_time} seconds.")
+                except Exception as err:
+                    upload_item_ids = [item.id for item in items_to_upload]
+                    error_message = f"Failed to upload feature vectors for items {upload_item_ids}. Error: {err}\n{traceback.format_exc()}"
+                    self.logger.error(error_message)
+                    errors.append(error_message)
+                    fail_ids.extend(upload_item_ids)
+        if len(errors) > 0:
+            errors_str = "\n".join(errors)
+            raise Exception(f"Failed to embed all items. Failed IDs: {fail_ids}.\nErrors:\n{errors_str}")
         return _items, vectors
 
     @entities.Package.decorators.function(
