@@ -9,3 +9,4 @@ m2r==0.2.1
 recommonmark
 mistune==0.8.4
 sphinx-notfound-page
+nbconvert>=7.17.0 # not directly required, pinned by Snyk to avoid a vulnerability
