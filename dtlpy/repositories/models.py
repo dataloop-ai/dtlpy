@@ -499,7 +499,7 @@ class Models:
                 "componentName": model_to_create['name'],
                 "dpkName": dpk.name,
                 "dpkVersion": dpk.version,
-                "dpkId": dpk.id
+                "dpkId": dpk.base_id
             }
 
         if configuration is not None:
