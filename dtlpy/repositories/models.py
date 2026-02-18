@@ -530,6 +530,9 @@ class Models:
                 annotations_validation_filter=annotations_validation_filter
             )
             payload['metadata'] = metadata
+        else:
+            payload['metadata'] = {'system': {}}
+
 
         # request
         success, response = self._client_api.gen_request(req_type='post',
