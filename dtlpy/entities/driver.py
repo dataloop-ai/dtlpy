@@ -28,6 +28,7 @@ class ExternalStorage(str, Enum):
     """
     S3 = "s3"
     GCS = "gcs"
+    FAAS_PROXY = "faasProxy"
     AZUREBLOB = "azureblob"
     AZURE_DATALAKE_GEN2 = 'azureDatalakeGen2'
     POWERSCALE_S3 = 'powerscaleS3'

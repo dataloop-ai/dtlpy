@@ -429,7 +429,7 @@ class Drivers:
                         f"Invalid endpoint URL '{endpoint}'. Must be 'http://<hostname>:<port>' or 'https://<hostname>:<port>'."
                     )
 
-        elif driver_type == entities.ExternalStorage.GCS:
+        elif driver_type == entities.ExternalStorage.GCS or driver_type == entities.ExternalStorage.FAAS_PROXY:
             bucket_payload = "bucket"
         else:
             bucket_payload = "containerName"
