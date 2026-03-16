@@ -2,7 +2,7 @@ urllib3>=1.26
 tqdm>=4.63
 certifi>=2020.12.5
 webvtt-py==0.4.3
-aiohttp>=3.8
+aiohttp>=3.12.14
 requests-toolbelt>=1.0.0
 requests>=2.25.0
 numpy>=1.16.2
