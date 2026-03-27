@@ -24,7 +24,7 @@ def step_impl(context, field, value):
             break
         time.sleep(interval)
     assert finished, f"TEST FAILED: Expected PLG plan and fail after {round(num_try * interval / 60, 1)} minutes"
-    sub = eval(response.text.replace("true", "True"))
+    sub = json.loads(response.text)
     plan = {"Type": sub['plan']['name'],
             # plan_answer = "Free" / "Basic / "Standard" / "Pro" / "Pro Plus"
             "Period": sub['period']
