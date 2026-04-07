@@ -37,8 +37,8 @@ class UnsearchablePaths:
                                                          {
                                                              "unsearchablePaths": payload
                                                          })
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets') is False:
+            return False
 
         resp = response.json()
         if isinstance(resp, dict):
@@ -114,7 +114,7 @@ class Schema:
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/datasets/{}/schema'.format(self.dataset.id))
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets') is False:
+            return None
 
         return response.json()

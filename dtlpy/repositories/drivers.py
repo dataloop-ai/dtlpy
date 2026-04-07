@@ -23,38 +23,12 @@ class Drivers:
         :param Project project: Optional project entity. If not provided, will try to get from checkout
         """
         self._client_api = client_api
-        self._project = project
-
-    ############
-    # entities #
-    ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            # try get checkout
-            project = self._client_api.state_io.get("project")
-            if project is not None:
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error="2001",
-                message="Cannot perform action WITHOUT Project entity in Drivers repository."
-                " Please checkout or set a project",
-            )
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        """
-        Set the project for this Drivers repository.
-
-        :param Project project: The project entity to set
-        :raises ValueError: If the provided project is not a valid Project entity
-        """
-        if not isinstance(project, entities.Project):
-            raise ValueError("Must input a valid Project entity")
-        self._project = project
+        # Try to get checked out project if project is None
+        if project is None:
+            checked_out_project = client_api.state_io.get("project")
+            if checked_out_project is not None:
+                project = entities.Project.from_json(_json=checked_out_project, client_api=client_api)
+        self.project = project
 
     ###########
     # methods #
@@ -69,11 +43,11 @@ class Drivers:
         :raises PlatformException: If the driver is not found or there's an API error
         """
         success, response = self._client_api.gen_request(req_type="get", path="/drivers/{}".format(driver_id))
-        if success:
-            _json = response.json()
-            driver = self._getDriverClass(_json).from_json(client_api=self._client_api, _json=_json)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/drivers") is False:
+            return None
+
+        _json = response.json()
+        driver = self._getDriverClass(_json).from_json(client_api=self._client_api, _json=_json)
         return driver
 
     @_api_reference.add(path="/drivers", method="get")
@@ -97,8 +71,8 @@ class Drivers:
         success, response = self._client_api.gen_request(
             req_type="get", path="/drivers?projectId={}".format(self.project.id)
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/drivers?projectId={}".format(self.project.id)) is False:
+            return None
         drivers = miscellaneous.List(
             [
                 self._getDriverClass(_json).from_json(_json=_json, client_api=self._client_api)
@@ -179,11 +153,10 @@ class Drivers:
         :raises PlatformException: If the driver creation fails
         """
         success, response = self._client_api.gen_request(req_type="post", path="/drivers", json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            _json = response.json()
-            return self._getDriverClass(_json).from_json(_json=_json, client_api=self._client_api)
+        if self._client_api.check_response(success, response, path="/drivers") is False:
+            return None
+        _json = response.json()
+        return self._getDriverClass(_json).from_json(_json=_json, client_api=self._client_api)
 
     def create_powerscale_s3(
         self,
@@ -374,7 +347,6 @@ class Drivers:
 
         return self._create_driver(payload)
 
-
     def create(
         self,
         name: str,
@@ -395,7 +367,7 @@ class Drivers:
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
         :param str name: the driver name
-        :param ExternalStorage driver_type: dl.ExternalStorage (Enum). For all options run: list(dl.ExsternalStorage)
+        :param ExternalStorage driver_type: dl.ExternalStorage (Enum). For all options run: list(dl.ExternalStorage)
         :param str integration_id: the integration id
         :param str bucket_name: the external bucket name
         :param IntegrationType integration_type: dl.IntegrationType (Enum). For all options run: list(dl.IntegrationType)
@@ -448,6 +420,60 @@ class Drivers:
             payload["payload"]["endpoint"] = endpoint
 
         return self._create_driver(payload)
+
+    def create_network_storage(
+        self,
+        name: str,
+        compute_id: str,
+        compute_storage_name: str,
+        public: bool = False,
+        project_id: str = None,
+        allow_external_delete: bool = True,
+        org_id: str = None
+    ):
+        """
+        Create a hybrid (network storage) driver linking compute storage to a project.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str name: the driver name
+        :param str compute_id: the compute ID to link
+        :param str compute_storage_name: the storage name configured on the compute
+        :param bool public: whether the driver is public (default: False)
+        :param str project_id: project id. If not provided, uses the current project
+        :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
+        :param str org_id: optional organization ID. If not provided, uses the project's organization
+        :return: driver object
+        :rtype: dtlpy.entities.driver.Driver
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.drivers.create_network_storage(
+                name='my-hybrid-driver',
+                compute_id='684c0a5d3cb7280017576fba',
+                compute_storage_name='s3driver',
+                public=False
+            )
+        """
+        payload = {
+            "name": name,
+            "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
+            "type": "hybrid",
+            "payload": {
+                "computeId": compute_id,
+                "computeStorageName": compute_storage_name,
+                "public": public,
+            },
+            "allowExternalDelete": allow_external_delete,
+            "creator": self._client_api.info().get("user_email"),
+        }
+
+        if org_id is not None:
+            payload["metadata"]["system"]["orgId"] = org_id
+
+        return self._create_driver(payload)
     
     @_api_reference.add(path="/drivers/{id}", method="delete")
     def delete(self, driver_name: str = None, driver_id: str = None, sure: bool = False, really: bool = False):
@@ -472,8 +498,8 @@ class Drivers:
         if sure and really:
             driver = self.get(driver_name=driver_name, driver_id=driver_id)
             success, response = self._client_api.gen_request(req_type="delete", path="/drivers/{}".format(driver.id))
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/drivers/{}".format(driver.id)) is False:
+                return False
             logger.info("Driver {!r} was deleted successfully".format(driver.name))
             return True
         else:

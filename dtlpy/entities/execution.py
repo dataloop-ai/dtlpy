@@ -57,7 +57,7 @@ class Execution(entities.BaseEntity):
     # sdk
     _client_api = attr.ib(type=ApiClient, repr=False)
     _service = attr.ib(repr=False)
-    _project = attr.ib(repr=False, default=None)
+    project = attr.ib(repr=False, default=None)
     _repositories = attr.ib(repr=False)
 
     # optional
@@ -74,18 +74,18 @@ class Execution(entities.BaseEntity):
         reps = namedtuple('repositories',
                           field_names=['executions', 'services'])
 
-        if self._project is not None:
-            services_repo = self._project.services
-            executions_repo = self._project.executions
+        if self.project is not None:
+            services_repo = self.project.services
+            executions_repo = self.project.executions
         elif self._service is not None:
             services_repo = self._service.services
             executions_repo = self._service.executions
         else:
             services_repo = repositories.Services(client_api=self._client_api,
-                                                  project=self._project,
+                                                  project=self.project,
                                                   package=None)
             executions_repo = repositories.Executions(client_api=self._client_api,
-                                                      project=self._project,
+                                                      project=self.project,
                                                       service=self._service)
 
         r = reps(executions=executions_repo,
@@ -161,6 +161,16 @@ class Execution(entities.BaseEntity):
                 logger.warning('Execution has been fetched from a service that is not belong to it')
                 service = None
 
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         inst = cls(
             feedback_queue=_json.get('feedbackQueue', None),
             service_id=_json.get('serviceId', None),
@@ -209,7 +219,7 @@ class Execution(entities.BaseEntity):
             self, filter=attr.filters.exclude(
                 attr.fields(Execution)._client_api,
                 attr.fields(Execution)._service,
-                attr.fields(Execution)._project,
+                attr.fields(Execution).project,
                 attr.fields(Execution).to_terminate,
                 attr.fields(Execution)._repositories,
                 attr.fields(Execution).project_id,
@@ -289,13 +299,6 @@ class Execution(entities.BaseEntity):
         assert isinstance(self._service, entities.Service)
         return self._service
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
-                                                                                   fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     def get_latest_status(self):
         self.latest_status = self.executions.get(execution_id=self.id).latest_status

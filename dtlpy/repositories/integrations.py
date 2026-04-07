@@ -26,17 +26,7 @@ class Integrations:
                  project: entities.Project = None):
         self._client_api = client_api
         self._org = org
-        self._project = project
-
-    @property
-    def project(self) -> entities.Project:
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
+        self.project = project
 
     @property
     def org(self) -> entities.Organization:
@@ -91,10 +81,9 @@ class Integrations:
             url_path = '/orgs/{}/integrations/{}'.format(organization_id, integrations_id)
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path=url_path)
-            if not success:
-                raise exceptions.PlatformException(response)
-            else:
-                return True
+            if self._client_api.check_response(success, response, path='/integrations') is False:
+                return False
+            return True
         else:
             raise exceptions.PlatformException(
                 error='403',
@@ -164,10 +153,9 @@ class Integrations:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            integration = entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
+        if self._client_api.check_response(success, response, path='/integrations') is False:
+            return None
+        integration = entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
         if integration.metadata and isinstance(integration.metadata, list) and len(integration.metadata) > 0:
             for m in integration.metadata:
                 if m['name'] == 'status':
@@ -250,8 +238,8 @@ class Integrations:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/integrations') is False:
+            return None
 
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
@@ -288,8 +276,8 @@ class Integrations:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/integrations') is False:
+            return None
         return entities.Integration.from_json(_json=response.json(), client_api=self._client_api)
 
     @_api_reference.add(path='/orgs/{orgId}/integrations', method='get')
@@ -328,8 +316,8 @@ class Integrations:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/integrations') is False:
+            return None
 
         available_integrations = miscellaneous.List(response.json())
         return available_integrations

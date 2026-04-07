@@ -72,23 +72,23 @@ class Messages:
 
         success, response = self._client_api.gen_request(req_type='get', path=url)
 
-        if success:
-            pool = self._client_api.thread_pools('entity.create')
-            message_json = response.json()
-            items = message_json.get('items', list())
-            jobs = [None for _ in range(len(items))]
-            for i_message, message in enumerate(items):
-                jobs[i_message] = pool.submit(
-                    entities.Message._protected_from_json,
-                    **{'client_api': self._client_api, '_json': message}
-                )
+        if self._client_api.check_response(success, response, path="/inbox/message/user") is False:
+            return None
 
-            # get all results
-            results = [j.result() for j in jobs]
-            # log errors
-            _ = [logger.warning(r[1]) for r in results if r[0] is False]
-            # return good jobs
-            messages = miscellaneous.List([r[1] for r in results if r[0] is True])
-        else:
-            raise exceptions.PlatformException(response)
+        pool = self._client_api.thread_pools('entity.create')
+        message_json = response.json()
+        items = message_json.get('items', list())
+        jobs = [None for _ in range(len(items))]
+        for i_message, message in enumerate(items):
+            jobs[i_message] = pool.submit(
+                entities.Message._protected_from_json,
+                **{'client_api': self._client_api, '_json': message}
+            )
+
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        messages = miscellaneous.List([r[1] for r in results if r[0] is True])
         return messages

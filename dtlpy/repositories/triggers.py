@@ -21,16 +21,19 @@ class Triggers:
                  project_id: str = None,
                  pipeline: entities.Pipeline = None):
         self._client_api = client_api
-        self._project = project
         self._service = service
         self._pipeline = pipeline
-        if project_id is None:
-            if self._project is not None:
-                project_id = self._project.id
-            elif self._service is not None:
-                project_id = self._service.project_id
-
-        self._project_id = project_id
+        # Initialize project - try from service first, then from project_id
+        if project is None:
+            if service is not None:
+                project = service.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
 
     ############
     # entities #
@@ -65,23 +68,6 @@ class Triggers:
             raise ValueError('Must input a valid Service entity')
         self._pipeline = pipeline
 
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            if self._service is not None:
-                self._project = self._service._project
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.triggers repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     def name_validation(self, name: str):
         """
@@ -94,8 +80,7 @@ class Triggers:
         # request
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        self._client_api.check_response(success, response, path="/triggers")
 
     @_api_reference.add(path='/triggers', method='post')
     def create(self,
@@ -265,10 +250,11 @@ class Triggers:
             spec['operation'] = operation
 
             # payload
-            if self._project_id is None and project_id is None:
-                raise exceptions.PlatformException('400', 'Please provide a project id')
-            elif project_id is None:
-                project_id = self._project_id
+            if project_id is None:
+                if self.project is not None:
+                    project_id = self.project.id
+                else:
+                    raise exceptions.PlatformException('400', 'Please provide a project id')
 
             payload = {
                 'type': trigger_type,
@@ -290,13 +276,13 @@ class Triggers:
                                                              json_req=payload)
 
             # exception handling
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/triggers") is False:
+                return None
 
             # return entity
             return entities.BaseTrigger.from_json(_json=response.json(),
                                                   client_api=self._client_api,
-                                                  project=self._project if self._project_id == project_id else None,
+                                                  project=self.project if (self.project is not None and self.project.id == project_id) else None,
                                                   service=self._service)
 
     @_api_reference.add(path='/triggers/{id}', method='get')
@@ -325,13 +311,13 @@ class Triggers:
             )
 
             # exception handling
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/triggers") is False:
+                return None
 
             # return entity
             trigger = entities.BaseTrigger.from_json(client_api=self._client_api,
                                                      _json=response.json(),
-                                                     project=self._project,
+                                                     project=self.project,
                                                      service=self._service)
             # verify input trigger name is same as the given id
             if trigger_name is not None and trigger.name != trigger_name:
@@ -386,8 +372,8 @@ class Triggers:
             path="/triggers/{}".format(trigger_id)
         )
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/triggers") is False:
+            return False
         return True
 
     @_api_reference.add(path='/triggers/{id}', method='patch')
@@ -416,13 +402,13 @@ class Triggers:
                                                          json_req=payload)
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/triggers") is False:
+            return None
 
         # return entity
         return entities.BaseTrigger.from_json(_json=response.json(),
                                               client_api=self._client_api,
-                                              project=self._project,
+                                              project=self.project,
                                               service=self._service)
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.BaseTrigger]:
@@ -433,7 +419,7 @@ class Triggers:
             jobs[i_trigger] = pool.submit(entities.BaseTrigger._protected_from_json,
                                           **{'client_api': self._client_api,
                                              '_json': trigger,
-                                             'project': self._project,
+                                             'project': self.project,
                                              'service': self._service})
 
         # get all results
@@ -454,14 +440,14 @@ class Triggers:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/triggers") is False:
+            return None
         return response.json()
 
     def __generate_default_filter(self):
         filters = entities.Filters(resource=entities.FiltersResource.TRIGGER)
-        if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
+        if self.project is not None:
+            filters.add(field='projectId', values=self.project.id)
         if self._service is not None:
             filters.add(field='spec.operation.serviceId', values=self._service.id)
         if self._pipeline is not None:
@@ -531,6 +517,6 @@ class Triggers:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/triggers") is False:
+            return None
         return response.json()

@@ -35,7 +35,7 @@ class Webhook(entities.BaseEntity):
 
     # SDK
     _client_api = attr.ib(type=ApiClient, repr=False)
-    _project = attr.ib()
+    project = attr.ib()
 
     # repos
     _webhooks = attr.ib(default=None)
@@ -60,6 +60,17 @@ class Webhook(entities.BaseEntity):
             if project.id != _json.get('project', None):
                 logger.warning('Webhook has been fetched from a project that is not in it projects list')
                 project = None
+
+        # Initialize project with minimal JSON if not provided but project exists in JSON
+        if project is None:
+            project_id = _json.get('project', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         return cls(
             http_method=_json.get('httpMethod', None),
             created_at=_json.get("createdAt", None),
@@ -74,18 +85,11 @@ class Webhook(entities.BaseEntity):
             project=project
         )
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
-                                                                                   fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def webhooks(self):
         if self._webhooks is None:
-            self._webhooks = repositories.Webhooks(client_api=self._client_api, project=self._project)
+            self._webhooks = repositories.Webhooks(client_api=self._client_api, project=self.project)
         assert isinstance(self._webhooks, repositories.Webhooks)
         return self._webhooks
 
@@ -99,7 +103,7 @@ class Webhook(entities.BaseEntity):
         _json = attr.asdict(
             self,
             filter=attr.filters.exclude(
-                attr.fields(Webhook)._project,
+                attr.fields(Webhook).project,
                 attr.fields(Webhook)._client_api,
                 attr.fields(Webhook).project_id,
                 attr.fields(Webhook).hook_url,

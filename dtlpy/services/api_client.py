@@ -99,6 +99,116 @@ class Callbacks:
             callback(progress=progress, context=context)
 
 
+class ErrorSuppression:
+    """
+    Global configuration for suppressing specific platform errors.
+    When a suppressed error is encountered, the SDK logs a warning instead of raising.
+
+    Within each filter, conditions use AND logic: all provided conditions must match.
+    Across filters, OR logic applies: if ANY filter matches, the error is suppressed.
+    """
+
+    def __init__(self, cookie):
+        self.cookie = cookie
+        dictionary = self.cookie.get('error_suppression')
+        if isinstance(dictionary, dict):
+            self.from_cookie(dictionary)
+        else:
+            self._filters = []
+            self.to_cookie()
+
+    def to_cookie(self):
+        self.cookie.put(key='error_suppression', value={'filters': self._filters})
+
+    def from_cookie(self, dictionary):
+        self._filters = dictionary.get('filters', [])
+
+    @property
+    def filters(self):
+        return list(self._filters)
+
+    def add_filter(self, status_codes=None, message_keywords=None, path_patterns=None):
+        """
+        Add a suppression filter. All provided conditions must match to suppress the error (AND logic).
+        Conditions not provided are ignored.
+
+        :param list status_codes: HTTP status codes to suppress (e.g. ['400', '409'])
+        :param list message_keywords: substrings to match in the error message (case-insensitive)
+        :param list path_patterns: substrings to match in the API request path
+        """
+        if status_codes is None and message_keywords is None and path_patterns is None:
+            raise ValueError('At least one filter condition must be provided')
+        filt = {}
+        if status_codes is not None:
+            filt['status_codes'] = [str(c) for c in status_codes]
+        if message_keywords is not None:
+            filt['message_keywords'] = [kw.lower() for kw in message_keywords]
+        if path_patterns is not None:
+            filt['path_patterns'] = path_patterns
+        self._filters.append(filt)
+        self.to_cookie()
+
+    def remove_filter(self, status_codes=None, message_keywords=None, path_patterns=None):
+        """
+        Remove filters matching the provided criteria. Uses the same parameters as add_filter.
+
+        :param list status_codes: HTTP status codes to match (e.g. ['400', '409'])
+        :param list message_keywords: substrings to match in the error message (case-insensitive)
+        :param list path_patterns: substrings to match in the API request path
+        """
+        if status_codes is None and message_keywords is None and path_patterns is None:
+            raise ValueError('At least one filter condition must be provided')
+        filt = {}
+        if status_codes is not None:
+            filt['status_codes'] = [str(c) for c in status_codes]
+        if message_keywords is not None:
+            filt['message_keywords'] = [kw.lower() for kw in message_keywords]
+        if path_patterns is not None:
+            filt['path_patterns'] = path_patterns
+        dictionary = self.cookie.get('error_suppression')
+        if isinstance(dictionary, dict):
+            self.from_cookie(dictionary)
+        self._filters = [f for f in self._filters if f != filt]
+        self.to_cookie()
+
+    def clear_filters(self):
+        """Remove all suppression filters."""
+        self._filters.clear()
+        self.to_cookie()
+
+    def should_suppress(self, status_code, message, path):
+        """
+        Check if an error should be suppressed based on the configured filters.
+        Uses AND logic within each filter: all provided conditions must match.
+        Conditions not present in a filter are ignored.
+        Uses OR logic across filters: if any filter matches, returns True.
+
+        :param str status_code: HTTP status code of the response
+        :param str message: error message from the response
+        :param str path: API request path
+        :return: True if the error should be suppressed
+        :rtype: bool
+        """
+        if not self._filters:
+            return False
+        message_lower = (message or '').lower()
+        status_code = str(status_code) if status_code else ''
+        for filt in self._filters:
+            match = True
+            if 'status_codes' in filt:
+                if status_code not in filt['status_codes']:
+                    match = False
+            if match and 'message_keywords' in filt:
+                if not any(kw in message_lower for kw in filt['message_keywords']):
+                    match = False
+            if match and 'path_patterns' in filt:
+                if not path or not any(pattern in path for pattern in filt['path_patterns']):
+                    match = False
+            if match:
+                return True
+        return False
+
+
 class Verbose:
     __DEFAULT_LOGGING_LEVEL = 'warning'
     __DEFAULT_DISABLE_PROGRESS_BAR = False
@@ -475,6 +585,7 @@ class ApiClient:
         self._environments = None
         self._environment = None
         self._verbose = None
+        self._error_suppression = None
         self._callbacks = None
         self._cache_state = None
         self._attributes_mode = None
@@ -492,6 +603,7 @@ class ApiClient:
         # event and pools
         self._thread_pools = dict()
         self._event_loop = None
+        self._pid = os.getpid()
         self._login_domain = None
         self.__gate_url_for_requests = None
 
@@ -551,6 +663,7 @@ class ApiClient:
 
     @property
     def event_loop(self):
+        self._check_fork()
         self.lock.acquire()
         if self._event_loop is None:
             self._event_loop = self.create_event_loop_thread()
@@ -640,7 +753,17 @@ class ApiClient:
         time.sleep(1)
         return event_loop
 
+    def _check_fork(self):
+        if os.getpid() == self._pid:
+            return
+        self._pid = os.getpid()
+        self._thread_pools = dict()
+        self.session = None
+        self._event_loop = None
+        self.lock = threading.Lock()
+
     def thread_pools(self, pool_name):
+        self._check_fork()
         if pool_name not in self._thread_pools_names:
             raise ValueError('unknown thread pool name: {}. known name: {}'.format(
                 pool_name,
@@ -735,6 +858,13 @@ class ApiClient:
             self._verbose = Verbose(cookie=self.cookie_io)
         assert isinstance(self._verbose, Verbose)
         return self._verbose
+
+    @property
+    def error_suppression(self):
+        if self._error_suppression is None:
+            self._error_suppression = ErrorSuppression(cookie=self.cookie_io)
+        assert isinstance(self._error_suppression, ErrorSuppression)
+        return self._error_suppression
 
     @property
     def cache_state(self):
@@ -1012,6 +1142,29 @@ class ApiClient:
         #     if 'stack' in kwargs:
         #         self.event_tracker.put(event=kwargs.get('stack'), resp=resp, path=path)
         return success, resp
+
+    def check_response(self, success, response, path=None):
+        """
+        Check API response and raise or suppress based on error_suppression config.
+
+        :param bool success: whether the request succeeded
+        :param response: the HTTP response object
+        :param str path: the API request path (for filter matching)
+        :return: True if no error, False if error was suppressed
+        :rtype: bool
+        :raises PlatformException: if error is not suppressed
+        """
+        if success:
+            return True
+        status_code = str(getattr(response, 'status_code', ''))
+        try:
+            message = response.json().get('message', response.text)
+        except Exception:
+            message = getattr(response, 'text', '')
+        if self.error_suppression.should_suppress(status_code, message, path):
+            logger.warning(f"Suppressed error [{status_code}]: {message} (path: {path})")
+            return False
+        raise exceptions.PlatformException(response)
 
     def _gen_request(self, req_type, path, data=None, json_req=None, files=None, stream=False, headers=None,
                      log_error=True):
@@ -1299,6 +1452,7 @@ class ApiClient:
         return pbar
 
     def send_session(self, prepared, stream=None):
+        self._check_fork()
         if self.session is None:
             self.session = requests.Session()
             retry = Retry(

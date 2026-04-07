@@ -23,47 +23,28 @@ class Recipes:
                  project_id: str = None):
         self._client_api = client_api
         self._dataset = dataset
-        self._project = project
-        self._project_id = project_id
-        if project_id is None and project is not None:
-            self._project_id = project.id
+        # Initialize project - try from dataset first, then from project_id
+        if project is None:
+            if dataset is not None:
+                project = dataset.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
 
     ############
     # entities #
     ############
     @property
     def platform_url(self):
-        if self._project_id is None:
+        if self.project is None:
             project_id = self.dataset.project.id
         else:
-            project_id = self._project_id
+            project_id = self.project.id
         return self._client_api._get_resource_url("projects/{}/recipes".format(project_id))
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            if self._project_id is None:
-                if self._dataset is None:
-                    raise exceptions.PlatformException(
-                        error='2001',
-                        message='Missing "Project". need to set a Project entity or use project.recipes repository'
-                    )
-                else:
-                    self._project = self._dataset.project
-                    self._project_id = self._project.id
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
-                self._project_id = self._project.id
-
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
-        self._project_id = project.id
 
     @property
     def dataset(self) -> entities.Dataset:
@@ -154,15 +135,14 @@ class Recipes:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/recipes',
                                                          json_req=payload)
-        if success:
-            recipe = entities.Recipe.from_json(client_api=self._client_api,
-                                               _json=response.json(),
-                                               dataset=self._dataset)
-            if annotation_instruction_file:
-                recipe.add_instruction(annotation_instruction_file=annotation_instruction_file)
-        else:
-            logger.error('Failed to create Recipe')
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/recipes') is False:
+            return None
+
+        recipe = entities.Recipe.from_json(client_api=self._client_api,
+                                           _json=response.json(),
+                                           dataset=self._dataset)
+        if annotation_instruction_file:
+            recipe.add_instruction(annotation_instruction_file=annotation_instruction_file)
 
         if self._dataset is not None:
             self._dataset.switch_recipe(recipe.id)
@@ -201,7 +181,7 @@ class Recipes:
             _ = [logger.warning(r[1]) for r in results if r[0] is False]
             # return good jobs
             recipes = miscellaneous.List([r[1] for r in results if r[0] is True])
-        elif self._project_id is not None:
+        elif self.project is not None:
             if filters is None:
                 filters = entities.Filters(resource=entities.FiltersResource.RECIPE)
             # assert type filters
@@ -213,13 +193,12 @@ class Recipes:
                     error='400',
                     message='Filters resource must to be FiltersResource.RECIPE. Got: {!r}'.format(filters.resource))
             if not filters.has_field('projects'):
-                filters.add(field='projects', values=[self._project_id])
+                filters.add(field='projects', values=[self.project.id if self.project is not None else None])
 
             recipes = entities.PagedEntities(items_repository=self,
                                              filters=filters,
                                              page_offset=filters.page,
                                              page_size=filters.page_size,
-                                             project_id=self._project_id,
                                              client_api=self._client_api)
             recipes.get_page()
         else:
@@ -232,8 +211,8 @@ class Recipes:
         encoded_url = urllib.parse.quote(url, safe='/:?=&')
         # request
         success, response = self._client_api.gen_request(req_type='get', path=encoded_url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/recipes') is False:
+            return None
         return response.json()
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Recipe]:
@@ -244,7 +223,7 @@ class Recipes:
             jobs[i_rec] = pool.submit(entities.Recipe._protected_from_json,
                                       **{'client_api': self._client_api,
                                          '_json': rec,
-                                         'project': self._project,
+                                         'project': self.project,
                                          'dataset': self._dataset})
 
         # get all results
@@ -288,15 +267,13 @@ class Recipes:
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/recipes/%s' % recipe_id)
-        if success:
-            recipe = entities.Recipe.from_json(client_api=self._client_api,
-                                               _json=response.json(),
-                                               project=self._project,
-                                               dataset=self._dataset)
-        else:
-            logger.error('Unable to get info from recipe. Recipe_id id: {}'.format(recipe_id))
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/recipes') is False:
+            return None
 
+        recipe = entities.Recipe.from_json(client_api=self._client_api,
+                                           _json=response.json(),
+                                           project=self.project,
+                                           dataset=self._dataset)
         return recipe
 
     def open_in_web(self,
@@ -346,8 +323,8 @@ class Recipes:
             path += '?force=true'
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path=path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/recipes') is False:
+            return False
         logger.info('Recipe id {} deleted successfully'.format(recipe_id))
         return True
 
@@ -375,11 +352,10 @@ class Recipes:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=recipe.to_json())
-        if success:
-            return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self._dataset)
-        else:
-            logger.error('Error while updating item:')
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/recipes') is False:
+            return None
+
+        return entities.Recipe.from_json(client_api=self._client_api, _json=response.json(), dataset=self._dataset)
 
     @_api_reference.add(path='/recipes/{id}/clone', method='post')
     def clone(self,
@@ -416,12 +392,11 @@ class Recipes:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/recipes/{}/clone'.format(recipe_id),
                                                          json_req=payload)
-        if success:
-            recipe = entities.Recipe.from_json(client_api=self._client_api,
-                                               _json=response.json())
-        else:
-            logger.error('Failed to clone Recipe')
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/recipes') is False:
+            return None
+
+        recipe = entities.Recipe.from_json(client_api=self._client_api,
+                                           _json=response.json())
 
         assert isinstance(recipe, entities.Recipe)
         logger.debug('Recipe has been cloned successfully. recipe id: {}'.format(recipe.id))

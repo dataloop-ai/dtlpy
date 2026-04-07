@@ -24,13 +24,22 @@ class Artifacts:
                  package: entities.Package = None,
                  dataset_name=None):
         self._client_api = client_api
-        self._project = project
         self._dataset = dataset
         self._items_repository = None
         self.dataset_name = dataset_name
-        self.project_id = project_id
         self.model = model
         self.package = package
+        # Initialize project with minimal JSON if not provided but project_id exists
+        if project is None and project_id is not None:
+            project = entities.Project.from_json(
+                _json={'id': project_id},
+                client_api=client_api,
+                is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+            )
+        # If project is still None, try to get from dataset
+        if project is None and dataset is not None:
+            project = dataset.project
+        self.project = project
 
     ############
     # entities #
@@ -39,6 +48,9 @@ class Artifacts:
     def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             # get dataset from project
+            if self.project is None:
+                raise PlatformException(error='400',
+                                        message='Artifacts doesnt have a project, at least one must not be None: dataset, project or project_id')
             try:
                 if self.dataset_name is None:
                     self.dataset_name = 'Binaries'
@@ -50,18 +62,6 @@ class Artifacts:
                     f'Missing "{self.dataset_name}" dataset in the project. Please contact support for help')
 
         return self._dataset
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            if self._dataset is not None:
-                self._project = self._dataset.project
-            elif self.project_id is not None:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
-            else:
-                raise PlatformException(error='400',
-                                        message='Artifacts doesnt have a project, at least one must not be None: dataset, project or project_id')
-        return self._project
 
     ################
     # repositories #

@@ -41,7 +41,6 @@ class PagedEntities:
 
     # execution attribute
     _service_id = attr.ib(default=None, repr=False)
-    _project_id = attr.ib(default=None, repr=False)
     _list_function = attr.ib(default=None, repr=False)
 
     # items list

@@ -62,28 +62,10 @@ class Packages:
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
-        self._project = project
+        if project is None:
+            project = entities.Project(_dict={}, _client_api=client_api)
+        self.project = project
         self.package_io = PackageIO()
-
-    ############
-    # entities #
-    ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            try:
-                self._project = repositories.Projects(client_api=self._client_api).get()
-            except exceptions.NotFound:
-                raise exceptions.PlatformException(
-                    error='2001',
-                    message='Missing "project". need to set a Project entity or use project.packages repository')
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     ###########
     # methods #
@@ -146,8 +128,8 @@ class Packages:
         success, response = self._client_api.gen_request(
             req_type="get",
             path="/packages/{}/revisions".format(package_id))
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/packages/{}/revisions'.format(package_id)) is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/packages/{id}', method='get')
@@ -191,11 +173,11 @@ class Packages:
                     req_type="get",
                     path="/packages/{}".format(package_id),
                     log_error=log_error)
-                if not success:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(success, response, path='/packages/{}'.format(package_id)) is False:
+                    return None
                 package = entities.Package.from_json(client_api=self._client_api,
                                                      _json=response.json(),
-                                                     project=self._project)
+                                                     project=self.project)
                 # verify input package name is same as the given id
                 if package_name is not None and package.name != package_name:
                     logger.warning(
@@ -206,8 +188,8 @@ class Packages:
             elif package_name is not None:
                 filters = entities.Filters(field='name', values=package_name, resource=entities.FiltersResource.PACKAGE,
                                            use_defaults=False)
-                if self._project is not None:
-                    filters.add(field='projectId', values=self._project.id)
+                if self.project is not None:
+                    filters.add(field='projectId', values=self.project.id)
                 packages = self.list(filters=filters)
                 if packages.items_count == 0:
                     raise exceptions.PlatformException(
@@ -227,7 +209,7 @@ class Packages:
             package = entities.Package.from_json(_json={'id': package_id,
                                                         'name': package_name},
                                                  client_api=self._client_api,
-                                                 project=self._project,
+                                                 project=self.project,
                                                  is_fetched=False)
 
         if checkout:
@@ -242,7 +224,7 @@ class Packages:
             jobs[i_package] = pool.submit(entities.Package._protected_from_json,
                                           **{'client_api': self._client_api,
                                              '_json': package,
-                                             'project': self._project})
+                                             'project': self.project})
 
         # get all results
         results = [j.result() for j in jobs]
@@ -259,8 +241,8 @@ class Packages:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/query/faas') is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/query/faas', method='post')
@@ -292,8 +274,8 @@ class Packages:
                 error='400',
                 message='Filters resource must to be FiltersResource.PACKAGE. Got: {!r}'.format(filters.resource))
 
-        if project_id is None and self._project is not None:
-            project_id = self._project.id
+        if project_id is None and self.project is not None:
+            project_id = self.project.id
 
         if project_id is not None:
             filters.add(field='projectId', values=project_id)
@@ -302,7 +284,6 @@ class Packages:
                                        filters=filters,
                                        page_offset=filters.page,
                                        page_size=filters.page_size,
-                                       project_id=project_id,
                                        client_api=self._client_api)
         paged.get_page()
         return paged
@@ -374,8 +355,7 @@ class Packages:
         # request
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        self._client_api.check_response(success, response, path='/piper-misc/naming/packages/{}'.format(name))
 
     @staticmethod
     def _validate_slots(slots, modules):
@@ -493,13 +473,11 @@ class Packages:
             project_to_deploy = project
         elif project_id is not None:
             project_to_deploy = repositories.Projects(client_api=self._client_api).get(project_id=project_id)
-        elif self._project is not None:
-            project_to_deploy = self._project
+        elif self.project is not None:
+            project_to_deploy = self.project
         else:
-            try:
-                project_to_deploy = repositories.Projects(client_api=self._client_api).get()
-            except Exception:
-                pass
+            # Use self.project which will lazy-fetch via _get_entity_data when accessed
+            project_to_deploy = self.project
 
         if project_to_deploy is None:
             raise exceptions.PlatformException(
@@ -714,9 +692,8 @@ class Packages:
                                                          path='/packages',
                                                          json_req=payload)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/packages') is False:
+            return None
 
         # return entity
         return entities.Package.from_json(_json=response.json(),
@@ -750,12 +727,12 @@ class Packages:
 
         # check if project exist
         project_exists = True
-        if self._project is None:
+        if self.project is None:
             try:
                 if package is not None and package.project is not None:
-                    self._project = package.project
+                    self.project = package.project
                 else:
-                    self._project = repositories.Projects(client_api=self._client_api).get(
+                    self.project = repositories.Projects(client_api=self._client_api).get(
                         project_id=package.project_id)
             except exceptions.NotFound:
                 project_exists = False
@@ -764,7 +741,7 @@ class Packages:
             # TODO can remove? in transactor?
             try:
                 # create codebases repo
-                codebases = repositories.Codebases(client_api=self._client_api, project=self._project)
+                codebases = repositories.Codebases(client_api=self._client_api, project=self.project)
                 # get package codebases
                 codebase_pages = codebases.list_versions(codebase_name=package_name)
                 for codebase_page in codebase_pages:
@@ -779,11 +756,8 @@ class Packages:
             path="/packages/{}".format(package_id)
         )
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return results
+        if self._client_api.check_response(success, response, path='/packages/{}'.format(package_id)) is False:
+            return False
         return True
 
     @_api_reference.add(path='/packages/{id}', method='patch')
@@ -823,14 +797,13 @@ class Packages:
                                                          path='/packages/{}'.format(package.id),
                                                          json_req=payload)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/packages/{}'.format(package.id)) is False:
+            return None
 
         # return entity
         return entities.Package.from_json(_json=response.json(),
                                           client_api=self._client_api,
-                                          project=self._project)
+                                          project=self.project)
 
     def deploy(self,
                package_id: str = None,
@@ -1042,7 +1015,7 @@ class Packages:
                     updated_trigger = existing_trigger.from_json(_json=_new_json,
                                                                  client_api=service._client_api,
                                                                  service=service,
-                                                                 project=service._project)
+                                                                 project=service.project)
                     updated_trigger.update()
 
     def __compare_and_update_service_configurations(self, service, service_json):
@@ -1064,7 +1037,7 @@ class Packages:
             service = service.from_json(_json=_new_json,
                                         client_api=service._client_api,
                                         package=service._package,
-                                        project=service._project)
+                                        project=service.project)
         return to_update, service
 
     def __compare_and_upload_artifacts(self, artifacts, package):
@@ -1558,20 +1531,15 @@ class Packages:
                                           entry_point=entry_point,
                                           mock_file_path=mock_file_path)
 
-        if self._project is None:
-            try:
-                project = repositories.Projects(client_api=self._client_api).get()
-            except Exception:
-                project = None
-        else:
-            project = self.project
+        # Use self.project which will lazy-fetch via _get_entity_data when accessed
+        project = self.project
 
         return local_runner.run_local_project(project=project)
 
     def __get_from_cache(self) -> entities.Package:
         package = self._client_api.state_io.get('package')
         if package is not None:
-            package = entities.Package.from_json(_json=package, client_api=self._client_api, project=self._project)
+            package = entities.Package.from_json(_json=package, client_api=self._client_api, project=self.project)
         return package
 
     def checkout(self,

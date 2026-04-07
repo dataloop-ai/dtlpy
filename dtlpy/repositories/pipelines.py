@@ -18,28 +18,9 @@ class Pipelines:
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
-        self._project = project
-
-    ############
-    # entities #
-    ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            try:
-                self._project = repositories.Projects(client_api=self._client_api).get()
-            except exceptions.NotFound:
-                raise exceptions.PlatformException(
-                    error="2001",
-                    message='Missing "project". need to set a Project entity or use project.pipelines repository',
-                )
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError("Must input a valid Project entity")
-        self._project = project
+        if project is None:
+            project = entities.Project(_dict={}, _client_api=client_api)
+        self.project = project
 
     ###########
     # methods #
@@ -104,10 +85,10 @@ class Pipelines:
                 success, response = self._client_api.gen_request(
                     req_type="get", path="/pipelines/{}".format(pipeline_id)
                 )
-                if not success:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(success, response, path="/pipelines") is False:
+                    return None
                 pipeline = entities.Pipeline.from_json(
-                    client_api=self._client_api, _json=response.json(), project=self._project
+                    client_api=self._client_api, _json=response.json(), project=self.project
                 )
                 if pipeline_name is not None and pipeline.name != pipeline_name:
                     logger.warning(
@@ -118,8 +99,8 @@ class Pipelines:
                 filters = entities.Filters(
                     field="name", values=pipeline_name, resource=entities.FiltersResource.PIPELINE, use_defaults=False
                 )
-                if self._project is not None:
-                    filters.add(field="projectId", values=self._project.id)
+                if self.project is not None:
+                    filters.add(field="projectId", values=self.project.id)
                 pipelines = self.list(filters=filters)
                 if pipelines.items_count == 0:
                     raise exceptions.PlatformException(
@@ -141,7 +122,7 @@ class Pipelines:
             pipeline = entities.Pipeline.from_json(
                 _json={"id": pipeline_id, "name": pipeline_name},
                 client_api=self._client_api,
-                project=self._project,
+                project=self.project,
                 is_fetched=False,
             )
 
@@ -154,7 +135,7 @@ class Pipelines:
         for i_pipeline, pipeline in enumerate(response_items):
             jobs[i_pipeline] = pool.submit(
                 entities.Pipeline._protected_from_json,
-                **{"client_api": self._client_api, "_json": pipeline, "project": self._project}
+                **{"client_api": self._client_api, "_json": pipeline, "project": self.project}
             )
 
         # get all results
@@ -171,8 +152,8 @@ class Pipelines:
 
         # request
         success, response = self._client_api.gen_request(req_type="post", path=url, json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
         return response.json()
 
     @_api_reference.add(path="/pipelines/query", method="post")
@@ -204,8 +185,8 @@ class Pipelines:
                 message="Filters resource must to be FiltersResource.PIPELINE. Got: {!r}".format(filters.resource),
             )
 
-        if project_id is None and self._project is not None:
-            project_id = self._project.id
+        if project_id is None and self.project is not None:
+            project_id = self.project.id
 
         if project_id is not None:
             filters.add(field="projectId", values=project_id)
@@ -215,7 +196,6 @@ class Pipelines:
             filters=filters,
             page_offset=filters.page,
             page_size=filters.page_size,
-            project_id=project_id,
             client_api=self._client_api,
         )
         paged.get_page()
@@ -226,8 +206,7 @@ class Pipelines:
 
         # request
         success, response = self._client_api.gen_request(req_type="get", path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        self._client_api.check_response(success, response, path="/pipelines")
 
     # @_api_reference.add(path='/pipelines/{pipelineId}', method='delete')
     def delete(self, pipeline: entities.Pipeline = None, pipeline_name: str = None, pipeline_id: str = None):
@@ -258,10 +237,8 @@ class Pipelines:
         success, response = self._client_api.gen_request(req_type="delete", path="/pipelines/{}".format(pipeline_id))
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return results
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return False
         return True
 
     @_api_reference.add(path="/pipelines/{pipelineId}/settings", method="patch")
@@ -289,11 +266,11 @@ class Pipelines:
         success, response = self._client_api.gen_request(
             req_type="patch", path="/pipelines/{}".format(pipeline.id), json_req=payload
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         # return entity
-        return entities.Pipeline.from_json(_json=response.json(), client_api=self._client_api, project=self._project)
+        return entities.Pipeline.from_json(_json=response.json(), client_api=self._client_api, project=self.project)
 
     def __update_variables(self, pipeline: entities.Pipeline):
         pipeline_json = pipeline.to_json()
@@ -310,11 +287,11 @@ class Pipelines:
         success, response = self._client_api.gen_request(
             req_type="patch", path="/pipelines/{}/variables".format(pipeline.id), json_req=payload
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         # return entity
-        return entities.Pipeline.from_json(_json=response.json(), client_api=self._client_api, project=self._project)
+        return entities.Pipeline.from_json(_json=response.json(), client_api=self._client_api, project=self.project)
 
     @_api_reference.add(path="/pipelines/{pipelineId}", method="patch")
     def update(self, pipeline: entities.Pipeline = None) -> entities.Pipeline:
@@ -351,11 +328,11 @@ class Pipelines:
         )
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         # return entity
-        return entities.Pipeline.from_json(_json=response.json(), client_api=self._client_api, project=self._project)
+        return entities.Pipeline.from_json(_json=response.json(), client_api=self._client_api, project=self.project)
 
     @_api_reference.add(path="/pipelines", method="post")
     def create(self, name: str = None, project_id: str = None, pipeline_json: dict = None) -> entities.Pipeline:
@@ -389,12 +366,11 @@ class Pipelines:
                 pipeline_json["projectId"] = self.project.id
 
         success, response = self._client_api.gen_request(req_type="post", path="/pipelines", json_req=pipeline_json)
-        if success:
-            pipeline = entities.Pipeline.from_json(
-                client_api=self._client_api, _json=response.json(), project=self.project
-            )
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
+        pipeline = entities.Pipeline.from_json(
+            client_api=self._client_api, _json=response.json(), project=self.project
+        )
         assert isinstance(pipeline, entities.Pipeline)
         return pipeline
 
@@ -424,8 +400,8 @@ class Pipelines:
             req_type="post", path="/pipelines/{}/install".format(pipeline.id), json_req=payload
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         return entities.Pipeline.from_json(client_api=self._client_api, _json=response.json(), project=self.project)
 
@@ -455,8 +431,8 @@ class Pipelines:
             req_type="post", path="/pipelines/{}/uninstall".format(pipeline.id), json_req=payload
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
     @_api_reference.add(path="/pipelines/{pipelineId}/reset", method="post")
     def reset(
@@ -503,9 +479,8 @@ class Pipelines:
             req_type="post", path="/pipelines/{}/reset".format(pipeline_id)
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return False
         return True
 
     @_api_reference.add(path="/pipelines/{id}/statistics", method="get")
@@ -542,8 +517,8 @@ class Pipelines:
             req_type="get", path="/pipelines/{}/statistics".format(pipeline_id)
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         return entities.PipelineStats.from_json(_json=response.json())
 
@@ -580,7 +555,7 @@ class Pipelines:
             pipeline = self.get(pipeline_id=pipeline_id)
 
         execution = repositories.PipelineExecutions(
-            pipeline=pipeline, client_api=self._client_api, project=self._project
+            pipeline=pipeline, client_api=self._client_api, project=self.project
         ).create(pipeline_id=pipeline.id, execution_input=execution_input, test_mode=False)
         return execution
 
@@ -609,7 +584,7 @@ class Pipelines:
             pipeline = self.get(pipeline_id=pipeline_id)
 
         execution = repositories.PipelineExecutions(
-            pipeline=pipeline, client_api=self._client_api, project=self._project
+            pipeline=pipeline, client_api=self._client_api, project=self.project
         ).create(pipeline_id=pipeline.id, execution_input=execution_input, test_mode=True)
         return execution
 
@@ -634,7 +609,7 @@ class Pipelines:
             req_type="post", path="/pipelines/validate", json_req=pipeline_json
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         return response.json()

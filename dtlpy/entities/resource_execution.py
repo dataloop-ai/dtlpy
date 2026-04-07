@@ -32,7 +32,7 @@ class ResourceExecution(entities.BaseEntity):
 
     # sdk
     _client_api = attr.ib(type=ApiClient, repr=False)
-    _project = attr.ib()
+    project = attr.ib()
     resource = attr.ib()
 
     @staticmethod
@@ -69,6 +69,17 @@ class ResourceExecution(entities.BaseEntity):
             if project.id != _json.get('projectId', None):
                 logger.warning('Execution has been fetched from a project that is not belong to it')
                 project = None
+
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         inst = cls(
             resource_id=_json.get('resourceId', None),
             resource_type=_json.get('resourceType', None),
@@ -103,7 +114,7 @@ class ResourceExecution(entities.BaseEntity):
         _json = attr.asdict(
             self, filter=attr.filters.exclude(
                 attr.fields(ResourceExecution)._client_api,
-                attr.fields(ResourceExecution)._project,
+                attr.fields(ResourceExecution).project,
                 attr.fields(ResourceExecution).resource_id,
                 attr.fields(ResourceExecution).resource_type,
                 attr.fields(ResourceExecution).execution_id,
@@ -129,10 +140,3 @@ class ResourceExecution(entities.BaseEntity):
 
         return _json
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
-                                                                                   fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project

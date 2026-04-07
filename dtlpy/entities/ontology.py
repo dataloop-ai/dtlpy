@@ -56,7 +56,7 @@ class Ontology(entities.BaseEntity):
     # entities
     _recipe = attr.ib(repr=False, default=None)
     _dataset = attr.ib(repr=False, default=None)
-    _project = attr.ib(repr=False, default=None)
+    project = attr.ib(repr=False, default=None)
 
     # repositories
     _repositories = attr.ib(repr=False)
@@ -84,6 +84,10 @@ class Ontology(entities.BaseEntity):
         if self._recipe is None:
             filters = entities.Filters(resource=entities.FiltersResource.RECIPE)
             filters.add(field="ontologies", values=self.id)
+            if self.project is None:
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Missing "project". Cannot fetch recipe without project.')
             recipes = self.project.recipes.list(filters=filters)
             if recipes.items_count > 0:
                 self._recipe = recipes.items[0]
@@ -101,19 +105,6 @@ class Ontology(entities.BaseEntity):
         if self._dataset is not None:
             assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
-
-    @property
-    def project(self):
-        if self._project is None:
-            if 'system' in self.metadata:
-                project_id = self.metadata['system'].get('projectIds', None)
-                if project_id is not None:
-                    self._project = self.projects.get(project_id=project_id[0])
-            elif self.dataset is not None:
-                self._project = self.dataset.project
-        if self._project is not None:
-            assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def ontologies(self):
@@ -245,6 +236,29 @@ class Ontology(entities.BaseEntity):
         for root in _json["roots"]:
             labels.append(entities.Label.from_root(root=root))
 
+        # Initialize project with minimal JSON if not provided
+        # Try metadata.system.projectIds first, then fall back to dataset.project (similar to old property behavior)
+        if project is None:
+            metadata = _json.get('metadata', {})
+            project_id = None
+            
+            # First try to get project_id from metadata.system.projectIds
+            if 'system' in metadata:
+                project_ids = metadata['system'].get('projectIds', None)
+                if project_ids and len(project_ids) > 0:
+                    project_id = project_ids[0]
+            
+            # Fall back to dataset.project if available (old property behavior)
+            if project_id is None and dataset is not None and dataset.project is not None:
+                project_id = dataset.project.id
+            
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         inst = cls(
             metadata=_json.get("metadata", None),
             creator=_json.get("creator", None),
@@ -272,7 +286,7 @@ class Ontology(entities.BaseEntity):
         roots = [label.to_root() for label in self.labels]
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Ontology)._client_api,
                                                               attr.fields(Ontology)._recipe,
-                                                              attr.fields(Ontology)._project,
+                                                              attr.fields(Ontology).project,
                                                               attr.fields(Ontology)._dataset,
                                                               attr.fields(Ontology)._instance_map,
                                                               attr.fields(Ontology)._color_map,

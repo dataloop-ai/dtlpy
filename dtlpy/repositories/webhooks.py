@@ -14,27 +14,13 @@ class Webhooks:
     def __init__(self,
                  client_api: ApiClient,
                  project: entities.Project = None):
-        self._project = project
         self._client_api = client_api
         self._url = '/webhooks'
+        self.project = project
 
     ############
     # entities #
     ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.webhooks repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     ###########
     # methods #
@@ -56,7 +42,7 @@ class Webhooks:
         :return:
         """
         if project is None:
-            project = self._project
+            project = self.project
 
         if project_id is None and project is None:
             raise exceptions.PlatformException('400', 'Must provide project or project id')
@@ -78,8 +64,8 @@ class Webhooks:
                                                          json_req=payload)
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._url) is False:
+            return None
 
         # return entity
         return entities.Webhook.from_json(_json=response.json(),
@@ -96,8 +82,8 @@ class Webhooks:
         """
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.WEBHOOK)
-            if self._project is not None:
-                filters.add(field='projectId', values=self._project.id)
+            if self.project is not None:
+                filters.add(field='projectId', values=self.project.id)
         # assert type filters
         elif not isinstance(filters, entities.Filters):
             raise exceptions.PlatformException(error='400',
@@ -125,7 +111,7 @@ class Webhooks:
             jobs[i_item] = pool.submit(entities.Webhook.from_json,
                                        **{'client_api': self._client_api,
                                           '_json': item,
-                                          'project': self._project})
+                                          'project': self.project})
 
         # get all results
         items = miscellaneous.List([j.result() for j in jobs])
@@ -150,8 +136,8 @@ class Webhooks:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._url) is False:
+            return None
 
         return response.json()
 
@@ -182,13 +168,13 @@ class Webhooks:
             )
 
             # exception handling
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path=self._url) is False:
+                return None
 
             # return entity
             webhook = entities.Webhook.from_json(client_api=self._client_api,
                                                  _json=response.json(),
-                                                 project=self._project)
+                                                 project=self.project)
             # verify input webhook name is same as the given id
             if webhook_name is not None and webhook.name != webhook_name:
                 logger.warning(
@@ -219,8 +205,8 @@ class Webhooks:
             path="{}/{}".format(self._url, webhook_id)
         )
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._url) is False:
+            return False
         return True
 
     def update(self, webhook: entities.Webhook) -> entities.Webhook:
@@ -240,10 +226,10 @@ class Webhooks:
                                                          json_req=payload)
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._url) is False:
+            return None
 
         # return entity
         return entities.Webhook.from_json(_json=response.json(),
                                           client_api=self._client_api,
-                                          project=self._project)
+                                          project=self.project)

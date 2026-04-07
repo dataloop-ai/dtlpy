@@ -25,7 +25,7 @@ class User(entities.BaseEntity):
     id = attr.ib()
 
     # api
-    _project = attr.ib(repr=False)
+    project = attr.ib(repr=False)
     _client_api = attr.ib(default=None, repr=False)
     _users = attr.ib(repr=False, default=None)
 
@@ -58,14 +58,6 @@ class User(entities.BaseEntity):
             user = traceback.format_exc()
             status = False
         return status, user
-
-    @property
-    def project(self):
-        if self._project is None:
-            raise exceptions.PlatformException(error='2001',
-                                               message='Missing entity "project".')
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @classmethod
     def from_json(cls, _json, project, client_api, users=None):
@@ -103,7 +95,7 @@ class User(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(User)._project,
+                            filter=attr.filters.exclude(attr.fields(User).project,
                                                         attr.fields(User).name,
                                                         attr.fields(User)._client_api,
                                                         attr.fields(User)._users,

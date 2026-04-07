@@ -403,12 +403,11 @@ class Uploader:
                                                                               self.items_repository.dataset.id),
                                                                           json_req=[req_json])
 
-        if success:
-            items = entities.Item.from_json(client_api=self.items_repository._client_api, _json=response.json()[0],
-                                            project=self.items_repository._dataset._project,
-                                            dataset=self.items_repository.dataset)
-        else:
-            raise exceptions.PlatformException(response)
+        if self.items_repository._client_api.check_response(success, response, path='/imports') is False:
+            return None
+        items = entities.Item.from_json(client_api=self.items_repository._client_api, _json=response.json()[0],
+                                        project=self.items_repository._dataset.project,
+                                        dataset=self.items_repository.dataset)
         return items, response.headers.get('x-item-op', 'na')
 
     async def __single_async_upload(self,
@@ -490,17 +489,16 @@ class Uploader:
             if need_close:
                 to_upload.close()
 
-        if response.ok:
-            if item_size != response.json().get('metadata', {}).get('system', {}).get('size', 0):
-                self.items_repository.delete(item_id=response.json()['id'])
-                raise PlatformException(500,
-                                        "The uploaded file is corrupted. "
-                                        "Please try again. If it happens again please contact support.")
-            item = self.items_repository.items_entity.from_json(client_api=self.items_repository._client_api,
-                                                                _json=response.json(),
-                                                                dataset=self.items_repository.dataset)
-        else:
-            raise PlatformException(response)
+        if self.items_repository._client_api.check_response(response.ok, response, path='/items') is False:
+            return None
+        if item_size != response.json().get('metadata', {}).get('system', {}).get('size', 0):
+            self.items_repository.delete(item_id=response.json()['id'])
+            raise PlatformException(500,
+                                    "The uploaded file is corrupted. "
+                                    "Please try again. If it happens again please contact support.")
+        item = self.items_repository.items_entity.from_json(client_api=self.items_repository._client_api,
+                                                            _json=response.json(),
+                                                            dataset=self.items_repository.dataset)
         return item, response.headers.get('x-item-op', 'na')
 
     async def __upload_single_item_wrapper(self, element, pbar, reporter, mode):

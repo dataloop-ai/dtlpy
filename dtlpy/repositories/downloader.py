@@ -649,8 +649,9 @@ class Downloader:
                                                                 path='/datasets/{}/export'.format(dataset.id),
                                                                 json_req=payload,
                                                                 headers={'user_query': filters._user_query})
-            if not success:
-                raise exceptions.PlatformException(response)
+            if dataset._client_api.check_response(success, response,
+                                                     path='/datasets/{}/export'.format(dataset.id)) is False:
+                return None
             command = entities.Command.from_json(_json=response.json(),
                                                  client_api=dataset._client_api)
             command = command.wait(timeout=0)
@@ -908,7 +909,10 @@ class Downloader:
                     if not result:
                         if os.path.isfile(local_filepath + '.download'):
                             os.remove(local_filepath + '.download')
-                        raise PlatformException(response)
+                        if self.items_repository._client_api.check_response(
+                                result, response,
+                                path="/items/{}/stream".format(item.id)) is False:
+                            return None
                 else:
                     _, ext = os.path.splitext(item.metadata['system']['shebang']['linkInfo']['ref'].split('?')[0])
                     if local_filepath:
@@ -1089,7 +1093,7 @@ class Downloader:
                 "items",
             )
         else:
-            if self.items_repository.dataset._project is None:
+            if self.items_repository.dataset.project is None:
                 # by dataset name
                 local_path = os.path.join(
                     self.items_repository._client_api.sdk_cache.cache_path_bin,

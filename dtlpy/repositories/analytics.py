@@ -13,25 +13,11 @@ class Analytics:
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
-        self._project = project
+        self.project = project
 
     ############
     # entities #
     ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.times_series repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     ############
     #  methods #
@@ -49,21 +35,20 @@ class Analytics:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/analytics/query',
                                                          json_req=query)
-        if success:
-            if return_field is not None:
-                res = response.json()[return_field]
-            else:
-                res = response.json()
-            if return_raw:
-                return res
-            if isinstance(res, dict):
-                df = pd.DataFrame.from_dict(res, orient="index")
-            elif isinstance(res, list):
-                df = pd.DataFrame(res)
-            else:
-                raise ValueError('unknown return type for time series: {}'.format(type(res)))
+        if self._client_api.check_response(success, response, path='/analytics/query') is False:
+            return None
+        if return_field is not None:
+            res = response.json()[return_field]
         else:
-            raise exceptions.PlatformException(response)
+            res = response.json()
+        if return_raw:
+            return res
+        if isinstance(res, dict):
+            df = pd.DataFrame.from_dict(res, orient="index")
+        elif isinstance(res, list):
+            df = pd.DataFrame(res)
+        else:
+            raise ValueError('unknown return type for time series: {}'.format(type(res)))
         return df
 
     def report_metrics(self, samples):

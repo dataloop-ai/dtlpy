@@ -2,10 +2,8 @@ from collections import namedtuple
 from enum import Enum
 import traceback
 import logging
-import attr
 
 from .. import repositories, miscellaneous, entities
-from ..services.api_client import ApiClient
 
 logger = logging.getLogger(name='dtlpy')
 
@@ -17,33 +15,26 @@ class MemberRole(str, Enum):
     ANNOTATION_MANAGER = "annotationManager"
 
 
-@attr.s()
-class Project(entities.BaseEntity):
+class Project(entities.DlEntity):
     """
     Project entity
     """
+    _enable_lazy_fetch = True  # Enable lazy fetch for Project
+    _id_param = 'project_id'  # Parameter name for project ID in repository.get()
 
-    _contributors = attr.ib(repr=False)
-    created_at = attr.ib()
-    creator = attr.ib()
-    id = attr.ib()
-    url = attr.ib()
-    name = attr.ib()
-    org = attr.ib(repr=False)
-    updated_at = attr.ib(repr=False)
-    role = attr.ib(repr=False)
-    account = attr.ib(repr=False)
-    is_blocked = attr.ib(repr=False)
-    archived = attr.ib(repr=False)
-
-    # name change
-    feature_constraints = attr.ib()
-
-    # api
-    _client_api = attr.ib(type=ApiClient, repr=False)
-
-    # repositories
-    _repositories = attr.ib(repr=False)
+    _contributors = entities.DlProperty(location=['contributors'], _type=list)
+    created_at = entities.DlProperty(location=['createdAt'], _type=str)
+    creator = entities.DlProperty(location=['creator'], _type=str)
+    id = entities.DlProperty(location=['id'], _type=str)
+    url = entities.DlProperty(location=['url'], _type=str)
+    name = entities.DlProperty(location=['name'], _type=str)
+    org = entities.DlProperty(location=['org'], _type=str)
+    updated_at = entities.DlProperty(location=['updatedAt'], _type=str)
+    role = entities.DlProperty(location=['role'], _type=str, default=None)
+    account = entities.DlProperty(location=['account'], _type=str)
+    is_blocked = entities.DlProperty(location=['isBlocked'], _type=bool)
+    archived = entities.DlProperty(location=['archived'], _type=bool)
+    feature_constraints = entities.DlProperty(location=['featureConstraints'], _type=dict)
 
     @property
     def isBlocked(self):
@@ -57,47 +48,64 @@ class Project(entities.BaseEntity):
     def updatedAt(self):
         return self.updated_at
 
-    @_repositories.default
-    def set_repositories(self):
-        reps = namedtuple(
-            'repositories',
-            'projects triggers datasets items recipes packages codebases artifacts times_series services '
-            'executions assignments tasks bots webhooks models analytics ontologies '
-            'drivers pipelines feature_sets features integrations settings apps dpks compositions'
-        )
-        datasets = repositories.Datasets(client_api=self._client_api, project=self)
-        return reps(
-            projects=repositories.Projects(client_api=self._client_api),
-            webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
-            items=repositories.Items(client_api=self._client_api, datasets=datasets, project=self),
-            recipes=repositories.Recipes(client_api=self._client_api, project=self, project_id=self.id),
-            datasets=datasets,
-            executions=repositories.Executions(client_api=self._client_api, project=self),
-            triggers=repositories.Triggers(client_api=self._client_api, project=self),
-            packages=repositories.Packages(project=self, client_api=self._client_api),
-            models=repositories.Models(project=self, client_api=self._client_api),
-            codebases=repositories.Codebases(project=self, client_api=self._client_api),
-            artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
-            times_series=repositories.TimesSeries(project=self, client_api=self._client_api),
-            services=repositories.Services(client_api=self._client_api, project=self),
-            assignments=repositories.Assignments(project=self, client_api=self._client_api),
-            tasks=repositories.Tasks(client_api=self._client_api, project=self),
-            bots=repositories.Bots(client_api=self._client_api, project=self),
-            analytics=repositories.Analytics(client_api=self._client_api, project=self),
-            ontologies=repositories.Ontologies(client_api=self._client_api, project=self),
-            drivers=repositories.Drivers(client_api=self._client_api, project=self),
-            pipelines=repositories.Pipelines(client_api=self._client_api, project=self),
-            feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self),
-            features=repositories.Features(client_api=self._client_api, project=self),
-            integrations=repositories.Integrations(client_api=self._client_api, project=self),
-            settings=repositories.Settings(client_api=self._client_api,
-                                           project=self,
-                                           resource=self,
-                                           resource_type=entities.PlatformEntityType.PROJECT),
-            apps=repositories.Apps(client_api=self._client_api, project=self),
-            dpks=repositories.Dpks(client_api=self._client_api, project=self),
-            compositions=repositories.Compositions(client_api=self._client_api, project=self)
-        )
+    def __init__(self, _dict=None, **kwargs):
+        # Extract _client_api from kwargs if provided
+        _client_api = kwargs.pop('_client_api', None)
+        super().__init__(_dict=_dict, **kwargs)
+        # Set non-JSON attributes
+        if _client_api is not None:
+            self._client_api = _client_api
+        self._repositories_cache = None
+
+    def _get_entity_repository_obj(self):
+        return self.projects
+
+    @property
+    def _repositories(self):
+        """
+        Lazy initialization of repositories.
+        Returns namedtuple of repository instances.
+        """
+        if self._repositories_cache is None:
+            reps = namedtuple(
+                'repositories',
+                'projects triggers datasets items recipes packages codebases artifacts services '
+                'executions assignments tasks bots webhooks models analytics ontologies '
+                'drivers pipelines feature_sets features integrations settings apps dpks compositions'
+            )
+            datasets = repositories.Datasets(client_api=self._client_api, project=self)
+            self._repositories_cache = reps(
+                projects=repositories.Projects(client_api=self._client_api),
+                webhooks=repositories.Webhooks(client_api=self._client_api, project=self),
+                items=repositories.Items(client_api=self._client_api, datasets=datasets, project=self),
+                recipes=repositories.Recipes(client_api=self._client_api, project=self, project_id=self.id),
+                datasets=datasets,
+                executions=repositories.Executions(client_api=self._client_api, project=self),
+                triggers=repositories.Triggers(client_api=self._client_api, project=self),
+                packages=repositories.Packages(project=self, client_api=self._client_api),
+                models=repositories.Models(project=self, client_api=self._client_api),
+                codebases=repositories.Codebases(project=self, client_api=self._client_api),
+                artifacts=repositories.Artifacts(project=self, client_api=self._client_api),
+                services=repositories.Services(client_api=self._client_api, project=self),
+                assignments=repositories.Assignments(project=self, client_api=self._client_api),
+                tasks=repositories.Tasks(client_api=self._client_api, project=self),
+                bots=repositories.Bots(client_api=self._client_api, project=self),
+                analytics=repositories.Analytics(client_api=self._client_api, project=self),
+                ontologies=repositories.Ontologies(client_api=self._client_api, project=self),
+                drivers=repositories.Drivers(client_api=self._client_api, project=self),
+                pipelines=repositories.Pipelines(client_api=self._client_api, project=self),
+                feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self),
+                features=repositories.Features(client_api=self._client_api, project=self),
+                integrations=repositories.Integrations(client_api=self._client_api, project=self),
+                settings=repositories.Settings(client_api=self._client_api,
+                                              project=self,
+                                              resource=self,
+                                              resource_type=entities.PlatformEntityType.PROJECT),
+                apps=repositories.Apps(client_api=self._client_api, project=self),
+                dpks=repositories.Dpks(client_api=self._client_api, project=self),
+                compositions=repositories.Compositions(client_api=self._client_api, project=self)
+            )
+        return self._repositories_cache
 
     @property
     def drivers(self):
@@ -199,11 +207,6 @@ class Project(entities.BaseEntity):
         return self._repositories.artifacts
 
     @property
-    def times_series(self):
-        assert isinstance(self._repositories.times_series, repositories.TimesSeries)
-        return self._repositories.times_series
-
-    @property
     def assignments(self):
         assert isinstance(self._repositories.assignments, repositories.Assignments)
         return self._repositories.assignments
@@ -240,6 +243,8 @@ class Project(entities.BaseEntity):
 
     @property
     def contributors(self):
+        if self._contributors is None:
+            return None
         return miscellaneous.List([entities.User.from_json(_json=_json,
                                                            client_api=self._client_api,
                                                            project=self) for _json in self._contributors])
@@ -273,46 +278,9 @@ class Project(entities.BaseEntity):
         :return: Project object
         :rtype: dtlpy.entities.project.Project
         """
-        inst = cls(feature_constraints=_json.get('featureConstraints', None),
-                   contributors=_json.get('contributors', None),
-                   is_blocked=_json.get('isBlocked', None),
-                   created_at=_json.get('createdAt', None),
-                   updated_at=_json.get('updatedAt', None),
-                   creator=_json.get('creator', None),
-                   account=_json.get('account', None),
-                   name=_json.get('name', None),
-                   role=_json.get('role', None),
-                   org=_json.get('org', None),
-                   id=_json.get('id', None),
-                   url=_json.get('url', None),
-                   archived=_json.get('archived', None),
-                   client_api=client_api)
-        inst.is_fetched = is_fetched
+        # Create instance with JSON dict directly (DlEntity pattern)
+        inst = cls(_dict=_json, _client_api=client_api, is_fetched=is_fetched)
         return inst
-
-    def to_json(self):
-        """
-        Returns platform _json format of project object
-
-        :return: platform json format of project object
-        :rtype: dict
-        """
-        output_dict = attr.asdict(self,
-                                  filter=attr.filters.exclude(attr.fields(Project)._client_api,
-                                                              attr.fields(Project)._repositories,
-                                                              attr.fields(Project).feature_constraints,
-                                                              attr.fields(Project)._contributors,
-                                                              attr.fields(Project).created_at,
-                                                              attr.fields(Project).updated_at,
-                                                              attr.fields(Project).is_blocked,
-                                                              ))
-        output_dict['contributors'] = self._contributors
-        output_dict['featureConstraints'] = self.feature_constraints
-        output_dict['createdAt'] = self.created_at
-        output_dict['updatedAt'] = self.updated_at
-        output_dict['isBlocked'] = self.is_blocked
-
-        return output_dict
 
     def delete(self, sure=False, really=False):
         """

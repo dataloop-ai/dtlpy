@@ -2,7 +2,10 @@
 Datasets Repository
 """
 
+import base64
 import copy
+import datetime
+import hashlib
 import json
 import logging
 import os
@@ -10,13 +13,15 @@ import sys
 import tempfile
 import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Generator, Optional, Union
+from urllib.parse import urlparse
 
 import tqdm
 
 from .. import _api_reference, entities, exceptions, miscellaneous, PlatformException, repositories, services
-from ..entities.dataset import ExportType, OutputExportType
+from ..entities.dataset import ExportType, OutputExportType, DatasetExportVersion, ExportMode
 from ..services import service_defaults
 from ..services.api_client import ApiClient
 
@@ -34,31 +39,12 @@ class Datasets:
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
-        self._project = project
-
-    ############
-    # entities #
-    ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            # try get checkout
-            project = self._client_api.state_io.get('project')
-            if project is not None:
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Cannot perform action WITHOUT Project entity in Datasets repository.'
-                        ' Please checkout or set a project')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
+        # Try to get checked out project if project is None
+        if project is None:
+            checked_out_project = client_api.state_io.get('project')
+            if checked_out_project is not None:
+                project = entities.Project.from_json(_json=checked_out_project, client_api=client_api)
+        self.project = project
 
     ###########
     # methods #
@@ -69,7 +55,7 @@ class Datasets:
             dataset = entities.Dataset.from_json(_json=dataset,
                                                  client_api=self._client_api,
                                                  datasets=self,
-                                                 project=self._project)
+                                                 project=self.project)
         return dataset
 
     def __get_by_id(self, dataset_id) -> entities.Dataset:
@@ -78,13 +64,13 @@ class Datasets:
         if dataset_id is None or dataset_id == '':
             raise exceptions.PlatformException('400', 'Please checkout a dataset')
 
-        if success:
-            dataset = entities.Dataset.from_json(client_api=self._client_api,
-                                                 _json=response.json(),
-                                                 datasets=self,
-                                                 project=self._project)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets') is False:
+            return None
+
+        dataset = entities.Dataset.from_json(client_api=self._client_api,
+                                             _json=response.json(),
+                                             datasets=self,
+                                             project=self.project)
         return dataset
 
     def __get_by_identifier(self, identifier=None) -> entities.Dataset:
@@ -150,7 +136,7 @@ class Datasets:
         if not filename:
             raise ValueError("item_data must have a 'filename' key")
         filename = filename.lstrip('/')
-        
+
         # Determine relative JSON path based on export version
         if export_version == entities.ExportVersion.V1:
             # V1: Replace extension with .json (e.g., "file.jpg" -> "file.json")
@@ -161,17 +147,17 @@ class Datasets:
         else:
             # Default/None: Replace extension with .json (backward compatible with section 1)
             rel_json_path = os.path.splitext(filename)[0] + '.json'
-        
+
         # Remove leading slash if present
         if rel_json_path.startswith('/'):
             rel_json_path = rel_json_path[1:]
-        
+
         # Build output path
         out_path = base_path / rel_json_path
-        
+
         # Create parent directories
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Write JSON file
         try:
             with open(out_path, 'w') as outf:
@@ -179,7 +165,7 @@ class Datasets:
         except Exception:
             logger.exception(f'Failed writing export item JSON to {out_path}')
             raise
-        
+
         return out_path
 
     @staticmethod
@@ -198,7 +184,7 @@ class Datasets:
         elif isinstance(filters, dict):
             payload['itemsQuery'] = filters
         else:
-            raise exceptions.BadRequest(message='filters must be of type dict or Filters', status_code=500)
+            raise exceptions.BadRequest(status_code='400', message='filters must be of type dict or Filters')
 
         payload['itemsVectorQuery'] = {}
         if include_feature_vectors:
@@ -359,8 +345,8 @@ class Datasets:
             filters.add(field='name', values=name)
         if creator is not None:
             filters.add(field='creator', values=creator)
-        if self._project is not None:
-            filters.context = {"projects": [self._project.id]}
+        if self.project is not None:
+            filters.context = {"projects": [self.project.id]}
         filters.page_size = 1000
         filters.page = 0
         datasets = list()
@@ -369,30 +355,28 @@ class Datasets:
                                                              json_req=filters.prepare(),
                                                              path=url,
                                                              headers={'user_query': filters._user_query})
-            if success:
-                pool = self._client_api.thread_pools('entity.create')
-                datasets_json = response.json()['items']
-                jobs = [None for _ in range(len(datasets_json))]
-                # return triggers list
-                for i_dataset, dataset in enumerate(datasets_json):
-                    jobs[i_dataset] = pool.submit(entities.Dataset._protected_from_json,
-                                                  **{'client_api': self._client_api,
-                                                     '_json': dataset,
-                                                     'datasets': self,
-                                                     'project': self.project})
+            if self._client_api.check_response(success, response, path='/datasets/query') is False:
+                return None
+            pool = self._client_api.thread_pools('entity.create')
+            datasets_json = response.json()['items']
+            jobs = [None for _ in range(len(datasets_json))]
+            for i_dataset, dataset in enumerate(datasets_json):
+                jobs[i_dataset] = pool.submit(entities.Dataset._protected_from_json,
+                                              **{'client_api': self._client_api,
+                                                 '_json': dataset,
+                                                 'datasets': self,
+                                                 'project': self.project})
 
-                # get all results
-                results = [j.result() for j in jobs]
-                # log errors
-                _ = [logger.warning(r[1]) for r in results if r[0] is False]
-                # return good jobs
-                datasets.extend([r[1] for r in results if r[0] is True])
-                if response.json()['hasNextPage'] is True:
-                    filters.page += 1
-                else:
-                    break
+            # get all results
+            results = [j.result() for j in jobs]
+            # log errors
+            _ = [logger.warning(r[1]) for r in results if r[0] is False]
+            # return good jobs
+            datasets.extend([r[1] for r in results if r[0] is True])
+            if response.json()['hasNextPage'] is True:
+                filters.page += 1
             else:
-                raise exceptions.PlatformException(response)
+                break
         datasets = miscellaneous.List(datasets)
         return datasets
 
@@ -435,6 +419,8 @@ class Datasets:
         elif fetch:
             if dataset_id is not None and dataset_id != '':
                 dataset = self.__get_by_id(dataset_id)
+                if dataset is None:
+                    return None
                 # verify input dataset name is same as the given id
                 if dataset_name is not None and dataset.name != dataset_name:
                     logger.warning(
@@ -461,7 +447,7 @@ class Datasets:
                                                         'name': dataset_id},
                                                  client_api=self._client_api,
                                                  datasets=self,
-                                                 project=self._project,
+                                                 project=self.project,
                                                  is_fetched=False)
         assert isinstance(dataset, entities.Dataset)
         if checkout:
@@ -496,8 +482,8 @@ class Datasets:
             dataset = self.get(dataset_name=dataset_name, dataset_id=dataset_id)
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path='/datasets/{}'.format(dataset.id))
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path='/datasets/{}'.format(dataset.id)) is False:
+                return False
             logger.info('Dataset {!r} was deleted successfully'.format(dataset.name))
             return True
         else:
@@ -538,11 +524,10 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=patch)
-        if success:
-            logger.info('Dataset was updated successfully')
-            return dataset
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
+        logger.info('Dataset was updated successfully')
+        return dataset
 
     @_api_reference.add(path='/datasets/{id}/unlock', method='patch')
     def unlock(self, dataset: entities.Dataset ) -> entities.Dataset:
@@ -564,11 +549,10 @@ class Datasets:
         url_path = '/datasets/{}/unlock'.format(dataset.id)
 
         success, response = self._client_api.gen_request(req_type='patch', path=url_path)
-        if success:
-            logger.info('Dataset was unlocked successfully')
-            return dataset
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
+        logger.info('Dataset was unlocked successfully')
+        return dataset
 
     @_api_reference.add(path='/datasets/{id}/directoryTree', method='get')
     def directory_tree(self,
@@ -599,11 +583,9 @@ class Datasets:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-
-        if success:
-            return entities.DirectoryTree(_json=response.json())
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
+        return entities.DirectoryTree(_json=response.json())
 
     @_api_reference.add(path='/datasets/{id}/clone', method='post')
     def clone(self,
@@ -675,8 +657,8 @@ class Datasets:
                                                          json_req=payload,
                                                          headers={'user_query': filters._user_query})
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets/{}/clone'.format(dataset_id)) is False:
+            return None
 
         command = entities.Command.from_json(_json=response.json(),
                                              client_api=self._client_api)
@@ -773,9 +755,8 @@ class Datasets:
                 req_type='post', path=f'/datasets/{dataset_entity.id}/export', json_req=payload
             )
 
-            if not success:
-                logger.error(f"failed to make API request /datasets/{dataset_entity.id}/export with payload {payload} response {response}")
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path=f'/datasets/{dataset_entity.id}/export') is False:
+                return
 
             # Handle command execution
             commands.append( entities.Command.from_json(_json=response.json(), client_api=self._client_api))
@@ -818,7 +799,14 @@ class Datasets:
         lock_timeout_sec: int = None,
         export_summary: bool = False,
         output_export_type: OutputExportType = None,
-    ) -> Optional[str]:
+        # V3 (LanceDB) export parameters
+        export_version: DatasetExportVersion = DatasetExportVersion.V1,
+        export_mode: ExportMode = None,
+        from_version: int = None,
+        partition_count: int = None,
+        force: bool = False,
+        parallel_downloads: int = 4,
+    ) -> Union[Optional[str], entities.ExportManifest]:
         """
         Export dataset items and annotations.
 
@@ -826,9 +814,15 @@ class Datasets:
 
         You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
 
-        **Export Behavior by Parameter Combination:**
+        **Export Versions:**
 
-        The behavior of this method depends on the combination of `export_type` and `output_export_type`:
+        - **DatasetExportVersion.V1** (default): Legacy export API using item-based commands
+        - **DatasetExportVersion.V3**: LanceDB-based export with partitioned NDJSON output and 
+          support for incremental (diff) exports
+
+        **V1 Export Behavior (export_version=DatasetExportVersion.V1):**
+
+        The behavior depends on the combination of `export_type` and `output_export_type`:
 
         **When export_type = ExportType.JSON:**
 
@@ -836,56 +830,144 @@ class Datasets:
           - Exports data in JSON format, split into subsets of max 500 items
           - Downloads all subset JSON files and concatenates them into a single `result.json` file
           - Returns the path to the concatenated JSON file
-          - Cleans up individual subset files after concatenation
 
         - **output_export_type = OutputExportType.ZIP:**
           - Same as JSON export, but zips the final `result.json` file
           - Returns the path to the zipped file (`result.json.zip`)
-          - Cleans up the unzipped JSON file after zipping
 
         - **output_export_type = OutputExportType.FOLDERS:**
-          - Exports data in JSON format, split into subsets of max 500 items
-          - Downloads all subset JSON files and creates individual JSON files for each item
           - Creates a folder structure mirroring the remote dataset structure
-          - Returns the path to the base directory containing the folder structure
           - Each item gets its own JSON file named after the original filename
 
         **When export_type = ExportType.ZIP:**
-
-        - **output_export_type = OutputExportType.ZIP:**
           - Exports data as a ZIP file containing the dataset
           - Returns the downloaded ZIP item directly
-          - No additional processing or concatenation
 
-        - **output_export_type = OutputExportType.JSON:**
-          - **NOT SUPPORTED** - Raises NotImplementedError
-          - Use export_type=ExportType.JSON instead for JSON output
+        **V3 Export Behavior (export_version=DatasetExportVersion.V3):**
 
-        - **output_export_type = OutputExportType.FOLDERS:**
-          - **NOT SUPPORTED** - Raises NotImplementedError
-          - Use export_type=ExportType.JSON instead for folder output
-
-        **When output_export_type = None (legacy behavior):**
-        - Defaults to OutputExportType.JSON
-        - Maintains backward compatibility with existing code
+        - **export_mode = ExportMode.FULL**: Exports all items matching filters (default)
+        - **export_mode = ExportMode.DIFF**: Exports only items changed since `from_version`
+        - Returns an ExportManifest object with partition info and downloaded file paths
 
         :param dtlpy.entities.dataset.Dataset dataset: Dataset object
         :param str dataset_name: The name of the dataset
         :param str dataset_id: The ID of the dataset
-        :param str local_path: Local path to save the exported dataset
+        :param str local_path: Local directory path to save the exported dataset. Must be a directory, not a file path.
         :param Union[dict, dtlpy.entities.filters.Filters] filters: Filters entity or a query dictionary
-        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations for export
-        :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity to filter feature vectors for export
-        :param bool include_feature_vectors: Include item feature vectors in the export
-        :param bool include_annotations: Include item annotations in the export
-        :param bool dataset_lock: Make dataset readonly during the export
-        :param bool export_summary: Get Summary of the dataset export
-        :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds
-        :param entities.ExportType export_type: Type of export ('json' or 'zip')
-        :param entities.OutputExportType output_export_type: Output format ('json', 'zip', or 'folders'). If None, defaults to 'json'
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations (V1 only)
+        :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity to filter feature vectors (V1 only)
+        :param bool include_feature_vectors: Include item feature vectors in the export (V1 only)
+        :param bool include_annotations: Include item annotations in the export (V1 only)
+        :param bool dataset_lock: Make dataset readonly during the export (V1 only)
+        :param bool export_summary: Get Summary of the dataset export (V1 only)
+        :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds (V1 only)
+        :param entities.ExportType export_type: Type of export ('json' or 'zip') (V1 only)
+        :param entities.OutputExportType output_export_type: Output format ('json', 'zip', or 'folders') (V1 only)
         :param int timeout: Maximum time in seconds to wait for the export to complete
-        :return: Path to exported file/directory, or None if export result is empty
-        :rtype: Optional[str]
+        :param entities.DatasetExportVersion export_version: Export API version - V1 (legacy) or V3 (LanceDB)
+        :param entities.ExportMode export_mode: Export mode for V3 - FULL or DIFF (V3 only)
+        :param int from_version: Starting version for diff mode (V3 only). If not provided in DIFF mode, 
+            falls back to last_to_version from dataset metadata. If no previous export exists, falls back to FULL mode.
+        :param int partition_count: Number of partitions, auto-calculated if None (V3 only)
+        :param bool force: Force re-export even if cached (V3 only)
+        :param int parallel_downloads: Number of concurrent partition downloads (V3 only)
+        :return: For V1: Path to exported file/directory, or None if empty. For V3: ExportManifest object
+        :rtype: Union[Optional[str], entities.ExportManifest]
+
+        **Example - V1 Export (Legacy)**:
+
+        .. code-block:: python
+
+            # Default V1 export
+            export_path = dataset.export(
+                local_path='/path/to/export',
+                export_type=dl.ExportType.JSON
+            )
+
+        **Example - V3 Export (LanceDB)**:
+
+        .. code-block:: python
+
+            # Full V3 export
+            manifest = dataset.export(
+                local_path='/path/to/export',
+                export_version=dl.DatasetExportVersion.V3,
+                export_mode=dl.ExportMode.FULL
+            )
+            print(f"Exported {manifest.total_records} records")
+
+        **Example - V3 Diff Export (Incremental)**:
+
+        .. code-block:: python
+
+            # Incremental export - only changes since version 5
+            manifest = dataset.export(
+                export_version=dl.DatasetExportVersion.V3,
+                export_mode=dl.ExportMode.DIFF,
+                from_version=5
+            )
+            # Store to_version for next diff export
+            next_from_version = manifest.to_version
+        """
+        if local_path is not None and os.path.isfile(local_path):
+            raise ValueError(f'local_path must be a directory, not a file path: {local_path}')
+
+        # Route to appropriate export implementation based on version
+        if export_version == DatasetExportVersion.V3:
+            return self._export_v3(
+                dataset=dataset,
+                dataset_name=dataset_name,
+                dataset_id=dataset_id,
+                local_path=local_path,
+                filters=filters,
+                export_mode=export_mode,
+                from_version=from_version,
+                partition_count=partition_count,
+                force=force,
+                timeout=timeout if timeout > 0 else 300,
+                parallel_downloads=parallel_downloads,
+            )
+        else:
+            return self._export_v1(
+                dataset=dataset,
+                dataset_name=dataset_name,
+                dataset_id=dataset_id,
+                local_path=local_path,
+                filters=filters,
+                annotation_filters=annotation_filters,
+                feature_vector_filters=feature_vector_filters,
+                include_feature_vectors=include_feature_vectors,
+                include_annotations=include_annotations,
+                export_type=export_type,
+                timeout=timeout,
+                dataset_lock=dataset_lock,
+                lock_timeout_sec=lock_timeout_sec,
+                export_summary=export_summary,
+                output_export_type=output_export_type,
+            )
+
+    def _export_v1(
+        self,
+        dataset: entities.Dataset = None,
+        dataset_name: str = None,
+        dataset_id: str = None,
+        local_path: str = None,
+        filters: Union[dict, entities.Filters] = None,
+        annotation_filters: entities.Filters = None,
+        feature_vector_filters: entities.Filters = None,
+        include_feature_vectors: bool = False,
+        include_annotations: bool = False,
+        export_type: ExportType = ExportType.JSON,
+        timeout: int = 0,
+        dataset_lock: bool = False,
+        lock_timeout_sec: int = None,
+        export_summary: bool = False,
+        output_export_type: OutputExportType = None,
+    ) -> Optional[str]:
+        """
+        Export dataset using V1 (legacy) export API.
+        
+        Internal method called by export() when export_version=DatasetExportVersion.V1.
         """
         export_result = list(
             self._export_recursive(
@@ -911,15 +993,11 @@ class Datasets:
             return None
 
         if export_type == ExportType.ZIP:
-            # if export type is zip, then return the _export_recursive result as it
             return export_result[0]
 
-        # if user didn't provide output_export_type, keep the previous behavior
         if output_export_type is None:
             output_export_type = OutputExportType.JSON
 
-        # export type is jsos :
-        # Load all items from subset JSON files and clean them up
         all_items = []
         logger.debug("start loading all items from subset JSON files")
         for json_file in export_result:
@@ -934,30 +1012,417 @@ class Datasets:
 
         base_dir = os.path.dirname(export_result[0])
         if output_export_type != OutputExportType.FOLDERS:
-            dataset_id=self._resolve_dataset_id(dataset, dataset_name, dataset_id)
-            result_file_name = f"{dataset_id}.json"
+            resolved_dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
+            result_file_name = f"{resolved_dataset_id}.json"
             result_file = os.path.join(base_dir, result_file_name)
             logger.debug(f"start writing all items to result file {result_file}")
             with open(result_file, 'w') as f:
                 json.dump(all_items, f)
             if output_export_type == OutputExportType.ZIP:
-                # Zip the result file
                 zip_filename = result_file + '.zip'
-                # Create zip file
                 logger.debug(f"start zipping result file {zip_filename}")
                 with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
                     zf.write(result_file, arcname=os.path.basename(result_file))
-
-                # Remove original json after zipping
                 os.remove(result_file)
                 result_file = zip_filename
             return result_file
+
         logger.debug("start building per-item JSON files under local_path mirroring remote structure")
-        # Build per-item JSON files under local_path mirroring remote structure
         for item in all_items:
             self._save_item_json_file(item_data=item, base_path=Path(base_dir), export_version=None)
         logger.debug("end building per-item JSON files under local_path mirroring remote structure")
         return base_dir
+
+    @staticmethod
+    def _extract_api_path(url: str) -> str:
+        """Extract the API path portion from a full Dataloop gateway URL.
+        
+        Given 'https://gate.dataloop.ai/api/v1/datasets/.../manifest',
+        returns '/datasets/.../manifest'.
+        """
+        parsed = urlparse(url)
+        path = parsed.path
+        # Strip the /api/v1 prefix used by the gateway
+        api_prefix_idx = path.find('/api/v1/')
+        if api_prefix_idx != -1:
+            return path[api_prefix_idx + len('/api/v1'):]
+        return path
+
+    def _download_partition_file(self, file_info: entities.ExportFile, file_index: int, local_path: str) -> str:
+        """
+        Download a single partition file with checksum verification.
+        
+        :param file_info: ExportFile entity with download metadata
+        :param file_index: Partition index (for logging)
+        :param local_path: Local directory to save the file
+        :return: Path to the downloaded file
+        """
+        api_path = self._extract_api_path(file_info.path)
+
+        success, response = self._client_api.gen_request(
+            req_type='get',
+            path=api_path,
+            stream=True
+        )
+
+        if self._client_api.check_response(success, response, path=api_path) is False:
+            return None
+
+        local_file_path = os.path.join(local_path, file_info.filename)
+
+        md5_hash = hashlib.md5()
+        with open(local_file_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    md5_hash.update(chunk)
+
+        actual_checksum = base64.b64encode(md5_hash.digest()).decode('utf-8')
+        if file_info.checksum and actual_checksum != file_info.checksum:
+            os.remove(local_file_path)
+            raise exceptions.PlatformException(
+                error='400',
+                message=f"Checksum mismatch for {file_info.filename}: "
+                        f"expected {file_info.checksum}, got {actual_checksum}"
+            )
+
+        logger.debug(f"Downloaded partition {file_index}: {file_info.filename} (checksum verified)")
+        return local_file_path
+
+    def _send_v3_export_request(self, dataset_id: str, payload: dict):
+        """
+        Send a single V3 export POST request and return the HTTP status code and parsed Command.
+        
+        Both 200 and 202 are valid responses (202 means a LanceDB sync is needed first).
+        
+        :return: (status_code, command) tuple. Both are None if the request failed.
+        """
+        api_path = f'/datasets/{dataset_id}/export/v3'
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path=api_path,
+            json_req=payload
+        )
+
+        if self._client_api.check_response(success, response, path=api_path) is False:
+            return None, None
+
+        command = entities.Command.from_json(
+            _json=response.json(),
+            client_api=self._client_api
+        )
+        return response.status_code, command
+
+    def _export_v3(
+        self,
+        dataset: entities.Dataset = None,
+        dataset_name: str = None,
+        dataset_id: str = None,
+        local_path: str = None,
+        filters: Union[dict, entities.Filters] = None,
+        export_mode: ExportMode = None,
+        from_version: int = None,
+        partition_count: int = None,
+        force: bool = False,
+        timeout: int = 300,
+        parallel_downloads: int = 4,
+    ) -> entities.ExportManifest:
+        """
+        Export dataset using V3 (LanceDB) export API.
+        
+        Internal method called by export() when export_version=DatasetExportVersion.V3.
+        
+        This method exports dataset items and annotations using the optimized V3 export
+        pipeline with partitioned NDJSON output. It supports both full exports and 
+        incremental (diff) exports for efficient data synchronization.
+        
+        If the dataset has not been synced to LanceDB yet, the API returns 202 with a
+        SyncDatasetToLanceDB command. This method waits for that sync to complete and
+        retries the export once. A second 202 response is treated as an error.
+        """
+        resolved_dataset_id = self._resolve_dataset_id(dataset, dataset_name, dataset_id)
+
+        # Get dataset entity if not provided (needed for metadata update)
+        if dataset is None:
+            dataset = self.get(dataset_id=resolved_dataset_id)
+
+        if export_mode is None:
+            export_mode = ExportMode.FULL
+
+        if export_mode == ExportMode.DIFF and from_version is None:
+            export_v3_meta = dataset.metadata.get('export_v3', {}) or {}
+            last_to_version = export_v3_meta.get('last_to_version')
+            if last_to_version is not None:
+                from_version = last_to_version
+                logger.info(
+                    "from_version not provided, using last_to_version=%s from dataset metadata. "
+                    "Previous export: mode=%s, time=%s, records=%s, by=%s",
+                    from_version,
+                    export_v3_meta.get('last_export_mode'),
+                    export_v3_meta.get('last_export_time'),
+                    export_v3_meta.get('last_total_records'),
+                    export_v3_meta.get('last_export_by', 'unknown')
+                )
+            else:
+                export_mode = ExportMode.FULL
+                logger.warning(
+                    "from_version not provided and no previous V3 export found in dataset metadata. "
+                    "Falling back to full export mode."
+                )
+
+        payload = {
+            'mode': export_mode.value if isinstance(export_mode, ExportMode) else export_mode,
+            'format': 'ndjson',
+            'force': force
+        }
+
+        if partition_count is not None:
+            payload['partitionCount'] = partition_count
+
+        if from_version is not None:
+            payload['fromVersion'] = from_version
+
+        if filters is not None:
+            if isinstance(filters, entities.Filters):
+                payload['filters'] = {
+                    'itemsQuery': {
+                        'filter': filters.prepare().get('filter', {})
+                    }
+                }
+            elif isinstance(filters, dict):
+                payload['filters'] = filters
+            else:
+                raise exceptions.BadRequest(
+                    message='filters must be of type dict or Filters',
+                    status_code=400
+                )
+
+        logger.info(f"Initiating V3 LanceDB export for dataset {resolved_dataset_id}")
+        status_code, command = self._send_v3_export_request(resolved_dataset_id, payload)
+        if command is None:
+            return None
+
+        # The API may return a SyncDatasetToLanceDB command (HTTP 200 or 202)
+        # when the dataset hasn't been synced yet. Wait for sync, then retry.
+        SYNC_COMMAND_TYPE = 'syncdatasettolancedb'
+        if command.type and command.type.lower() == SYNC_COMMAND_TYPE:
+            logger.info(
+                "Dataset requires LanceDB sync before export (command %s, type: %s). "
+                "Waiting for sync to complete...",
+                command.id, command.type
+            )
+            command = command.wait(timeout=timeout)
+            if command.status != entities.CommandsStatus.SUCCESS:
+                raise exceptions.PlatformException(
+                    error='424',
+                    message=f"LanceDB sync command {command.id} failed with status '{command.status}'. "
+                            f"Cannot proceed with export."
+                )
+            logger.info("LanceDB sync completed successfully. Retrying export...")
+            status_code, command = self._send_v3_export_request(resolved_dataset_id, payload)
+            if command is None:
+                return None
+            if command.type and command.type.lower() == SYNC_COMMAND_TYPE:
+                raise exceptions.PlatformException(
+                    error='424',
+                    message=f"Dataset {resolved_dataset_id} still requires LanceDB sync after initial "
+                            f"sync completed (command {command.id}). Please try again later or contact support."
+                )
+
+        logger.info(f"Export command {command.id} created, waiting for completion...")
+        command = command.wait(timeout=timeout)
+
+        if command.status != entities.CommandsStatus.SUCCESS:
+            raise exceptions.PlatformException(
+                error='424',
+                message=f"Export command failed: {command.error}"
+            )
+
+        export_result = command.spec.get('exportResult', {})
+        manifest_url = export_result.get('manifestUrl')
+
+        if not manifest_url:
+            total_records = export_result.get('totalRecords', 0) or 0
+            if total_records > 0:
+                raise exceptions.PlatformException(
+                    error='400',
+                    message=f"manifestUrl is null but totalRecords={total_records}"
+                )
+            logger.error("export result is empty (manifestUrl is null)")
+            return None
+
+        logger.info("Fetching export manifest...")
+        manifest_path = self._extract_api_path(manifest_url)
+
+        success, response = self._client_api.gen_request(
+            req_type='get',
+            path=manifest_path
+        )
+
+        if self._client_api.check_response(success, response, path=manifest_path) is False:
+            return None
+
+        manifest_json = response.json()
+        manifest = entities.ExportManifest.from_json(
+            _json=manifest_json,
+            export_result=export_result
+        )
+
+        logger.info(
+            f"Export manifest received: {manifest.total_records} records, "
+            f"{manifest.partition_count} partitions, {manifest.total_bytes} bytes"
+        )
+
+        # Set up local path
+        if local_path is None:
+            local_path = os.path.join(
+                tempfile.gettempdir(),
+                'dataloop',
+                'exports',
+                resolved_dataset_id,
+                manifest.export_id
+            )
+
+        os.makedirs(local_path, exist_ok=True)
+        manifest.local_path = local_path
+
+        if not manifest.files:
+            logger.warning("No files to download in export manifest")
+            # Still save metadata even for empty exports
+            self._save_export_v3_metadata(
+                dataset=dataset,
+                manifest=manifest,
+                local_path=local_path
+            )
+            return manifest
+
+        logger.info(f"Downloading {len(manifest.files)} partition files to {local_path}...")
+
+        downloaded_files = []
+        with ThreadPoolExecutor(max_workers=parallel_downloads) as executor:
+            future_to_file = {
+                executor.submit(self._download_partition_file, f, i, local_path): f 
+                for i, f in enumerate(manifest.files)
+            }
+
+            for future in tqdm.tqdm(
+                as_completed(future_to_file),
+                total=len(manifest.files),
+                desc='Downloading partitions',
+                disable=self._client_api.verbose.disable_progress_bar,
+                file=sys.stdout
+            ):
+                try:
+                    local_file = future.result()
+                    downloaded_files.append(local_file)
+                except Exception as e:
+                    logger.error(f"Failed to download partition: {e}")
+                    raise
+
+        manifest.downloaded_files = sorted(downloaded_files)
+        logger.info(f"Downloaded {len(downloaded_files)} files to {local_path}")
+
+        # Save export metadata to dataset and local history
+        self._save_export_v3_metadata(
+            dataset=dataset,
+            manifest=manifest,
+            local_path=local_path
+        )
+
+        return manifest
+
+    def _save_export_v3_metadata(
+        self,
+        dataset: entities.Dataset,
+        manifest: entities.ExportManifest,
+        local_path: str
+    ):
+        """
+        Save V3 export metadata to dataset metadata and local export history file.
+        
+        - Updates dataset.metadata.export_v3 with latest export info (overwrites)
+        - Appends to local /.dataloop/all_exports.json history file
+        """
+        # Build export metadata record
+        export_metadata = {
+            'export_id': manifest.export_id,
+            'dataset_id': dataset.id,
+            'exported_at': manifest.exported_at,
+            'mode': manifest.mode,
+            'from_version': manifest.from_version,
+            'to_version': manifest.to_version,
+            'total_records': manifest.total_records,
+            'total_bytes': manifest.total_bytes,
+            'partition_count': manifest.partition_count,
+            'file_count': manifest.statistics.file_count,
+            'format': manifest.format,
+            'local_path': local_path,
+            'downloaded_files': manifest.downloaded_files,
+            'last_updated': datetime.datetime.utcnow().isoformat() + 'Z'
+        }
+        # 1. Update dataset metadata with latest export info
+        try:
+            export_by = self._client_api.info(with_token=False).get('user_email', None) or 'unknown'
+            dataset.metadata['export_v3'] = {
+                'last_export_id': manifest.export_id,
+                'last_export_time': manifest.exported_at,
+                'last_export_mode': manifest.mode,
+                'last_from_version': manifest.from_version,
+                'last_to_version': manifest.to_version,
+                'last_total_records': manifest.total_records,
+                'last_total_bytes': manifest.total_bytes,
+                'last_partition_count': manifest.partition_count,
+                'last_local_path': local_path,
+                'last_export_by': export_by
+            }
+
+            self.update(dataset=dataset, system_metadata=True)
+            logger.debug(f"Updated dataset {dataset.id} metadata with export_v3 info")
+        except Exception as e:
+            logger.warning(f"Failed to update dataset metadata with export_v3 info: {e}")
+
+        # 2. Save to remote export history file in dataset
+        try:
+            remote_history_path = '/.dataloop/all_exports.json'
+            items_repo = repositories.Items(client_api=self._client_api, dataset=dataset)
+
+            # Try to get existing history file
+            export_history = {'exports': []}
+            try:
+                filters = entities.Filters()
+                filters.add(field='filename', values='all_exports.json')
+                filters.add(field='dir', values='/.dataloop')
+                pages = items_repo.list(filters=filters)
+                if pages.items_count > 0:
+                    history_item = pages.items[0]
+                    # Download and parse existing history
+                    local_temp = os.path.join(tempfile.gettempdir(), 'all_exports_temp.json')
+                    history_item.download(local_path=local_temp)
+                    with open(local_temp, 'r') as f:
+                        export_history = json.load(f)
+                    os.remove(local_temp)
+            except Exception:
+                pass
+
+            # Append current export to history
+            export_history['exports'].append(export_metadata)
+
+            # Write updated history to temp file and upload
+            temp_history_file = os.path.join(tempfile.gettempdir(), 'all_exports.json')
+            with open(temp_history_file, 'w') as f:
+                json.dump(export_history, f, indent=2)
+
+            # Upload (overwrite if exists)
+            items_repo.upload(
+                local_path=temp_history_file,
+                remote_path='/.dataloop',
+                overwrite=True
+            )
+            os.remove(temp_history_file)
+
+            logger.debug(f"Saved export history to {remote_history_path} in dataset {dataset.id}")
+        except Exception as e:
+            logger.warning(f"Failed to save export history to dataset: {e}")
 
     @_api_reference.add(path='/datasets/merge', method='post')
     def merge(self,
@@ -1008,19 +1473,19 @@ class Datasets:
                                                          path='/datasets/merge',
                                                          json_req=payload)
 
-        if success:
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
-            if 'mergeDatasetsConfiguration' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="mergeDatasetsConfiguration key is missing in command response: {}"
-                                                   .format(response))
-            return True
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets/merge') is False:
+            return False
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+        if 'mergeDatasetsConfiguration' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="mergeDatasetsConfiguration key is missing in command response: {}"
+                                               .format(response))
+        return True
 
     @_api_reference.add(path='/datasets/{id}/sync', method='post')
     def sync(self, dataset_id: str, wait: bool = True):
@@ -1044,19 +1509,19 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets/{}/sync'.format(dataset_id))
 
-        if success:
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
-            if 'datasetId' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="datasetId key is missing in command response: {}"
-                                                   .format(response))
-            return True
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets/{}/sync'.format(dataset_id)) is False:
+            return False
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+        if 'datasetId' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="datasetId key is missing in command response: {}"
+                                               .format(response))
+        return True
 
     @_api_reference.add(path='/datasets', method='post')
     def create(self,
@@ -1135,21 +1600,21 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/datasets',
                                                          json_req=payload)
-        if success:
-            dataset = entities.Dataset.from_json(client_api=self._client_api,
-                                                 _json=response.json(),
-                                                 datasets=self,
-                                                 project=self.project)
-            # create ontology and recipe
-            if not create_default_recipe:
-                if recipe_id is not None:
-                    dataset.switch_recipe(recipe_id=recipe_id)
-                else:
-                    dataset = dataset.recipes.create(ontology_ids=ontology_ids,
-                                                     labels=labels,
-                                                     attributes=attributes).dataset
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets') is False:
+            return None
+
+        dataset = entities.Dataset.from_json(client_api=self._client_api,
+                                             _json=response.json(),
+                                             datasets=self,
+                                             project=self.project)
+        # create ontology and recipe
+        if not create_default_recipe:
+            if recipe_id is not None:
+                dataset.switch_recipe(recipe_id=recipe_id)
+            else:
+                dataset = dataset.recipes.create(ontology_ids=ontology_ids,
+                                                 labels=labels,
+                                                 attributes=attributes).dataset
         logger.info('Dataset was created successfully. Dataset id: {!r}'.format(dataset.id))
         assert isinstance(dataset, entities.Dataset)
         if checkout:
@@ -1318,7 +1783,6 @@ class Datasets:
                 desc='Download Annotations'
             )
             jobs = []
-            
 
         # Call _export_recursive as generator
         export_generator = dataset.project.datasets._export_recursive(
@@ -1524,14 +1988,13 @@ class Datasets:
         success, response = self._client_api.gen_request(req_type='post',
                                                         path=path,
                                                         json_req=payload)
-        if success:
-            # Wait for the split operation to complete
-            command = entities.Command.from_json(_json=response.json(),
-                                                client_api=self._client_api)
-            command.wait()
-            return True
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=path) is False:
+            return False
+
+        command = entities.Command.from_json(_json=response.json(),
+                                            client_api=self._client_api)
+        command.wait()
+        return True
 
     @_api_reference.add(path='/datasets/{id}/items/bulk-update-metadata', method='post')
     def bulk_update_ml_subset(self, dataset_id: str, items_query: dict, subset: str = None, deleteTag: bool = False) -> bool:
@@ -1576,10 +2039,9 @@ class Datasets:
             path=f'/datasets/{dataset_id}/items/bulk-update-metadata',
             json_req=payload
         )
-        if success:
-            # Similar to split operation, a command is returned
-            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
-            command.wait()
-            return True
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=f'/datasets/{dataset_id}/items/bulk-update-metadata') is False:
+            return False
+
+        command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
+        command.wait()
+        return True

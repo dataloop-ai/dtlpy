@@ -223,7 +223,7 @@ class Pipeline(entities.BaseEntity):
     revisions = attr.ib()
 
     # sdk
-    _project = attr.ib(repr=False)
+    project = attr.ib(repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _original_settings = attr.ib(repr=False, type=PipelineSettings)
     _original_variables = attr.ib(repr=False, type=List[Variable])
@@ -270,6 +270,16 @@ class Pipeline(entities.BaseEntity):
             if project.id != _json.get('projectId', None):
                 logger.warning('Pipeline has been fetched from a project that is not belong to it')
                 project = None
+
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
 
         connections = [PipelineConnection.from_json(_json=con) for con in _json.get('connections', list())]
         json_variables = _json.get('variables', None) or list()
@@ -338,7 +348,7 @@ class Pipeline(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(Pipeline)._project,
+                            filter=attr.filters.exclude(attr.fields(Pipeline).project,
                                                         attr.fields(Pipeline)._repositories,
                                                         attr.fields(Pipeline)._client_api,
                                                         attr.fields(Pipeline).project_id,
@@ -395,12 +405,6 @@ class Pipeline(entities.BaseEntity):
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/pipelines/{}".format(self.project_id, self.id))
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = self.projects.get(project_id=self.project_id, fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     ################
     # repositories #
@@ -412,9 +416,9 @@ class Pipeline(entities.BaseEntity):
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
-            pipelines=repositories.Pipelines(client_api=self._client_api, project=self._project),
+            pipelines=repositories.Pipelines(client_api=self._client_api, project=self.project),
             pipeline_executions=repositories.PipelineExecutions(
-                client_api=self._client_api, project=self._project, pipeline=self
+                client_api=self._client_api, project=self.project, pipeline=self
             ),
             triggers=repositories.Triggers(client_api=self._client_api, pipeline=self),
             nodes=repositories.Nodes(client_api=self._client_api, pipeline=self)

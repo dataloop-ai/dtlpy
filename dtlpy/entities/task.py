@@ -102,7 +102,7 @@ class Task:
     _client_api = attr.ib(repr=False)
     _current_assignments = attr.ib(default=None, repr=False)
     _assignments = attr.ib(default=None, repr=False)
-    _project = attr.ib(default=None, repr=False)
+    project = attr.ib(default=None, repr=False)
     _dataset = attr.ib(default=None, repr=False)
     _tasks = attr.ib(default=None, repr=False)
     _settings = attr.ib(default=None, repr=False)
@@ -164,6 +164,16 @@ class Task:
                 logger.warning('Task has been fetched from a dataset that is not belong to it')
                 dataset = None
 
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         actions = [ItemAction.from_json(_json=action) for action in _json.get('availableActions', list())]
 
         return cls(
@@ -207,7 +217,7 @@ class Task:
         _json = attr.asdict(
             self, filter=attr.filters.exclude(
                 attr.fields(Task)._client_api,
-                attr.fields(Task)._project,
+                attr.fields(Task).project,
                 attr.fields(Task).project_id,
                 attr.fields(Task).dataset_id,
                 attr.fields(Task).recipe_id,
@@ -282,15 +292,6 @@ class Task:
         assert isinstance(self._settings, repositories.Settings)
         return self._settings
 
-    @property
-    def project(self):
-        if self._project is None:
-            self.get_project()
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project". need to "get_project()" ')
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def dataset(self):
@@ -303,12 +304,12 @@ class Task:
         return self._dataset
 
     def get_project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
+        if self.project is None:
+            self.project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id)
 
     def get_dataset(self):
         if self._dataset is None:
-            self._dataset = repositories.Datasets(client_api=self._client_api, project=self._project).get(
+            self._dataset = repositories.Datasets(client_api=self._client_api, project=self.project).get(
                 dataset_id=self.dataset_id)
 
     def open_in_web(self):

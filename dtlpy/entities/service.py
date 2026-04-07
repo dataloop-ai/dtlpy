@@ -248,11 +248,12 @@ class Service(entities.BaseEntity):
     _client_api = attr.ib(type=ApiClient, repr=False)
     _revisions = attr.ib(default=None, repr=False)
     # repositories
-    _project = attr.ib(default=None, repr=False)
+    project = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
     updated_by = attr.ib(default=None)
     app = attr.ib(default=None)
     integrations = attr.ib(default=None)
+    crashloop = attr.ib(default=None, repr=False)
 
     @property
     def createdAt(self):
@@ -309,6 +310,16 @@ class Service(entities.BaseEntity):
                 logger.warning('Service has been fetched from a package that is not belong to it')
                 package = None
 
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         versions = _json.get('versions', dict())
         runtime = _json.get("runtime", None)
         if runtime:
@@ -355,7 +366,8 @@ class Service(entities.BaseEntity):
             app=_json.get('app', None),
             integrations=_json.get('integrations', None),
             org_id=_json.get('orgId', None),
-            panels=_json.get('panels', None)
+            panels=_json.get('panels', None),
+            crashloop=_json.get('crashloop', None)
         )
         inst.is_fetched = is_fetched
         return inst
@@ -417,13 +429,6 @@ class Service(entities.BaseEntity):
     def platform_url(self):
         return self._client_api._get_resource_url("projects/{}/services/{}/main".format(self.project.id, self.id))
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
-                                                                                   fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def package(self):
@@ -470,12 +475,12 @@ class Service(entities.BaseEntity):
         if self._package is None:
             services_repo = repositories.Services(client_api=self._client_api,
                                                   package=self._package,
-                                                  project=self._project)
+                                                  project=self.project)
         else:
             services_repo = self._package.services
 
         triggers = repositories.Triggers(client_api=self._client_api,
-                                         project=self._project,
+                                         project=self.project,
                                          service=self)
 
         r = reps(executions=repositories.Executions(client_api=self._client_api, service=self),
@@ -510,7 +515,7 @@ class Service(entities.BaseEntity):
         _json = attr.asdict(
             self,
             filter=attr.filters.exclude(
-                attr.fields(Service)._project,
+                attr.fields(Service).project,
                 attr.fields(Service)._package,
                 attr.fields(Service)._revisions,
                 attr.fields(Service)._client_api,
@@ -544,7 +549,8 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).app,
                 attr.fields(Service).integrations,
                 attr.fields(Service).org_id,
-                attr.fields(Service).panels
+                attr.fields(Service).panels,
+                attr.fields(Service).crashloop
             )
         )
 
@@ -609,6 +615,9 @@ class Service(entities.BaseEntity):
 
         if self.integrations is not None:
             _json['integrations'] = self.integrations
+
+        if self.crashloop is not None:
+            _json['crashloop'] = self.crashloop
 
         return _json
 

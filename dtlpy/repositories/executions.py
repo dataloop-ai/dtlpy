@@ -26,7 +26,10 @@ class Executions:
                  project: entities.Project = None):
         self._client_api = client_api
         self._service = service
-        self._project = project
+        # Initialize project - try from service first
+        if project is None and service is not None:
+            project = service.project
+        self.project = project
 
     ############
     # entities #
@@ -45,24 +48,6 @@ class Executions:
         if not isinstance(service, entities.Service):
             raise ValueError('Must input a valid Service entity')
         self._service = service
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            if self._service is not None:
-                self._project = self._service._project
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use Project.executions repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     def __get_from_entity(self, name, value):
         project_id = None
@@ -127,8 +112,8 @@ class Executions:
 
             if project_id is None:
                 # if still None - get from current repository
-                if self._project is not None:
-                    project_id = self._project.id
+                if self.project is not None:
+                    project_id = self.project.id
                 else:
                     raise exceptions.PlatformException('400', 'Please provide project_id')
 
@@ -241,14 +226,13 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
 
         # return entity
         execution = entities.Execution.from_json(_json=response.json(),
                                                  client_api=self._client_api,
-                                                 project=self._project,
+                                                 project=self.project,
                                                  service=self._service)
 
         if sync and not return_output and not stream_logs:
@@ -342,9 +326,8 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
 
         response_json = response.json()
         command = entities.Command.from_json(_json=response_json,
@@ -394,9 +377,8 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req={'query': filters.prepare()['filter']})
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
 
         response_json = response.json()
         command = entities.Command.from_json(_json=response_json,
@@ -418,9 +400,8 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path=url) is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/query/faas', method='post')
@@ -452,8 +433,8 @@ class Executions:
             raise exceptions.PlatformException(
                 error='400',
                 message='Filters resource must to be FiltersResource.EXECUTION. Got: {!r}'.format(filters.resource))
-        if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
+        if self.project is not None:
+            filters.add(field='projectId', values=self.project.id)
         if self._service is not None:
             filters.add(field='serviceId', values=self._service.id)
 
@@ -473,7 +454,7 @@ class Executions:
             jobs[i_item] = pool.submit(entities.Execution._protected_from_json,
                                        **{'client_api': self._client_api,
                                           '_json': item,
-                                          'project': self._project,
+                                          'project': self.project,
                                           'service': self._service})
 
         # get results
@@ -510,15 +491,13 @@ class Executions:
 
         success, response = self._client_api.gen_request(req_type="get",
                                                          path=url_path)
-
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
 
         # return entity
         return entities.Execution.from_json(client_api=self._client_api,
                                             _json=response.json(),
-                                            project=self._project,
+                                            project=self.project,
                                             service=self._service)
 
     def logs(self,
@@ -568,15 +547,9 @@ class Executions:
             path='/executions/{}/attempts'.format(execution.id)
         )
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            return response.json()
+        if self._client_api.check_response(success, response, path='/executions/attempts') is False:
+            return None
+        return response.json()
 
     @_api_reference.add(path='/executions/{executionId}/rerun', method='post')
     def rerun(self, execution: entities.Execution, sync: bool = False):
@@ -602,18 +575,16 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            execution = entities.Execution.from_json(
-                client_api=self._client_api,
-                _json=response.json(),
-                project=self._project,
-                service=self._service
-            )
-            if sync:
-                execution = self.wait(execution_id=execution.id)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            return None
+        execution = entities.Execution.from_json(
+            client_api=self._client_api,
+            _json=response.json(),
+            project=self.project,
+            service=self._service
+        )
+        if sync:
+            execution = self.wait(execution_id=execution.id)
         return execution
 
     def wait(self,
@@ -686,14 +657,12 @@ class Executions:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/executions/{}/terminate'.format(execution.id))
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            return entities.Execution.from_json(_json=response.json(),
-                                                service=self._service,
-                                                project=self._project,
-                                                client_api=self._client_api)
+        if self._client_api.check_response(success, response, path='/executions/terminate') is False:
+            return None
+        return entities.Execution.from_json(_json=response.json(),
+                                            service=self._service,
+                                            project=self.project,
+                                            client_api=self._client_api)
 
     @_api_reference.add(path='/executions/{id}', method='patch')
     def update(self, execution: entities.Execution) -> entities.Execution:
@@ -720,15 +689,8 @@ class Executions:
                                                          path='/executions/{}'.format(execution.id),
                                                          json_req=payload)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return entity
-        if self._project is not None:
-            project = self._project
-        else:
-            project = execution._project
+        if self._client_api.check_response(success, response, path='/executions') is False:
+            return None
 
         # return
         if self._service is not None:
@@ -738,7 +700,7 @@ class Executions:
 
         return entities.Execution.from_json(_json=response.json(),
                                             service=service,
-                                            project=self._project,
+                                            project=self.project,
                                             client_api=self._client_api)
 
     def progress_update(
@@ -805,11 +767,9 @@ class Executions:
             json_req=payload
         )
 
-        # exception handling
-        if success:
-            return entities.Execution.from_json(_json=response.json(),
-                                                client_api=self._client_api,
-                                                project=self._project,
-                                                service=self._service)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/executions/progress') is False:
+            return None
+        return entities.Execution.from_json(_json=response.json(),
+                                            client_api=self._client_api,
+                                            project=self.project,
+                                            service=self._service)

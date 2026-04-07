@@ -47,6 +47,16 @@ class Bot(entities.User):
         :param bots: Bots repository
         :return: User object
         """
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         return cls(
             created_at=_json.get('createdAt', None),
             name=_json.get('firstName', None),
@@ -68,17 +78,9 @@ class Bot(entities.User):
     @property
     def bots(self):
         if self._bots is None:
-            self._bots = repositories.Bots(client_api=self._client_api, project=self._project)
+            self._bots = repositories.Bots(client_api=self._client_api, project=self.project)
         assert isinstance(self._bots, repositories.Bots)
         return self._bots
-
-    @property
-    def project(self):
-        if self._project is None:
-            raise exceptions.PlatformException(error='2001',
-                                               message='Missing entity "project".')
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     def to_json(self):
         """
@@ -88,7 +90,7 @@ class Bot(entities.User):
         :rtype: dict
         """
         _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(Bot)._project,
+                            filter=attr.filters.exclude(attr.fields(Bot).project,
                                                         attr.fields(Bot).name,
                                                         attr.fields(Bot)._client_api,
                                                         attr.fields(Bot)._bots,

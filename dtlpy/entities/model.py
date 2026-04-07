@@ -86,7 +86,7 @@ class Model(entities.BaseEntity):
     dataset_id = attr.ib(repr=False)
 
     # sdk
-    _project = attr.ib(repr=False)
+    project = attr.ib(repr=False)
     _package = attr.ib(repr=False)
     _dataset = attr.ib(repr=False)
     _feature_set = attr.ib(repr=False)
@@ -142,6 +142,16 @@ class Model(entities.BaseEntity):
                 logger.warning("Model's package is different then the input package")
                 package = None
 
+        # Initialize project with minimal JSON if not provided but project exists in context
+        if project is None:
+            project_id = _json.get('context', {}).get('project', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         model_artifacts = [entities.Artifact.from_json(_json=artifact,
                                                        client_api=client_api,
                                                        project=project)
@@ -191,7 +201,7 @@ class Model(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(self,
-                            filter=attr.filters.exclude(attr.fields(Model)._project,
+                            filter=attr.filters.exclude(attr.fields(Model).project,
                                                         attr.fields(Model)._package,
                                                         attr.fields(Model)._dataset,
                                                         attr.fields(Model)._ontology,
@@ -241,13 +251,6 @@ class Model(entities.BaseEntity):
     ############
     # entities #
     ############
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = self.projects.get(project_id=self.project_id, fetch=None)
-            self._repositories = self.set_repositories()  # update the repos with the new fetched entity
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def feature_set(self) -> 'entities.FeatureSet':
@@ -321,25 +324,25 @@ class Model(entities.BaseEntity):
 
         r = reps(projects=repositories.Projects(client_api=self._client_api),
                  datasets=repositories.Datasets(client_api=self._client_api,
-                                                project=self._project),
+                                                project=self.project),
                  models=repositories.Models(client_api=self._client_api,
-                                            project=self._project,
+                                            project=self.project,
                                             project_id=self.project_id,
                                             package=self._package),
                  packages=repositories.Packages(client_api=self._client_api,
-                                                project=self._project),
+                                                project=self.project),
                  ontologies=repositories.Ontologies(client_api=self._client_api,
-                                                    project=self._project,
+                                                    project=self.project,
                                                     dataset=self._dataset),
                  artifacts=repositories.Artifacts(client_api=self._client_api,
-                                                  project=self._project,
+                                                  project=self.project,
                                                   project_id=self.project_id,
                                                   model=self),
                  metrics=repositories.Metrics(client_api=self._client_api,
                                               model=self),
                  dpks=repositories.Dpks(client_api=self._client_api),
                  services=repositories.Services(client_api=self._client_api,
-                                                project=self._project,
+                                                project=self.project,
                                                 project_id=self.project_id,
                                                 model_id=self.id,
                                                 model=self),

@@ -23,28 +23,14 @@ class PipelineExecutions:
             pipeline: entities.Pipeline = None
     ):
         self._client_api = client_api
-        self._project = project
         self._pipeline = pipeline
+        if project is None:
+            project = entities.Project(_dict={}, _client_api=client_api)
+        self.project = project
 
     ############
     # entities #
     ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            try:
-                self._project = repositories.Projects(client_api=self._client_api).get()
-            except exceptions.NotFound:
-                raise exceptions.PlatformException(
-                    error='2001',
-                    message='Missing "project". need to set a Project entity or use project.pipelines repository')
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     @property
     def pipeline(self) -> entities.Pipeline:
@@ -94,8 +80,8 @@ class PipelineExecutions:
                 pipeline_execution_id=pipeline_execution_id
             )
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         pipeline_execution = entities.PipelineExecution.from_json(
             client_api=self._client_api,
@@ -137,8 +123,8 @@ class PipelineExecutions:
             path=url,
             json_req=filters.prepare()
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/pipelines/query', method='post')
@@ -169,10 +155,7 @@ class PipelineExecutions:
                 error='400',
                 message='Filters resource must to be FiltersResource.PIPELINE_EXECUTION. Got: {!r}'.format(
                     filters.resource))
-
-        project_id = None
-        if self._project is not None:
-            project_id = self._project.id
+                    
 
         # TODO - uncomment this after DAT-24496 is done and cycles have projectId
         # if self._project is not None:
@@ -186,7 +169,6 @@ class PipelineExecutions:
             filters=filters,
             page_offset=filters.page,
             page_size=filters.page_size,
-            project_id=project_id,
             client_api=self._client_api
         )
 
@@ -251,8 +233,8 @@ class PipelineExecutions:
             json_req={"pipeline": pipeline_options},
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         execution = entities.PipelineExecution.from_json(_json=response.json(),
                                                          client_api=self._client_api,
@@ -324,8 +306,8 @@ class PipelineExecutions:
             json_req=payload
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return None
 
         response_json = response.json()
         command = entities.Command.from_json(_json=response_json,
@@ -386,8 +368,8 @@ class PipelineExecutions:
             }
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/pipelines") is False:
+            return False
 
         command = entities.Command.from_json(_json=response.json(),
                                              client_api=self._client_api)

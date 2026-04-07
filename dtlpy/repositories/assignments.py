@@ -21,13 +21,19 @@ class Assignments:
                  dataset: entities.Dataset = None,
                  project_id=None):
         self._client_api = client_api
-        self._project = project
         self._dataset = dataset
         self._task = task
-
-        self._project_id = project_id
-        if self._project_id is None and self._project is not None:
-            self._project_id = self._project.id
+        # Initialize project - try from task first, then from project_id
+        if project is None:
+            if task is not None:
+                project = task.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
 
     ############
     # entities #
@@ -49,27 +55,10 @@ class Assignments:
 
     @property
     def project_id(self):
-        if self._project_id is not None:
-            return self._project_id
-        elif self._project is not None:
-            return self._project.id
+        if self.project is not None:
+            return self.project.id
         else:
             return None
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.assignments repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     ###########
     # methods #
@@ -112,10 +101,8 @@ class Assignments:
         if project_ids is not None:
             if not isinstance(project_ids, list):
                 project_ids = [project_ids]
-        elif self._project_id is not None:
-            project_ids = [self._project_id]
-        elif self._project is not None:
-            project_ids = [self._project.id]
+        elif self.project is not None:
+            project_ids = [self.project.id]
         else:
             raise exceptions.PlatformException(error='400', message='Must provide project')
 
@@ -146,15 +133,13 @@ class Assignments:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if success:
-            assignments = miscellaneous.List(
-                [entities.Assignment.from_json(client_api=self._client_api,
-                                               _json=_json, project=self._project, dataset=self._dataset,
-                                               task=self._task)
-                 for _json in response.json()['items']])
-        else:
-            logger.error('Platform error getting assignments')
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/assignments') is False:
+            return None
+        assignments = miscellaneous.List(
+            [entities.Assignment.from_json(client_api=self._client_api,
+                                           _json=_json, project=self.project, dataset=self._dataset,
+                                           task=self._task)
+             for _json in response.json()['items']])
         return assignments
 
     @_api_reference.add(path='/assignments/{id}', method='get')
@@ -180,21 +165,20 @@ class Assignments:
             url = '/assignments/{}'.format(assignment_id)
             success, response = self._client_api.gen_request(req_type='get',
                                                              path=url)
-            if not success:
-                raise exceptions.PlatformException('404', 'Assignment not found')
-            else:
-                assignment = entities.Assignment.from_json(_json=response.json(),
-                                                           client_api=self._client_api,
-                                                           project=self._project,
-                                                           dataset=self._dataset,
-                                                           task=self._task)
-                # verify input assignment name is same as the given id
-                if assignment_name is not None and assignment.name != assignment_name:
-                    logger.warning(
-                        "Mismatch found in assignments.get: assignment_name is different then assignment.name: "
-                        "{!r} != {!r}".format(
-                            assignment_name,
-                            assignment.name))
+            if self._client_api.check_response(success, response, path='/assignments') is False:
+                return None
+            assignment = entities.Assignment.from_json(_json=response.json(),
+                                                       client_api=self._client_api,
+                                                       project=self.project,
+                                                       dataset=self._dataset,
+                                                       task=self._task)
+            # verify input assignment name is same as the given id
+            if assignment_name is not None and assignment.name != assignment_name:
+                logger.warning(
+                    "Mismatch found in assignments.get: assignment_name is different then assignment.name: "
+                    "{!r} != {!r}".format(
+                        assignment_name,
+                        assignment.name))
         elif assignment_name is not None:
             assignments = [assignment for assignment in self.list() if assignment.name == assignment_name]
             if len(assignments) == 0:
@@ -296,19 +280,19 @@ class Assignments:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=payload)
-        if success:
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
-            if 'toAssignment' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="'toAssignment' key is missing in command response: {}"
-                                                   .format(response))
-            return self.get(assignment_id=command.spec['toAssignment'])
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/assignments') is False:
+            return None
+
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+        if 'toAssignment' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="'toAssignment' key is missing in command response: {}"
+                                               .format(response))
+        return self.get(assignment_id=command.spec['toAssignment'])
 
     @_api_reference.add(path='/assignments/{id}/redistribute', method='post')
     def redistribute(self,
@@ -365,33 +349,33 @@ class Assignments:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=payload)
-        if success:
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
-            if 'workload' not in command.spec:
-                raise exceptions.PlatformException(error='400',
-                                                   message="workload key is missing in command response: {}"
-                                                   .format(response))
+        if self._client_api.check_response(success, response, path='/assignments') is False:
+            return None
 
-            task_assignments = task.assignments.list()
-            workers = list()
-            for worker in workload:
-                workers.append(worker.assignee_id.lower())
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+        if 'workload' not in command.spec:
+            raise exceptions.PlatformException(error='400',
+                                               message="workload key is missing in command response: {}"
+                                               .format(response))
 
-            redistributed_assignments = list()
-            for ass in task_assignments:
-                if ass.annotator in workers:
-                    redistributed_assignments.append(ass)
-                    workers.remove(ass.annotator)
-                    if not workers:
-                        break
+        task_assignments = task.assignments.list()
+        workers = list()
+        for worker in workload:
+            workers.append(worker.assignee_id.lower())
 
-            return miscellaneous.List(redistributed_assignments)
-        else:
-            raise exceptions.PlatformException(response)
+        redistributed_assignments = list()
+        for ass in task_assignments:
+            if ass.annotator in workers:
+                redistributed_assignments.append(ass)
+                workers.remove(ass.annotator)
+                if not workers:
+                    break
+
+        return miscellaneous.List(redistributed_assignments)
 
     @_api_reference.add(path='/assignments/{id}', method='patch')
     def update(self,
@@ -422,12 +406,11 @@ class Assignments:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url,
                                                          json_req=assignment.to_json())
-        if success:
-            return entities.Assignment.from_json(_json=response.json(),
-                                                 client_api=self._client_api, project=self._project,
-                                                 dataset=self._dataset, task=self._task)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/assignments') is False:
+            return None
+        return entities.Assignment.from_json(_json=response.json(),
+                                             client_api=self._client_api, project=self.project,
+                                             dataset=self._dataset, task=self._task)
 
     def create(self,
                assignee_id: str,
@@ -544,7 +527,7 @@ class Assignments:
                 assignment = self.get(assignment_id=assignment_id, assignment_name=assignment_name)
             if assignment.dataset_id is None:
                 raise exceptions.PlatformException('400', 'Please provide a dataset entity')
-            dataset = repositories.Datasets(client_api=self._client_api, project=self._project).get(
+            dataset = repositories.Datasets(client_api=self._client_api, project=self.project).get(
                 dataset_id=assignment.dataset_id)
         elif dataset is None:
             dataset = self._dataset
@@ -593,7 +576,6 @@ class Assignments:
             json_req=payload
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/assignments") is False:
+            return False
         return True

@@ -86,7 +86,7 @@ class PipelineExecution(entities.BaseEntity):
 
     # sdk
     _pipeline = attr.ib(repr=False)
-    _project = attr.ib(repr=False)
+    project = attr.ib(repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
 
@@ -127,10 +127,26 @@ class PipelineExecution(entities.BaseEntity):
         """
         project = None
         if pipeline is not None:
-            project = pipeline._project
+            project = pipeline.project
             if pipeline.id != _json.get('pipelineId', None):
                 logger.warning('Pipeline has been fetched from a project that is not belong to it')
                 pipeline = None
+
+        # Try to get project from pipeline if not provided
+        # Note: PipelineExecution doesn't have projectId in JSON, only pipelineId
+        # If we can't fetch the pipeline, project will remain None
+        if project is None:
+            pipeline_id = _json.get('pipelineId', None)
+            if pipeline_id:
+                # Try to get project from pipeline if we can fetch it
+                try:
+                    fetched_pipeline = repositories.Pipelines(client_api=client_api).get(pipeline_id=pipeline_id, fetch=None)
+                    if fetched_pipeline and fetched_pipeline.project:
+                        project = fetched_pipeline.project
+                except:
+                    # If pipeline fetch fails, project remains None
+                    # It will never be set later since PipelineExecution has no update/refresh methods
+                    pass
 
         nodes = [PipelineExecutionNode.from_json(_json=node) for node in _json.get('nodes', list())]
 
@@ -163,6 +179,7 @@ class PipelineExecution(entities.BaseEntity):
                             filter=attr.filters.exclude(attr.fields(PipelineExecution)._repositories,
                                                         attr.fields(PipelineExecution)._client_api,
                                                         attr.fields(PipelineExecution)._pipeline,
+                                                        attr.fields(PipelineExecution).project,
                                                         attr.fields(PipelineExecution).nodes,
                                                         attr.fields(PipelineExecution).created_at,
                                                         attr.fields(PipelineExecution).updated_at,
@@ -195,12 +212,6 @@ class PipelineExecution(entities.BaseEntity):
         assert isinstance(self._pipeline, entities.Pipeline)
         return self._pipeline
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = self.pipeline.project
-        assert isinstance(self._pipeline.project, entities.Project)
-        return self._pipeline.project
 
     ################
     # repositories #
@@ -212,9 +223,9 @@ class PipelineExecution(entities.BaseEntity):
 
         r = reps(
             projects=repositories.Projects(client_api=self._client_api),
-            pipelines=repositories.Pipelines(client_api=self._client_api, project=self._project),
+            pipelines=repositories.Pipelines(client_api=self._client_api, project=self.project),
             pipeline_executions=repositories.PipelineExecutions(client_api=self._client_api,
-                                                                project=self._project,
+                                                                project=self.project,
                                                                 pipeline=self._pipeline)
         )
         return r

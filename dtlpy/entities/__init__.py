@@ -22,7 +22,8 @@ from .trigger import Trigger, TriggerResource, TriggerAction, TriggerExecutionMo
     TriggerType
 from .project import Project, MemberRole
 from .artifact import ItemArtifact, LocalArtifact, LinkArtifact, ArtifactType, Artifact
-from .dataset import Dataset, ExpirationOptions, IndexDriver, ExportType, OutputExportType
+from .dataset import Dataset, ExpirationOptions, IndexDriver, ExportType, OutputExportType, DatasetExportVersion, ExportMode
+from .export_manifest import ExportManifest, ExportPartition, ExportFile, ExportStatistics
 from .codebase import Codebase
 from .annotation import Annotation, FrameAnnotation, ViewAnnotationOptions, AnnotationStatus, AnnotationType, \
     ExportVersion
@@ -42,7 +43,6 @@ from .package_module import PackageModule
 from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, \
     UiBindingPanel
 from .package_function import PackageFunction, FunctionIO, PackageInputType
-from .time_series import TimeSeries
 from .service import Service, KubernetesAutoscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRPSAutoscaler, \
     InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType, DynamicConcurrencyUpdateMethod
 from .execution import Execution, ExecutionStatus

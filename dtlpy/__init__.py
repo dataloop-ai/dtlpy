@@ -55,7 +55,7 @@ if len(logger.handlers) == 0:
     logger.addHandler(fh)
 
 from .services.api_client import client as client_api
-from .services.api_client import VerboseLoggingLevel, ApiClient
+from .services.api_client import VerboseLoggingLevel, ApiClient, ErrorSuppression
 from .services import DataloopLogger, DtlpyFilter, check_sdk, Reporter, service_defaults
 from .services.api_reference import api_reference as _api_reference
 from .caches.cache import CacheConfig, CacheType
@@ -108,7 +108,9 @@ from .entities import (
     # compute
     ClusterProvider, ComputeType, ComputeStatus, Toleration, DeploymentResource, DeploymentResources,
     NodePool, AuthenticationIntegration, Authentication, ComputeCluster, ComputeContext, Compute, KubernetesCompute,
-    ServiceDriver, ExportType, OutputExportType, DynamicConcurrencyUpdateMethod
+    ServiceDriver, ExportType, OutputExportType, DynamicConcurrencyUpdateMethod,
+    # V3 Export
+    DatasetExportVersion, ExportMode, ExportManifest, ExportPartition, ExportFile, ExportStatistics
 )
 from .ml import BaseModelAdapter
 from .utilities import Converter, BaseServiceRunner, Progress, Context, AnnotationFormat
@@ -177,6 +179,7 @@ except Exception:
     logger.debug("Failed to check SDK! Continue without")
 
 verbose = client_api.verbose
+error_suppression = client_api.error_suppression
 login = client_api.login
 logout = client_api.logout
 login_token = client_api.login_token

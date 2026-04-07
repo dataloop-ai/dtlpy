@@ -20,7 +20,7 @@ class Settings:
     ):
         self._client_api = client_api
         self._org = org
-        self._project = project
+        self.project = project
         self._dataset = dataset
         self._task = task
         self._resource = resource
@@ -42,7 +42,7 @@ class Settings:
                 self.get_constructor(setting)(
                     client_api=self._client_api,
                     _json=setting,
-                    project=self._project
+                    project=self.project
                 )
             )
 
@@ -106,16 +106,15 @@ class Settings:
             json_req=setting.to_json()
         )
 
-        if success:
-            _json = response.json()
-            constructor = self.get_constructor(_json)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=BASE_URL) is False:
+            return None
 
+        _json = response.json()
+        constructor = self.get_constructor(_json)
         return constructor(
             _json=_json,
             client_api=self._client_api,
-            project=self._project,
+                    project=self.project,
             org=self._org
         )
 
@@ -160,16 +159,15 @@ class Settings:
             json_req=patch
         )
 
-        if success:
-            _json = response.json()
-            constructor = self.get_constructor(_json)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=BASE_URL) is False:
+            return None
 
+        _json = response.json()
+        constructor = self.get_constructor(_json)
         return constructor(
             _json=_json,
             client_api=self._client_api,
-            project=self._project,
+                    project=self.project,
             org=self._org
         )
 
@@ -188,10 +186,9 @@ class Settings:
             )
         )
 
-        if success:
-            return True
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=BASE_URL) is False:
+            return False
+        return True
 
     def get(self, setting_name: str = None, setting_id: str = None) -> entities.Setting:
         """
@@ -210,17 +207,17 @@ class Settings:
                 )
             )
 
-            if success:
-                _json = response.json()
-                constructor = self.get_constructor(_json)
-                setting = constructor(
-                    _json=_json,
-                    client_api=self._client_api,
-                    project=self._project,
-                    org=self._org
-                )
-            else:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path=BASE_URL) is False:
+                return None
+
+            _json = response.json()
+            constructor = self.get_constructor(_json)
+            setting = constructor(
+                _json=_json,
+                client_api=self._client_api,
+                project=self.project,
+                org=self._org
+            )
         elif setting_name is not None:
             if not isinstance(setting_name, str):
                 raise exceptions.PlatformException(
@@ -248,8 +245,8 @@ class Settings:
             path='{}/query'.format(BASE_URL),
             json_req=filters.prepare()
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=BASE_URL) is False:
+            return None
         return response.json()
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
@@ -269,15 +266,14 @@ class Settings:
                 error='400',
                 message='Filters resource must to be FiltersResource.SETTINGS . Got: {!r}'.format(filters.resource))
 
-        if self._project is not None:
-            filters.add(field='scope.id', values=self._project.id)
+        if self.project is not None:
+            filters.add(field='scope.id', values=self.project.id)
 
         paged = entities.PagedEntities(
             items_repository=self,
             filters=filters,
             page_offset=filters.page,
             page_size=filters.page_size,
-            project_id=self._project.id if self._project is not None else None,
             client_api=self._client_api
         )
 
@@ -306,8 +302,8 @@ class Settings:
             'userId': user_email
         }
 
-        if self._project:
-            payload['projectId'] = self._project.id
+        if self.project:
+            payload['projectId'] = self.project.id
         elif project_id:
             payload['projectId'] = project_id
 
@@ -332,8 +328,7 @@ class Settings:
             json_req=payload
         )
 
-        if success:
-            _json = response.json()
-            return self._build_entities_from_response(response_items=_json)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=BASE_URL) is False:
+            return None
+        _json = response.json()
+        return self._build_entities_from_response(response_items=_json)

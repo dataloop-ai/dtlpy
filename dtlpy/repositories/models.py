@@ -105,37 +105,20 @@ class Models:
         :param app: The app entity.
         """
         self._client_api = client_api
-        self._project = project
         self._package = package
-        self._project_id = project_id
         self._app = app
-        if self._project is not None:
-            self._project_id = self._project.id
-
-    ############
-    # entities #
-    ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            if self._project_id is not None:
-                projects = repositories.Projects(client_api=self._client_api)
-                self._project = projects.get(project_id=self._project_id)
-        if self._project is None:
+        # Initialize project - try from project_id first, then from app
+        if project is None:
+            if project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        if project is None:
             if self._app is not None and self._app.project is not None:
-                self._project = self.app.project
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.models repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
+                project = self._app.project
+        self.project = project
 
     @property
     def package(self) -> entities.Package:
@@ -173,11 +156,11 @@ class Models:
         if model_id is not None:
             success, response = self._client_api.gen_request(req_type="get",
                                                              path="/ml/models/{}".format(model_id))
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/ml/models") is False:
+                return None
             model = entities.Model.from_json(client_api=self._client_api,
                                              _json=response.json(),
-                                             project=self._project,
+                                             project=self.project,
                                              package=self._package)
             # verify input model name is same as the given id
             if model_name is not None and model.name != model_name:
@@ -196,10 +179,12 @@ class Models:
 
             project_id = None
 
-            if self._project is not None:
-                project_id = self._project.id
-            elif self._project_id is not None:
-                project_id = self._project_id
+            if self.project is not None:
+                project_id = self.project.id
+            else:
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Missing "project". need to set a Project entity or use project.models repository')
 
             if project_id is not None:
                 filters.add(field='projectId', values=project_id)
@@ -236,7 +221,7 @@ class Models:
                                           **{'client_api': self._client_api,
                                              '_json': service,
                                              'package': self._package,
-                                             'project': self._project})
+                                             'project': self.project})
 
         # get all results
         results = [j.result() for j in jobs]
@@ -250,8 +235,8 @@ class Models:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path='/ml/models/query',
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         return response.json()
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
@@ -265,8 +250,8 @@ class Models:
         # default filters
         if filters is None:
             filters = entities.Filters(resource=entities.FiltersResource.MODEL)
-        if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
+        if self.project is not None:
+            filters.add(field='projectId', values=self.project.id)
         if self._package is not None:
             filters.add(field='packageId', values=self._package.id)
         if self._app is not None:
@@ -453,7 +438,7 @@ class Models:
                 break
         if model_to_create is None:
             valid_model_names = [m['name'] for m in dpk.components.models]
-            raise exceptions.NotFound(f"Must provide a valid model name from the dpk {valid_model_names}")
+            raise exceptions.NotFound(status_code='404', message=f"Must provide a valid model name from the dpk {valid_model_names}")
 
 
 
@@ -467,9 +452,9 @@ class Models:
 
         # TODO need to remove the entire project id user interface - need to take it from dataset id (in BE)
         if project_id is None:
-            if self._project is None and app.project_id is None:
+            if self.project is None and app.project is None:
                 raise exceptions.PlatformException('Please provide project_id')
-            project_id = self._project.id if self._project is not None else app.project_id
+            project_id = self.project.id if self.project is not None else app.project.id
 
         if model_artifacts is None:
             model_artifacts = []
@@ -539,13 +524,12 @@ class Models:
                                                          path='/ml/models',
                                                          json_req=payload)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
 
         model = entities.Model.from_json(_json=response.json(),
                                          client_api=self._client_api,
-                                         project=self._project)
+                                         project=self.project)
 
         return model
 
@@ -631,11 +615,11 @@ class Models:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/ml/models/{}/clone'.format(from_model.id),
                                                          json_req=from_json)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         new_model = entities.Model.from_json(_json=response.json(),
                                              client_api=self._client_api,
-                                             project=self._project,
+                                             project=self.project,
                                              package=from_model._package)
         if wait:
             new_model = self.wait_for_model_ready(model=new_model)
@@ -700,11 +684,8 @@ class Models:
             path="/ml/models/{}".format(model_id)
         )
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return results
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return False
         return True
 
     def update(self,
@@ -739,14 +720,12 @@ class Models:
                                                          path=url_path,
                                                          json_req=payload)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
 
-        # return entity
         return entities.Model.from_json(_json=response.json(),
                                         client_api=self._client_api,
-                                        project=self._project,
+                                        project=self.project,
                                         package=model._package)
 
     def train(self, model_id: str, service_config=None):
@@ -763,11 +742,11 @@ class Models:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model_id}/train",
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
-                                            project=self._project)
+                                            project=self.project)
 
     def evaluate(self, model_id: str, dataset_id: str, filters: entities.Filters = None, service_config=None):
         """
@@ -790,11 +769,11 @@ class Models:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model_id}/evaluate",
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
-                                            project=self._project)
+                                            project=self.project)
 
     def predict(self, model, item_ids=None, dataset_id=None,filters=None):
         """
@@ -826,12 +805,11 @@ class Models:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model.id}/predict",
                                                          json_req=payload)
-        if not success:
-            logger.error(f"failed to make API request /ml/models/{model.id}/predict with payload {payload} response {response}")
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
-                                            project=self._project)
+                                            project=self.project)
 
     def embed(self, model, item_ids=None, dataset_id=None, filters=None):
         """
@@ -864,12 +842,11 @@ class Models:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model.id}/embed",
                                                          json_req=payload)
-        if not success:
-            logger.error(f"failed to make API request /ml/models/{model.id}/embed with payload {payload} response {response}")
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         return entities.Execution.from_json(_json=response.json(),
                                             client_api=self._client_api,
-                                            project=self._project)
+                                            project=self.project)
 
     def embed_datasets(self, model, dataset_ids, attach_trigger=False):
         """
@@ -893,8 +870,8 @@ class Models:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model.id}/embed/datasets",
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
         command = entities.Command.from_json(_json=response.json(),
                                              client_api=self._client_api)
         command = command.wait()
@@ -914,12 +891,12 @@ class Models:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=f"/ml/models/{model_id}/deploy",
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/models") is False:
+            return None
 
         return entities.Service.from_json(_json=response.json(),
                                           client_api=self._client_api,
-                                          project=self._project,
+                                          project=self.project,
                                           package=self._package)
 
 
@@ -956,11 +933,8 @@ class Metrics:
                                                          path='/ml/metrics/publish',
                                                          json_req=payload)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        # return entity
+        if self._client_api.check_response(success, response, path="/ml/metrics") is False:
+            return False
         return True
 
     def _list(self, filters: entities.Filters):
@@ -968,8 +942,8 @@ class Metrics:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path='/ml/metrics/query',
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ml/metrics") is False:
+            return None
         return response.json()
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Model]:

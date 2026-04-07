@@ -51,7 +51,7 @@ class App(entities.BaseEntity):
     dpk = attr.ib(type=entities.Dpk)
 
     # sdk
-    _project = attr.ib(type=entities.Project, repr=False)
+    project = attr.ib(type=entities.Project, repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
     integrations = attr.ib(type=list, default=None)
@@ -61,16 +61,11 @@ class App(entities.BaseEntity):
         reps = namedtuple('repositories', field_names=['projects', 'apps', 'compositions', 'models'])
         return reps(
             projects=repositories.Projects(client_api=self._client_api),
-            apps=repositories.Apps(client_api=self._client_api, project=self._project, project_id=self.project_id),
-            compositions=repositories.Compositions(client_api=self._client_api, project=self._project),
+            apps=repositories.Apps(client_api=self._client_api, project=self.project, project_id=self.project_id),
+            compositions=repositories.Compositions(client_api=self._client_api, project=self.project),
             models=repositories.Models(client_api=self._client_api, app=self)
         )
 
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = self.projects.get(project_id=self.project_id)
-        return self._project
 
     @property
     def projects(self):
@@ -203,6 +198,16 @@ class App(entities.BaseEntity):
 
     @classmethod
     def from_json(cls, _json, client_api: ApiClient, project: entities.Project=None, is_fetched=True):
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         app = cls(
             id=_json.get('id', None),
             name=_json.get('name', None),

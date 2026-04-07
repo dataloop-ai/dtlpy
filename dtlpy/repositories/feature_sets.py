@@ -23,36 +23,26 @@ class FeatureSets:
         dataset_id: str = None,
         dataset: entities.Dataset = None,
     ):
-        self._project = project
-        self._project_id = project_id
         self._model = model
         self._model_id = model_id
         self._dataset = dataset
         self._dataset_id = dataset_id
         self._client_api = client_api
+        # Initialize project - try from dataset first, then from project_id
+        if project is None:
+            if dataset is not None:
+                project = dataset.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
 
     ############
     # entities #
     ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None and self._project_id is None and self.dataset is not None:
-            self._project = self.dataset.project
-            self._project_id = self._project.id
-        if self._project is None and self._project_id is not None:
-            # get from id
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
-        if self._project is None:
-            # try get checkout
-            project = self._client_api.state_io.get('project')
-            if project is not None:
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001', message='Cannot perform action WITHOUT Project entity in FeatureSets repository.' ' Please checkout or set a project'
-            )
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def model(self) -> entities.Model:
@@ -81,8 +71,8 @@ class FeatureSets:
     def _list(self, filters: entities.Filters):
         # request
         success, response = self._client_api.gen_request(req_type='POST', path='/features/sets/query', json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/features/sets/query', method='post')
@@ -106,10 +96,8 @@ class FeatureSets:
 
         # Step 2: Extract IDs inline (no helper functions, no property access)
         # Extract project_id inline
-        if self._project_id is not None:
-            project_id = self._project_id
-        elif self._project is not None:
-            project_id = self._project.id
+        if self.project is not None:
+            project_id = self.project.id
         else:
             raise exceptions.PlatformException(
                 error='2001', message='Cannot perform action WITHOUT Project entity in FeatureSets repository.' ' Please checkout or set a project'
@@ -151,8 +139,8 @@ class FeatureSets:
                 "datasetIds": [dataset_id],
             }
             success, response = self._client_api.gen_request(req_type="POST", path="/features/vectors/project-count-aggregation", json_req=payload)
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path='/features/vectors/project-count-aggregation') is False:
+                return None
             result = response.json()
             # Extract dataset feature set IDs from response, filtering out entries where count == 0
             dataset_fs_ids = [item['featureSetId'] for item in result if item.get('count', 0) > 0]
@@ -201,8 +189,8 @@ class FeatureSets:
         """
         if feature_set_id is not None:
             success, response = self._client_api.gen_request(req_type="GET", path="{}/{}".format(self.URL, feature_set_id))
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path=self.URL) is False:
+                return None
             feature_set = entities.FeatureSet.from_json(client_api=self._client_api, _json=response.json())
         elif feature_set_name is not None:
             if not isinstance(feature_set_name, str):
@@ -238,19 +226,18 @@ class FeatureSets:
         :return: Feature Set object
         """
         if project_id is None:
-            if self._project is None:
+            if self.project is None:
                 raise ValueError('Must input a project id')
             else:
-                project_id = self._project.id
+                project_id = self.project.id
 
         payload = {'name': name, 'size': size, 'type': set_type, 'project': project_id, 'modelId': model_id, 'entityType': entity_type}
         if org_id is not None:
             payload['org'] = org_id
         success, response = self._client_api.gen_request(req_type="post", json_req=payload, path=self.URL)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return None
 
         # return entity
         return entities.FeatureSet.from_json(client_api=self._client_api, _json=response.json()[0])
@@ -267,12 +254,10 @@ class FeatureSets:
 
         success, response = self._client_api.gen_request(req_type="delete", path=f"{self.URL}/{feature_set_id}")
 
-        # check response
-        if success:
-            logger.debug("Feature Set deleted successfully")
-            return success
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return False
+        logger.debug("Feature Set deleted successfully")
+        return True
 
     @_api_reference.add(path='/features/set/{id}', method='patch')
     def update(self, feature_set: entities.FeatureSet) -> entities.FeatureSet:
@@ -292,8 +277,8 @@ class FeatureSets:
              dl.feature_sets.update(feature_set='feature_set')
         """
         success, response = self._client_api.gen_request(req_type="patch", path=f"{self.URL}/{feature_set.id}", json_req=feature_set.to_json())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return None
 
         logger.debug("feature_set updated successfully")
         # update dataset labels

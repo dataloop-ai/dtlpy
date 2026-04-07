@@ -1,6 +1,5 @@
 prune *venv*
 prune *env*
-prune tests
 prune build
 prune dist
 prune *.egg-info

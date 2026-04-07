@@ -38,7 +38,7 @@ class Recipe(entities.BaseEntity):
     _client_api = attr.ib(type=ApiClient, repr=False)
     # entities
     _dataset = attr.ib(repr=False, default=None)
-    _project = attr.ib(repr=False, default=None)
+    project = attr.ib(repr=False, default=None)
     # repositories
     _repositories = attr.ib(repr=False)
 
@@ -68,6 +68,16 @@ class Recipe(entities.BaseEntity):
             if project.id not in project_ids:
                 logger.warning('Recipe has been fetched from a project that is not belong to it')
                 project = None
+
+        # Initialize project with minimal JSON if not provided but projectIds exists
+        if project is None:
+            project_ids_list = _json.get('projectIds', None)
+            if project_ids_list and len(project_ids_list) > 0:
+                project = entities.Project.from_json(
+                    _json={'id': project_ids_list[0]},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
 
         inst = cls(
             client_api=client_api,
@@ -119,8 +129,8 @@ class Recipe(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['ontologies', 'recipes'])
-        if self._dataset is None and self._project is None:
-            recipes = repositories.Recipes(client_api=self._client_api, dataset=self._dataset, project=self._project)
+        if self._dataset is None and self.project is None:
+            recipes = repositories.Recipes(client_api=self._client_api, dataset=self._dataset, project=self.project)
         elif self._dataset is not None:
             recipes = self.dataset.recipes
         else:
@@ -135,11 +145,6 @@ class Recipe(entities.BaseEntity):
             assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
-    @property
-    def project(self):
-        if self._project is not None:
-            assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def recipes(self):
@@ -160,7 +165,7 @@ class Recipe(entities.BaseEntity):
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Recipe)._client_api,
                                                               attr.fields(Recipe)._dataset,
-                                                              attr.fields(Recipe)._project,
+                                                              attr.fields(Recipe).project,
                                                               attr.fields(Recipe).project_ids,
                                                               attr.fields(Recipe).ui_settings,
                                                               attr.fields(Recipe)._repositories,
@@ -278,7 +283,7 @@ class Recipe(entities.BaseEntity):
 
         remote_name = validation_file_metadata.get("name", None)
         local_name = os.path.basename(local_path)
-        binaries_dataset = self._project.datasets._get_binaries_dataset()
+        binaries_dataset = self.project.datasets._get_binaries_dataset()
         remote_path = f"/.dataloop/recipes/{self.id}/verification/"
 
         if remote_name is None or overwrite or remote_name != local_name:

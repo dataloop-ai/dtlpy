@@ -79,7 +79,7 @@ class BaseTrigger(entities.BaseEntity):
     # SDK attributes #
     ##################
     _service = attr.ib(repr=False)
-    _project = attr.ib(repr=False)
+    project = attr.ib(repr=False)
     _client_api = attr.ib(type=ApiClient, repr=False)
     _op_type = attr.ib(default='service')
     _repositories = attr.ib(repr=False)
@@ -163,6 +163,16 @@ class BaseTrigger(entities.BaseEntity):
                 logger.warning('Trigger has been fetched from a service that is not belong to it')
                 service = None
 
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         trigger_type = _json.get('type', None)
 
         if trigger_type == TriggerType.CRON:
@@ -179,13 +189,13 @@ class BaseTrigger(entities.BaseEntity):
         reps = namedtuple('repositories',
                           field_names=['services', 'triggers'])
 
-        if self._project is None:
-            services_repo = repositories.Services(client_api=self._client_api, project=self._project)
+        if self.project is None:
+            services_repo = repositories.Services(client_api=self._client_api, project=self.project)
         else:
-            services_repo = self._project.services
+            services_repo = self.project.services
 
         triggers = repositories.Triggers(client_api=self._client_api,
-                                         project=self._project)
+                                         project=self.project)
 
         r = reps(services=services_repo, triggers=triggers)
         return r
@@ -203,13 +213,6 @@ class BaseTrigger(entities.BaseEntity):
     ############
     # entities #
     ############
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
-                                                                                   fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def service(self):
@@ -231,7 +234,7 @@ class BaseTrigger(entities.BaseEntity):
         # get excluded
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(BaseTrigger)._client_api,
                                                               attr.fields(BaseTrigger).project_id,
-                                                              attr.fields(BaseTrigger)._project,
+                                                              attr.fields(BaseTrigger).project,
                                                               attr.fields(BaseTrigger)._service,
                                                               attr.fields(BaseTrigger).special,
                                                               attr.fields(BaseTrigger)._op_type,

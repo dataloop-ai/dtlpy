@@ -83,7 +83,7 @@ class Package(entities.DlEntity):
     _client_api: ApiClient
     _revisions = None
     __repositories = None
-    _project = None
+    project = None
 
     def __repr__(self):
         # TODO need to move to DlEntity
@@ -159,10 +159,21 @@ class Package(entities.DlEntity):
             if project.id != _json.get('projectId', None):
                 logger.warning('Package has been fetched from a project that is not belong to it')
                 project = None
+
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         # Entity
         inst = cls(_dict=_json)
         # Platform
-        inst._project = project
+        inst.project = project
         inst._client_api = client_api
         inst.is_fetched = is_fetched
 
@@ -181,17 +192,6 @@ class Package(entities.DlEntity):
     ############
     # entities #
     ############
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = self.projects.get(project_id=self.project_id, fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project):
-        assert isinstance(self._project, entities.Project), "Unknwon 'project' type: {}".format(type(project))
-        self._project = project
 
     ################
     # repositories #
@@ -205,22 +205,22 @@ class Package(entities.DlEntity):
 
             self.__repositories = reps(
                 executions=repositories.Executions(client_api=self._client_api,
-                                                   project=self._project),
+                                                   project=self.project),
                 services=repositories.Services(client_api=self._client_api,
                                                package=self,
-                                               project=self._project,
+                                               project=self.project,
                                                project_id=self.project_id),
                 projects=repositories.Projects(client_api=self._client_api),
                 packages=repositories.Packages(client_api=self._client_api,
-                                               project=self._project),
+                                               project=self.project),
                 artifacts=repositories.Artifacts(client_api=self._client_api,
-                                                 project=self._project,
+                                                 project=self.project,
                                                  project_id=self.project_id,
                                                  package=self),
-                codebases=repositories.Codebases(client_api=self._client_api, project=self._project,
+                codebases=repositories.Codebases(client_api=self._client_api, project=self.project,
                                                  project_id=self.project_id),
                 models=repositories.Models(client_api=self._client_api,
-                                           project=self._project,
+                                           project=self.project,
                                            package=self,
                                            project_id=self.project_id)
             )

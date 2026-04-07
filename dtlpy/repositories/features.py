@@ -19,15 +19,22 @@ class Features:
                  annotation: entities.Annotation = None,
                  feature_set: entities.FeatureSet = None,
                  dataset: entities.Dataset = None):
-        if project is not None and project_id is None:
-            project_id = project.id
         self._dataset = dataset
-        self._project = project
-        self._project_id = project_id
         self._item = item
         self._annotation = annotation
         self._feature_set = feature_set
         self._client_api = client_api
+        # Initialize project - try from item first, then from project_id
+        if project is None:
+            if item is not None:
+                project = item.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
 
     ############
     # entities #
@@ -35,27 +42,6 @@ class Features:
     @property
     def feature_set(self) -> entities.FeatureSet:
         return self._feature_set
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None and self._project_id is None and self._item is not None:
-            self._project = self._item.project
-            self._project_id = self._project.id
-        if self._project is None and self._project_id is not None:
-            # get from id
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
-        if self._project is None:
-            # try get checkout
-            project = self._client_api.state_io.get('project')
-            if project is not None:
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Cannot perform action WITHOUT Project entity in Features repository.'
-                        ' Please checkout or set a project')
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     ###########
     # methods #
@@ -74,8 +60,8 @@ class Features:
                                                          json_req=filters.prepare(),
                                                          headers={'user_query': filters._user_query}
                                                          )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/features/vectors', method='post')
@@ -108,9 +94,8 @@ class Features:
             filters.add(field='entityId', values=self._item.id)
         if self._dataset is not None:
             filters.add(field='datasetId', values=self._dataset.id)
-        if self._project_id is None:
-            self._project_id = self.project.id
-        filters.context = {"projects": [self._project_id]}
+        if self.project is not None:
+            filters.context = {"projects": [self.project.id]}
         
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
@@ -132,9 +117,8 @@ class Features:
         success, response = self._client_api.gen_request(req_type="GET",
                                                          path="{}/{}".format(self.URL, feature_id))
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return None
 
         # return entity
         return entities.Feature.from_json(client_api=self._client_api,
@@ -163,10 +147,8 @@ class Features:
         :return: Feature vector:
         """
         if project_id is None:
-            if self._project is not None:
-                project_id = self._project.id
-            elif self._project_id is not None:
-                project_id = self._project_id
+            if self.project is not None:
+                project_id = self.project.id
             else:
                 raise ValueError('Must insert a project id')
 
@@ -207,9 +189,8 @@ class Features:
                                                          json_req=payload,
                                                          path=self.URL)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return None
 
         features = [entities.Feature.from_json(client_api=self._client_api,
                                           _json=feature) for feature in response.json()]
@@ -231,12 +212,10 @@ class Features:
         success, response = self._client_api.gen_request(req_type="delete",
                                                          path="{}/{}".format(self.URL, feature_id))
 
-        # check response
-        if success:
-            logger.debug("Feature deleted successfully")
-            return success
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self.URL) is False:
+            return False
+        logger.debug("Feature deleted successfully")
+        return True
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Item]:
         pool = self._client_api.thread_pools(pool_name='entity.create')

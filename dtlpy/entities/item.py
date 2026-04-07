@@ -66,8 +66,7 @@ class Item(entities.BaseEntity):
     # entities
     _dataset = attr.ib(repr=False)
     _model = attr.ib(repr=False)
-    _project = attr.ib(repr=False)
-    _project_id = attr.ib(repr=False)
+    project = attr.ib(repr=False)
 
     # repositories
     _repositories = attr.ib(repr=False)
@@ -129,9 +128,8 @@ class Item(entities.BaseEntity):
         :return: Item object
         :rtype: dtlpy.entities.item.Item
         """
-        dataset_id = None
+        dataset_id = _json.get('datasetId', None)
         if dataset is not None:
-            dataset_id = _json.get('datasetId', None)
             if dataset.id != dataset_id and dataset_id is not None:
                 logger.warning('Item has been fetched from a dataset that is not belong to it')
                 dataset = None
@@ -140,8 +138,20 @@ class Item(entities.BaseEntity):
 
         metadata = _json.get('metadata', dict())
         project_id = _json.get('projectId', None)
-        if project_id is None:
-            project_id = project.id if project else None
+
+        # Initialize project with minimal JSON if not provided but projectId exists
+        # Only need project_id if project is None - try to get it from dataset if available
+        if project is None:
+            if project_id is None and dataset is not None and dataset.project is not None:
+                project_id = dataset.project.id
+
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False,  # Not fully fetched yet, will lazy fetch when needed
+                )
+
         inst = cls(
             # sdk
             platform_dict=copy.deepcopy(_json),
@@ -168,7 +178,6 @@ class Item(entities.BaseEntity):
             id=_json.get('id', None),
             spec=_json.get('spec', None),
             creator=_json.get('creator', None),
-            project_id=project_id,
             description=_json.get('description', None),
             src_item=_json.get('srcItem', None),
             updated_at=_json.get('updatedAt', None),
@@ -213,24 +222,10 @@ class Item(entities.BaseEntity):
             raise exceptions.PlatformException(resp)
 
     @property
-    def project(self):
-        if self._project is None:
-            if self._dataset is None:
-                self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
-            self._project = self._dataset.project
-            if self._project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Missing entity "project".')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @property
     def project_id(self):
-        if self._project_id is None:
-            if self._dataset is None:
-                self._dataset = self.datasets.get(dataset_id=self.dataset_id, fetch=None)
-            self._project_id = self._dataset.project.id
-        return self._project_id
+        if self.project is not None:
+            return self.project.id
+        return None
 
     ################
     # repositories #
@@ -253,8 +248,9 @@ class Item(entities.BaseEntity):
             datasets = items.datasets
 
         else:
-            items = self.dataset.items
-            datasets = self.dataset.datasets
+            # Use _dataset directly to avoid property access during initialization
+            items = self._dataset.items
+            datasets = self._dataset.datasets
 
         r = reps(
             annotations=repositories.Annotations(
@@ -270,22 +266,22 @@ class Item(entities.BaseEntity):
             modalities=Modalities(item=self),
             features=repositories.Features(
                 client_api=self._client_api,
-                project=self._project,
+                project=self.project,
                 item=self
             ),
             tasks=repositories.Tasks(
                 client_api=self._client_api,
-                project=self._project,
+                project=self.project,
                 dataset=self._dataset
             ),
             assignments=repositories.Assignments(
                 client_api=self._client_api,
-                project=self._project,
+                project=self.project,
                 dataset=self._dataset
             ),
             resource_executions=repositories.ResourceExecutions(
                 client_api=self._client_api,
-                project=self._project,
+                project=self.project,
                 resource=self
             ),
             collections=repositories.Collections(client_api=self._client_api, item=self, dataset=self._dataset)
@@ -331,7 +327,7 @@ class Item(entities.BaseEntity):
     def features(self):
         assert isinstance(self._repositories.features, repositories.Features)
         return self._repositories.features
-    
+
     @property
     def collections(self):
         assert isinstance(self._repositories.collections, repositories.Collections)
@@ -421,7 +417,7 @@ class Item(entities.BaseEntity):
                             filter=attr.filters.exclude(attr.fields(Item)._repositories,
                                                         attr.fields(Item)._dataset,
                                                         attr.fields(Item)._model,
-                                                        attr.fields(Item)._project,
+                                                        attr.fields(Item).project,
                                                         attr.fields(Item)._client_api,
                                                         attr.fields(Item)._platform_dict,
                                                         attr.fields(Item).annotations_count,
@@ -431,7 +427,6 @@ class Item(entities.BaseEntity):
                                                         attr.fields(Item).creator,
                                                         attr.fields(Item).created_at,
                                                         attr.fields(Item).dataset_id,
-                                                        attr.fields(Item)._project_id,
                                                         attr.fields(Item)._description,
                                                         attr.fields(Item)._src_item,
                                                         attr.fields(Item).updated_at,
@@ -779,7 +774,6 @@ class Item(entities.BaseEntity):
 
         return self.update(system_metadata=True)
 
-
     def remove_subset(self):
         """
         Remove any ML subset assignment from this item.
@@ -797,7 +791,6 @@ class Item(entities.BaseEntity):
 
         return self.update(system_metadata=True)
 
-
     def get_current_subset(self) -> str:
         """
         Get the current ML subset assignment of this item.
@@ -811,7 +804,7 @@ class Item(entities.BaseEntity):
             if tags.get(subset) is True:
                 return subset
         return None
-    
+
     def assign_collection(self, collections: List[str]) -> bool:
         """
         Assign this item to one or more collections.
@@ -841,13 +834,13 @@ class Item(entities.BaseEntity):
         if not isinstance(collections, dict):
             # Ensure collections is a dictionary
             return []
-    
+
         # Retrieve collection names by their keys
         return [
             {"key": key, "name": self.collections.get_name_by_key(key)}
             for key in collections.keys()
         ]
-    
+
     def task_scores(self, task_id: str, page_offset: int = None, page_size: int = None):
         """
         Get the scores of the item in a specific task.

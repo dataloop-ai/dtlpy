@@ -62,7 +62,7 @@ class Integration(entities.BaseEntity):
     url = attr.ib()
     _client_api = attr.ib(type=ApiClient, repr=False)
     metadata = attr.ib(default=None, repr=False)
-    _project = attr.ib(default=None, repr=False)
+    project = attr.ib(default=None, repr=False)
 
     @classmethod
     def from_json(cls,
@@ -98,18 +98,8 @@ class Integration(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Integration)._client_api,
-                                                              attr.fields(Integration)._project))
+                                                              attr.fields(Integration).project))
         return _json
-
-    @property
-    def project(self):
-        return self._project
-
-    @project.setter
-    def project(self, project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     def update(
             self,

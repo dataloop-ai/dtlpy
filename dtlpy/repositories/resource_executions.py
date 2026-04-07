@@ -18,8 +18,8 @@ class ResourceExecutions:
                  project: entities.Project = None,
                  resource=None):
         self._client_api = client_api
-        self._project = project
         self._resource = resource
+        self.project = project
 
     ############
     # entities #
@@ -39,21 +39,6 @@ class ResourceExecutions:
             raise ValueError('Must input a valid entity')
         self._resource = resource
 
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use Project.executions repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
-
     def _list(self, filters: entities.Filters):
         """
         List resource executions
@@ -67,8 +52,8 @@ class ResourceExecutions:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/executions/resource') is False:
+            return None
 
         return response.json()
 
@@ -107,8 +92,8 @@ class ResourceExecutions:
                 error='400',
                 message='Filters resource must to be FiltersResource.RESOURCE_EXECUTION. '
                         'Got: {!r}'.format(filters.resource))
-        if self._project is not None:
-            filters.add(field='projectId', values=self._project.id)
+        if self.project is not None:
+            filters.add(field='projectId', values=self.project.id)
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
@@ -126,7 +111,7 @@ class ResourceExecutions:
             jobs[i_item] = pool.submit(entities.ResourceExecution._protected_from_json,
                                        **{'client_api': self._client_api,
                                           '_json': item,
-                                          'project': self._project,
+                                          'project': self.project,
                                           'resource': self._resource})
 
         # get results

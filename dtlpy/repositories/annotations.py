@@ -93,14 +93,13 @@ class Annotations:
         """
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/annotations/{}'.format(annotation_id))
-        if success:
-            annotation = entities.Annotation.from_json(_json=response.json(),
-                                                       annotations=self,
-                                                       dataset=self._dataset,
-                                                       client_api=self._client_api,
-                                                       item=self._item)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/annotations') is False:
+            return None
+        annotation = entities.Annotation.from_json(_json=response.json(),
+                                                   annotations=self,
+                                                   dataset=self._dataset,
+                                                   client_api=self._client_api,
+                                                   item=self._item)
         return annotation
 
     def _build_entities_from_response(self, response_items):
@@ -138,8 +137,8 @@ class Annotations:
                                                          json_req=filters.prepare(),
                                                          headers={'user_query': filters._user_query}
                                                          )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/datasets/query') is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/datasets/{id}/query', method='post')
@@ -340,8 +339,8 @@ class Annotations:
                                                              path='/annotations/{}'.format(w_annotation_id),
                                                              json_req=payload)
 
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path='/annotations') is False:
+                return False
             return success
         except Exception:
             logger.exception('Failed to delete annotation')
@@ -490,14 +489,13 @@ class Annotations:
                 suc, response = self._update_annotation_req(annotation_json=json_req,
                                                             system_metadata=system_metadata,
                                                             annotation_id=annotation_id)
-                if suc:
-                    result = entities.Annotation.from_json(_json=response.json(),
-                                                           annotations=self,
-                                                           dataset=self._dataset,
-                                                           item=self._item)
-                    w_annotation._platform_dict = result._platform_dict
-                else:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(suc, response, path='/annotations') is False:
+                    return False, "Error suppressed"
+                result = entities.Annotation.from_json(_json=response.json(),
+                                                       annotations=self,
+                                                       dataset=self._dataset,
+                                                       item=self._item)
+                w_annotation._platform_dict = result._platform_dict
                 status = True
         except Exception:
             status = False
@@ -697,14 +695,13 @@ class Annotations:
                     suc, response = self._update_annotation_req(annotation_json=json_ann,
                                                                 system_metadata=True,
                                                                 annotation_id=to_merge[0].id)
-                    if not suc:
-                        raise exceptions.PlatformException(response)
-                    if suc:
-                        result = entities.Annotation.from_json(_json=response.json(),
-                                                               annotations=self,
-                                                               dataset=self._dataset,
-                                                               item=self._item)
-                        exist_annotations.append(result)
+                    if self._client_api.check_response(suc, response, path='/annotations') is False:
+                        return None
+                    result = entities.Annotation.from_json(_json=response.json(),
+                                                           annotations=self,
+                                                           dataset=self._dataset,
+                                                           item=self._item)
+                    exist_annotations.append(result)
                     to_delete.append(ann)
         if len(to_delete) > 0:
             annotations_batch = [[a for a in annotations if a not in to_delete] for annotations in annotations_batch]
@@ -716,12 +713,11 @@ class Annotations:
             suc, response = self._client_api.gen_request(req_type='post',
                                                          path='/items/{}/annotations'.format(self.item.id),
                                                          json_req=annotation_batch)
-            if suc:
-                return_annotations = response.json()
-                if not isinstance(return_annotations, list):
-                    return_annotations = [return_annotations]
-            else:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(suc, response, path='/annotations') is False:
+                return False, "Error suppressed"
+            return_annotations = response.json()
+            if not isinstance(return_annotations, list):
+                return_annotations = [return_annotations]
 
             status = True
             result = return_annotations
@@ -773,16 +769,15 @@ class Annotations:
                                                                              path='/items/{}/annotations'
                                                                              .format(self.item.id),
                                                                              json_req=annotations_list)
-                if success:
-                    return_annotations = response.json()
-                    if not isinstance(return_annotations, list):
-                        return_annotations = [return_annotations]
-                    output_annotations.extend(return_annotations)
-                else:
+                if self._client_api.check_response(success, response, path='/annotations') is False:
                     if len(output_annotations) > 0:
                         logger.warning("Only {} annotations from {} annotations have been uploaded".
                                        format(len(output_annotations), len(annotations)))
-                    raise exceptions.PlatformException(response)
+                    return None
+                return_annotations = response.json()
+                if not isinstance(return_annotations, list):
+                    return_annotations = [return_annotations]
+                output_annotations.extend(return_annotations)
 
             result = entities.AnnotationCollection.from_json(_json=output_annotations, item=self.item)
             return result
@@ -905,10 +900,9 @@ class Annotations:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/scores/tasks/{}/annotations/{}?page={}&pageSize={}'
                                                          .format(task_id, annotation_id, page_offset, page_size))
-        if success:
-            return response.json()
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/scores') is False:
+            return None
+        return response.json()
 
     ##################
     # async function #

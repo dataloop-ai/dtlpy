@@ -14,22 +14,7 @@ class Bots:
 
     def __init__(self, client_api: ApiClient, project: entities.Project):
         self._client_api = client_api
-        self._project = project
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.bots repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
+        self.project = project
 
     ###########
     # methods #
@@ -53,27 +38,26 @@ class Bots:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}/bots'.format(self.project.id))
 
-        if success:
-            bots_json = response.json()
-            pool = self._client_api.thread_pools(pool_name='entity.create')
-            jobs = [None for _ in range(len(bots_json))]
-            # return triggers list
-            for i_bot, bot in enumerate(bots_json):
-                jobs[i_bot] = pool.submit(entities.Bot._protected_from_json,
-                                          **{'project': self.project,
-                                             'bots': self,
-                                             'client_api': self._client_api,
-                                             '_json': bot})
+        if self._client_api.check_response(success, response, path="/bots") is False:
+            return None
 
-            # get all results
-            results = [j.result() for j in jobs]
-            # log errors
-            _ = [logger.warning(r[1]) for r in results if r[0] is False]
-            # return good jobs
-            bots = miscellaneous.List([r[1] for r in results if r[0] is True])
-        else:
-            logger.error('Platform error getting bots')
-            raise exceptions.PlatformException(response)
+        bots_json = response.json()
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        jobs = [None for _ in range(len(bots_json))]
+        # return triggers list
+        for i_bot, bot in enumerate(bots_json):
+            jobs[i_bot] = pool.submit(entities.Bot._protected_from_json,
+                                      **{'project': self.project,
+                                         'bots': self,
+                                         'client_api': self._client_api,
+                                         '_json': bot})
+
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        bots = miscellaneous.List([r[1] for r in results if r[0] is True])
         return bots
 
     def get(self,
@@ -121,25 +105,25 @@ class Bots:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/projects/{}/bots/{}'.format(self.project.id,
                                                                                             bot_id))
-        if success:
-            bot = entities.Bot.from_json(_json=response.json(),
-                                         project=self.project,
-                                         bots=self, client_api=self._client_api)
-            # verify input bot name and bot email are same as the given id
-            if bot_name is not None and bot.name != bot_name:
-                logger.warning(
-                    "Mismatch found in bots.get: bot_name is different then bot.name: "
-                    "{!r} != {!r}".format(
-                        bot_name,
-                        bot.name))
-            if bot_email is not None and bot.email != bot_email:
-                logger.warning(
-                    "Mismatch found in bots.get: bot_email is different then bot.email: "
-                    "{!r} != {!r}".format(
-                        bot_email,
-                        bot.email))
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/bots") is False:
+            return None
+
+        bot = entities.Bot.from_json(_json=response.json(),
+                                     project=self.project,
+                                     bots=self, client_api=self._client_api)
+        # verify input bot name and bot email are same as the given id
+        if bot_name is not None and bot.name != bot_name:
+            logger.warning(
+                "Mismatch found in bots.get: bot_name is different then bot.name: "
+                "{!r} != {!r}".format(
+                    bot_name,
+                    bot.name))
+        if bot_email is not None and bot.email != bot_email:
+            logger.warning(
+                "Mismatch found in bots.get: bot_email is different then bot.email: "
+                "{!r} != {!r}".format(
+                    bot_email,
+                    bot.email))
 
         assert isinstance(bot, entities.Bot)
         return bot
@@ -175,8 +159,8 @@ class Bots:
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path='/projects/{}/bots/{}'.format(self.project.id,
                                                                                             bot_id))
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/bots") is False:
+            return False
         logger.info('Bot {} deleted successfully'.format(bot_id))
         return True
 
@@ -203,11 +187,10 @@ class Bots:
                                                          path='/projects/{}/bots'.format(self.project.id),
                                                          json_req={'name': name,
                                                                    'returnCredentials': return_credentials})
-        if success:
-            bot = entities.Bot.from_json(_json=response.json(),
-                                         project=self.project,
-                                         bots=self, client_api=self._client_api)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/bots") is False:
+            return None
+        bot = entities.Bot.from_json(_json=response.json(),
+                                     project=self.project,
+                                     bots=self, client_api=self._client_api)
         assert isinstance(bot, entities.Bot)
         return bot

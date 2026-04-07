@@ -20,12 +20,6 @@ class Projects:
         self._client_api = client_api
         self._org = org
 
-    def __get_from_cache(self) -> entities.Project:
-        project = self._client_api.state_io.get('project')
-        if project is not None:
-            project = entities.Project.from_json(_json=project, client_api=self._client_api)
-        return project
-
     def __get_by_id(self, project_id: str, log_error: bool) -> entities.Project:
         """
         :param project_id:
@@ -173,8 +167,8 @@ class Projects:
                                                          path=url,
                                                          json_req=payload)
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return False
         return True
 
     @_api_reference.add(path='/projects/{projectId}/members/{userId}', method='post')
@@ -206,8 +200,8 @@ class Projects:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
 
         return response.json()
 
@@ -240,8 +234,8 @@ class Projects:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
 
         return response.json()
 
@@ -266,8 +260,8 @@ class Projects:
         url_path = '/projects/{}/members/{}'.format(project_id, email)
         success, response = self._client_api.gen_request(req_type='delete',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
 
         return response.json()
 
@@ -297,8 +291,8 @@ class Projects:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
 
         members = miscellaneous.List(
             [entities.User.from_json(_json=user, client_api=self._client_api, project=project) for user in
@@ -331,25 +325,24 @@ class Projects:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
 
-        if success:
-            pool = self._client_api.thread_pools(pool_name='entity.create')
-            projects_json = response.json()
-            jobs = [None for _ in range(len(projects_json))]
-            # return triggers list
-            for i_project, project in enumerate(projects_json):
-                jobs[i_project] = pool.submit(entities.Project._protected_from_json,
-                                              **{'client_api': self._client_api,
-                                                 '_json': project})
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
 
-            # get all results
-            results = [j.result() for j in jobs]
-            # log errors
-            _ = [logger.warning(r[1]) for r in results if r[0] is False]
-            # return good jobs
-            projects = miscellaneous.List([r[1] for r in results if r[0] is True])
-        else:
-            logger.error('Platform error getting projects')
-            raise exceptions.PlatformException(response)
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        projects_json = response.json()
+        jobs = [None for _ in range(len(projects_json))]
+        # return triggers list
+        for i_project, project in enumerate(projects_json):
+            jobs[i_project] = pool.submit(entities.Project._protected_from_json,
+                                          **{'client_api': self._client_api,
+                                             '_json': project})
+
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        projects = miscellaneous.List([r[1] for r in results if r[0] is True])
         return projects
 
     @_api_reference.add(path='/projects/{projectId}', method='get')
@@ -380,53 +373,64 @@ class Projects:
 
             project = dl.projects.get(project_id='project_id')
         """
+        # Resolution flow:
+        # 1. fetch=False + has id/name   → minimal unfetched Project stub (no API call)
+        # 2. fetch=False + no id/name    → error (need at least one identifier)
+        # 3. fetch=True  + no id/name    → return checked-out project from cache
+        # 4. fetch=True  + project_id    → return cached if id matches, else fetch by id
+        # 5. fetch=True  + project_name  → fetch by name from platform
         if fetch is None:
             fetch = self._client_api.fetch_entities
 
-        if project_id is None and project_name is None:
-            project = self.__get_from_cache()
-            if project is None:
+        # fetch=False: return a minimal unfetched entity without any API/cache access
+        if not fetch:
+            if project_id is None and project_name is None:
                 raise exceptions.PlatformException(
                     error='400',
-                    message='No checked-out Project was found. You must checkout to a project or provide an identifier in inputs')
-        elif fetch:
-            if project_id is not None:
-                if not isinstance(project_id, str):
+                    message='fetch is False but no project_id or project_name provided')
+            project = entities.Project.from_json(
+                _json={'id': project_id, 'name': project_name},
+                client_api=self._client_api,
+                is_fetched=False
+            )
+        else:
+            # fetch=True: may need the cached checked-out project
+            cached_project_json = self._client_api.state_io.get('project')
+            cached_project = None
+            if cached_project_json is not None:
+                cached_project = entities.Project.from_json(
+                    _json=cached_project_json,
+                    client_api=self._client_api
+                )
+
+            if project_id is None and project_name is None:
+                if cached_project is not None:
+                    project = cached_project
+                else:
                     raise exceptions.PlatformException(
                         error='400',
-                        message='project_id must be strings')
+                        message='No checked-out Project was found. You must checkout to a project or provide an identifier in inputs')
+            elif project_id is not None:
+                if cached_project is not None and cached_project.id == project_id:
+                    project = cached_project
+                else:
+                    project = self.__get_by_id(project_id, log_error=log_error)
 
-                project = self.__get_by_id(project_id, log_error=log_error)
-                # verify input project name is same as the given id
                 if project_name is not None and project.name != project_name:
                     logger.warning(
                         "Mismatch found in projects.get: project_name is different then project.name:"
-                        " {!r} != {!r}".format(
-                            project_name,
-                            project.name))
+                        " {!r} != {!r}".format(project_name, project.name))
             elif project_name is not None:
-                if not isinstance(project_name, str):
-                    raise exceptions.PlatformException(
-                        error='400',
-                        message='project_name must be strings')
-
                 projects = self.__get_by_name(project_name)
                 if len(projects) > 1:
-                    # more than one matching project
                     raise exceptions.PlatformException(
                         error='404',
                         message='More than one project with same name. Please "get" by id')
-                else:
-                    project = projects[0]
+                project = projects[0]
             else:
                 raise exceptions.PlatformException(
                     error='404',
                     message='No input and no checked-out found')
-        else:
-            project = entities.Project.from_json(_json={'id': project_id,
-                                                        'name': project_name},
-                                                 client_api=self._client_api,
-                                                 is_fetched=False)
         assert isinstance(project, entities.Project)
         if checkout:
             self.checkout(project=project)
@@ -462,8 +466,8 @@ class Projects:
                 project_id = project.id
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path='/projects/{}'.format(project_id))
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/projects") is False:
+                return False
             logger.info('Project id {} deleted successfully'.format(project_id))
             return True
         else:
@@ -497,10 +501,10 @@ class Projects:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=project.to_json())
-        if success:
-            return project
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
+
+        return project
 
     @_api_reference.add(path='/projects', method='post')
     def create(self,
@@ -526,11 +530,10 @@ class Projects:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/projects',
                                                          data=payload)
-        if success:
-            project = entities.Project.from_json(client_api=self._client_api,
-                                                 _json=response.json())
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/projects") is False:
+            return None
+
+        project = entities.Project.from_json(client_api=self._client_api, _json=response.json())
         assert isinstance(project, entities.Project)
         if checkout:
             self.checkout(project=project)

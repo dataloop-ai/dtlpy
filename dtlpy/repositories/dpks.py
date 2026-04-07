@@ -13,17 +13,7 @@ logger = logging.getLogger(name='dtlpy')
 class Dpks:
     def __init__(self, client_api: ApiClient, project: entities.Project = None):
         self._client_api = client_api
-        self._project = project
-
-    @property
-    def project(self) -> Optional[entities.Project]:
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
+        self.project = project
 
     def init(self, directory: str = None, name: str = None, description: str = None,
              attributes: dict = None, icon: str = None, scope: str = None):
@@ -123,7 +113,7 @@ class Dpks:
             jobs[i_item] = pool.submit(entities.Dpk._protected_from_json,
                                        **{'client_api': self._client_api,
                                           '_json': item,
-                                          'project': self._project})
+                                          'project': self.project})
         # get all results
         results = [j.result() for j in jobs]
         # log errors
@@ -265,7 +255,8 @@ class Dpks:
         if not success_pack:
             raise exceptions.PlatformException(error=response_pack)
 
-        return entities.Dpk.from_json(response_pack.json(), self._client_api, dpk.project)
+        project = getattr(dpk, 'project', None) or self.project
+        return entities.Dpk.from_json(response_pack.json(), self._client_api, project)
 
     def update(self, dpk: entities.Dpk) -> entities.Dpk:
         """
@@ -280,11 +271,11 @@ class Dpks:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path='/app-registry/{}'.format(dpk.id),
                                                          json_req=dpk.to_json())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/app-registry") is False:
+            return None
         res = response.json()
         logger.info(res.get('message'))
-        return entities.Dpk.from_json(res.get('dpk'), self._client_api, self._project)
+        return entities.Dpk.from_json(res.get('dpk'), self._client_api, self.project)
 
     def delete(self, dpk_id: str) -> bool:
         """
@@ -297,11 +288,10 @@ class Dpks:
         :rtype bool
         """
         success, response = self._client_api.gen_request(req_type='delete', path=f'/app-registry/{dpk_id}')
-        if success:
-            logger.info(f'Deleted dpk: {dpk_id} successfully')
-        else:
-            raise exceptions.PlatformException(response)
-        return success
+        if self._client_api.check_response(success, response, path="/app-registry") is False:
+            return False
+        logger.info(f'Deleted dpk: {dpk_id} successfully')
+        return True
 
     def list(self, filters: entities.Filters = None) -> entities.PagedEntities:
         """
@@ -321,8 +311,8 @@ class Dpks:
         elif filters.resource != entities.FiltersResource.DPK:
             raise ValueError('Filters resource must to be FiltersResource.DPK. Got: {!r}'.format(filters.resource))
 
-        if self._project is not None:
-            filters.add(field='context.project', values=self._project.id)
+        if self.project is not None:
+            filters.add(field='context.project', values=self.project.id)
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,
@@ -339,8 +329,8 @@ class Dpks:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/app-registry") is False:
+            return None
         return response.json()
 
     def get_revisions(self, dpk_id: str, version: str):
@@ -363,12 +353,12 @@ class Dpks:
         # request
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/app-registry") is False:
+            return None
 
         dpk = entities.Dpk.from_json(_json=response.json(),
                                      client_api=self._client_api,
-                                     project=self._project,
+                                     project=self.project,
                                      is_fetched=False)
         return dpk
 
@@ -396,12 +386,12 @@ class Dpks:
             # request
             success, response = self._client_api.gen_request(req_type='get',
                                                              path=url)
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/app-registry") is False:
+                return None
 
             dpk = entities.Dpk.from_json(_json=response.json(),
                                          client_api=self._client_api,
-                                         project=self._project,
+                                         project=self.project,
                                          is_fetched=False)
         else:
             dpk = self.__get_by_name(dpk_name=dpk_name, dpk_version=dpk_version)
@@ -428,7 +418,7 @@ class Dpks:
             path=url
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/app-registry") is False:
+            return None
 
         return response.json()

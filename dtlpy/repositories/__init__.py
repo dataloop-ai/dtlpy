@@ -25,7 +25,6 @@ from .packages import Packages, PackageCatalog
 from .downloader import Downloader
 from .uploader import Uploader
 from .triggers import Triggers
-from .times_series import TimesSeries
 from .services import Services, FUNCTION_END_LINE
 from .executions import Executions
 from .assignments import Assignments

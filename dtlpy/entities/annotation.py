@@ -1673,6 +1673,12 @@ class FrameAnnotation(entities.BaseEntity):
 
     @attributes.setter
     def attributes(self, attributes):
+        if self._interpolation and not self.fixed:
+            logger.warning(
+                'Setting attributes on interpolated frame %s of annotation %s. '
+                'Changes will not be persisted on update(). ',
+                self.frame_num, self.annotation.id
+            )
         self.annotation_definition.attributes = attributes
 
     @property

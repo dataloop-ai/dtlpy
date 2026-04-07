@@ -63,8 +63,8 @@ class Organizations:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/orgs/{}/groups'.format(organization.id)) is False:
+            return None
 
         groups = miscellaneous.List(response.json())
         return groups
@@ -109,8 +109,8 @@ class Organizations:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/orgs/{}/integrations'.format(organization.id)) is False:
+            return None
 
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
@@ -158,8 +158,8 @@ class Organizations:
 
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url_path)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/orgs/{}/members'.format(organization.id)) is False:
+            return None
 
         members = miscellaneous.List(
             [entities.User.from_json(_json=user, client_api=self._client_api, project=None) for user in
@@ -189,25 +189,24 @@ class Organizations:
         success, response = self._client_api.gen_request(req_type='get',
                                                          path='/orgs')
 
-        if success:
-            pool = self._client_api.thread_pools(pool_name='entity.create')
-            organization_json = response.json()
-            jobs = [None for _ in range(len(organization_json))]
-            # return triggers list
-            for i_organization, organization in enumerate(organization_json):
-                jobs[i_organization] = pool.submit(entities.Organization._protected_from_json,
-                                                   **{'client_api': self._client_api,
-                                                      '_json': organization})
+        if self._client_api.check_response(success, response, path='/orgs') is False:
+            return None
 
-            # get all results
-            results = [j.result() for j in jobs]
-            # log errors
-            _ = [logger.warning(r[1]) for r in results if r[0] is False]
-            # return good jobs
-            organization = miscellaneous.List([r[1] for r in results if r[0] is True])
-        else:
-            logger.error('Platform error getting organization')
-            raise exceptions.PlatformException(response)
+        pool = self._client_api.thread_pools(pool_name='entity.create')
+        organization_json = response.json()
+        jobs = [None for _ in range(len(organization_json))]
+        # return triggers list
+        for i_organization, organization in enumerate(organization_json):
+            jobs[i_organization] = pool.submit(entities.Organization._protected_from_json,
+                                               **{'client_api': self._client_api,
+                                                  '_json': organization})
+
+        # get all results
+        results = [j.result() for j in jobs]
+        # log errors
+        _ = [logger.warning(r[1]) for r in results if r[0] is False]
+        # return good jobs
+        organization = miscellaneous.List([r[1] for r in results if r[0] is True])
         return organization
 
     @_api_reference.add(path='/orgs/{orgId}', method='get')
@@ -246,8 +245,8 @@ class Organizations:
             if organization_id is not None:
                 success, response = self._client_api.gen_request(req_type='get',
                                                                  path='/orgs/{}'.format(organization_id))
-                if not success:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(success, response, path='/orgs/{}'.format(organization_id)) is False:
+                    return None
                 organization = entities.Organization.from_json(
                     client_api=self._client_api,
                     _json=response.json()
@@ -319,10 +318,10 @@ class Organizations:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=payload)
-        if success:
-            return organization
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/orgs/{}/plan'.format(organization.id)) is False:
+            return None
+
+        return organization
 
     @_api_reference.add(path='/orgs/{orgId}/members', method='post')
     def add_member(self, email: str,
@@ -375,10 +374,9 @@ class Organizations:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url_path,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            return True
+        if self._client_api.check_response(success, response, path='/orgs/{}/members'.format(organization.id)) is False:
+            return False
+        return True
 
     @_api_reference.add(path='/orgs/{orgId}/members/{memberId}', method='delete')
     def delete_member(self, user_id: str,
@@ -424,10 +422,9 @@ class Organizations:
             url_path = '/orgs/{}/members/{}'.format(organization.id, user_id)
             success, response = self._client_api.gen_request(req_type='delete',
                                                              path=url_path)
-            if not success:
-                raise exceptions.PlatformException(response)
-            else:
-                return True
+            if self._client_api.check_response(success, response, path='/orgs/{}/members/{}'.format(organization.id, user_id)) is False:
+                return False
+            return True
         else:
             raise exceptions.PlatformException(
                 error='403',
@@ -481,8 +478,8 @@ class Organizations:
         success, response = self._client_api.gen_request(req_type='patch',
                                                          path=url_path,
                                                          json_req=payload)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/orgs/{}/members'.format(organization.id)) is False:
+            return None
 
         return response.json()
 

@@ -10,33 +10,21 @@ class Apps:
 
     def __init__(self, client_api: ApiClient, project: entities.Project = None, project_id: str = None):
         self._client_api = client_api
-        self._project = project
-        self._project_id = project_id
+        # Initialize project with minimal JSON if not provided but project_id exists
+        if project is None and project_id is not None:
+            project = entities.Project.from_json(
+                _json={'id': project_id},
+                client_api=client_api,
+                is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+            )
+        self.project = project
         self._commands = None
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            if self._project_id is None:
-                raise exceptions.PlatformException(
-                    error='2001',
-                    message='Missing "project". need to set a Project entity or use project.apps repository')
-            else:
-                self._project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def commands(self) -> repositories.Commands:
         if self._commands is None:
             self._commands = repositories.Commands(client_api=self._client_api)
         return self._commands
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     def get(self,
             app_name: str = None,
@@ -68,11 +56,11 @@ class Apps:
                 app = self.__get_by_name(name=app_name)
             else:
                 success, response = self._client_api.gen_request(req_type='get', path="/apps/{}".format(app_id))
-                if not success:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(success, response, path="/apps") is False:
+                    return None
                 app = entities.App.from_json(client_api=self._client_api,
                                              _json=response.json(),
-                                             project=self._project)
+                                             project=self.project)
         else:
             app = entities.App.from_json(
                 _json={
@@ -80,7 +68,7 @@ class Apps:
                     'name': app_name
                 },
                 client_api=self._client_api,
-                project=self._project,
+                project=self.project,
                 is_fetched=False
             )
         assert isinstance(app, entities.App)
@@ -91,7 +79,7 @@ class Apps:
                                    values=name,
                                    resource=entities.FiltersResource.APP,
                                    use_defaults=False)
-        if self._project is not None:
+        if self.project is not None:
             filters.add(field='projectId', values=self.project.id)
         apps = self.list(filters=filters)
         if apps.items_count == 0:
@@ -112,7 +100,7 @@ class Apps:
             jobs[i_item] = pool.submit(entities.App._protected_from_json,
                                        **{'client_api': self._client_api,
                                           '_json': item,
-                                          'project': self._project})
+                                          'project': self.project})
         # get all results
         results = [j.result() for j in jobs]
         # log errors
@@ -128,8 +116,8 @@ class Apps:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/apps") is False:
+            return None
         return response.json()
 
     def list(self, filters: entities.Filters = None, project_id: str = None) -> entities.PagedEntities:
@@ -156,8 +144,8 @@ class Apps:
                 message='Filters resource must to be FiltersResource.APP. Got: {!r}'.format(filters.resource))
 
         # noinspection DuplicatedCode
-        if project_id is None and self._project is not None:
-            project_id = self._project.id
+        if project_id is None and self.project is not None:
+            project_id = self.project.id
 
         if project_id is not None:
             filters.add(field='projectId', values=project_id)
@@ -166,7 +154,6 @@ class Apps:
                                        filters=filters,
                                        page_offset=filters.page,
                                        page_size=filters.page_size,
-                                       project_id=project_id,
                                        client_api=self._client_api)
         paged.get_page()
         return paged
@@ -191,8 +178,8 @@ class Apps:
         success, response = self._client_api.gen_request(req_type='put',
                                                          path=f"/apps/{app.id}",
                                                          json_req=app.to_json())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/apps") is False:
+            return False
 
         app = entities.App.from_json(
             _json=response.json(),
@@ -257,8 +244,8 @@ class Apps:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path="/apps",
                                                          json_req=app.to_json())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/apps") is False:
+            return None
         app = entities.App.from_json(_json=response.json(),
                                      client_api=self._client_api,
                                      project=self.project)
@@ -298,8 +285,8 @@ class Apps:
             app_id = app.id
 
         success, response = self._client_api.gen_request(req_type='delete', path='/apps/{}'.format(app_id))
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/apps") is False:
+            return False
 
         try:
             app = self.get(app_id=app_id)
@@ -342,11 +329,10 @@ class Apps:
             raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
 
         success, response = self._client_api.gen_request(req_type='post', path='/apps/{}/activate'.format(app.id))
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/apps") is False:
+            return False
         logger.debug(f"App resumed successfully (id: {app.id}, name: {app.name}")
-        return success
+        return True
 
     def pause(self, app: entities.App = None, app_id: str = None) -> bool:
         """
@@ -375,8 +361,7 @@ class Apps:
             raise exceptions.PlatformException(error='400', message='You must provide app or app_id')
 
         success, response = self._client_api.gen_request(req_type='post', path='/apps/{}/deactivate'.format(app.id))
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/apps") is False:
+            return False
         logger.debug(f"App paused successfully (id: {app.id}, name: {app.name}")
-        return success
+        return True

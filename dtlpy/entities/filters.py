@@ -596,7 +596,8 @@ class Filters:
         pages = b_dataset.items.list(filters=f)
         if pages.items_count == 0:
             raise exceptions.NotFound(
-                f"Saved filter not found: {filter_name}. Run `Filters.list()` to list existing filters"
+                status_code='404',
+                message=f"Saved filter not found: {filter_name}. Run `Filters.list()` to list existing filters"
             )
         with open(pages.items[0].download()) as f:
             data = json.load(f)

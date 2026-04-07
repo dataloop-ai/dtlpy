@@ -22,10 +22,34 @@ class ExportType(str, Enum):
     JSON = "json"
     ZIP = "zip"
 
+
 class OutputExportType(str, Enum):
     JSON = "json"
     ZIP = "zip"
     FOLDERS = "folders"
+
+
+class DatasetExportVersion(str, Enum):
+    """
+    Dataset export API version to use.
+    
+    - V1: Legacy export API - exports via item-based commands
+    - V3: LanceDB-based export API - optimized partitioned NDJSON export with 
+          support for incremental (diff) exports
+    """
+    V1 = "v1"
+    V3 = "v3"
+
+
+class ExportMode(str, Enum):
+    """
+    Export mode for V3 LanceDB export.
+    
+    - FULL: Export all items matching filters (default)
+    - DIFF: Export only items changed since a specific version (incremental)
+    """
+    FULL = "full"
+    DIFF = "diff"
 
 class ExpirationOptions:
     """
@@ -90,7 +114,7 @@ class Dataset(entities.BaseEntity):
     is_syncing = attr.ib(default=False, repr=False)
 
     # entities
-    _project = attr.ib(default=None, repr=False)
+    project = attr.ib(default=None, repr=False)
 
     # repositories
     _datasets = attr.ib(repr=False, default=None)
@@ -159,6 +183,15 @@ class Dataset(entities.BaseEntity):
                 logger.warning('Dataset has been fetched from a project that is not in it projects list')
                 project = None
 
+        # Initialize project with minimal JSON if not provided but projects list exists
+        if project is None and projects and len(projects) > 0:
+            # Create minimal Project entity with just ID - Project class will handle lazy fetch
+            project = entities.Project.from_json(
+                _json={'id': projects[0]},
+                client_api=client_api,
+                is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+            )
+
         expiration_options = _json.get('expirationOptions', None)
         if expiration_options:
             expiration_options = ExpirationOptions.from_json(expiration_options)
@@ -199,7 +232,7 @@ class Dataset(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Dataset)._client_api,
-                                                              attr.fields(Dataset)._project,
+                                                              attr.fields(Dataset).project,
                                                               attr.fields(Dataset)._readonly,
                                                               attr.fields(Dataset)._datasets,
                                                               attr.fields(Dataset)._repositories,
@@ -303,24 +336,27 @@ class Dataset(entities.BaseEntity):
         reps = namedtuple('repositories',
                           field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
                                        'ontologies', 'features', 'feature_sets', 'settings', 'schema', 'collections'])
-        _project_id = None
-        if self._project is None:
-            datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
+        if self.project is None:
+            datasets = repositories.Datasets(client_api=self._client_api, project=None)
             if self.projects is not None and len(self.projects) > 0:
-                _project_id = self.projects[0]
+                self.project = entities.Project.from_json(
+                    _json={'id': self.projects[0]},
+                    client_api=self._client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
         else:
-            datasets = self._project.datasets
-            _project_id = self._project.id
+            datasets = self.project.datasets
+
         return reps(
             items=repositories.Items(client_api=self._client_api, dataset=self, datasets=datasets),
             recipes=repositories.Recipes(client_api=self._client_api, dataset=self),
-            assignments=repositories.Assignments(project=self._project, client_api=self._client_api, dataset=self),
-            tasks=repositories.Tasks(client_api=self._client_api, project=self._project, dataset=self),
+            assignments=repositories.Assignments(project=self.project, client_api=self._client_api, dataset=self),
+            tasks=repositories.Tasks(client_api=self._client_api, project=self.project, dataset=self),
             annotations=repositories.Annotations(client_api=self._client_api, dataset=self),
             datasets=datasets,
             ontologies=repositories.Ontologies(client_api=self._client_api, dataset=self),
-            features=repositories.Features(client_api=self._client_api, project=self._project, dataset=self),
-            feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self._project, project_id=_project_id, dataset=self),
+            features=repositories.Features(client_api=self._client_api, project=self.project, dataset=self),
+            feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self.project, dataset=self),
             settings=repositories.Settings(client_api=self._client_api, dataset=self),
             schema=repositories.Schema(client_api=self._client_api, dataset=self),
             collections=repositories.Collections(client_api=self._client_api, dataset=self)
@@ -386,28 +422,6 @@ class Dataset(entities.BaseEntity):
         assert isinstance(self._repositories.schema, repositories.Schema)
         return self._repositories.schema
 
-    @property
-    def project(self):
-        if self._project is None:
-            # get from cache
-            project = self._client_api.state_io.get('project')
-            if project is not None:
-                # build entity from json
-                p = entities.Project.from_json(_json=project, client_api=self._client_api)
-                # check if dataset belongs to project
-                if p.id in self.projects:
-                    self._project = p
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.projects[0],
-                                                                                   fetch=None)
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
 
     @property
     def directory_tree(self):
@@ -418,13 +432,13 @@ class Dataset(entities.BaseEntity):
 
     def __copy__(self):
         return Dataset.from_json(_json=self.to_json(),
-                                 project=self._project,
+                                 project=self.project,
                                  client_api=self._client_api,
                                  is_fetched=self.is_fetched,
                                  datasets=self.datasets)
 
     def __get_local_path__(self):
-        if self._project is not None:
+        if self.project is not None:
             local_path = os.path.join(services.service_defaults.DATALOOP_PATH,
                                       'projects',
                                       self.project.name,
@@ -731,38 +745,107 @@ class Dataset(entities.BaseEntity):
                dataset_lock: bool = False,
                lock_timeout_sec: int = None,
                export_summary: bool = False,
-               output_export_type: OutputExportType = None):
+               output_export_type: OutputExportType = None,
+               # V3 (LanceDB) export parameters
+               export_version: DatasetExportVersion = DatasetExportVersion.V1,
+               export_mode: ExportMode = None,
+               from_version: int = None,
+               partition_count: int = None,
+               force: bool = False,
+               parallel_downloads: int = 4):
         """
         Export dataset items and annotations.
 
         **Prerequisites**: You must be an *owner* or *developer* to use this method.
 
-        You must provide at least ONE of the following params: dataset, dataset_name, dataset_id.
+        **Export Versions:**
 
-        :param str local_path: The local path to save the exported dataset
+        - **DatasetExportVersion.V1** (default): Legacy export API using item-based commands
+        - **DatasetExportVersion.V3**: LanceDB-based export with partitioned NDJSON output and
+          support for incremental (diff) exports
+
+        **V1 Export Behavior (export_version=DatasetExportVersion.V1):**
+
+        The behavior depends on the combination of ``export_type`` and ``output_export_type``:
+
+        **When export_type = ExportType.JSON:**
+
+        - **output_export_type = OutputExportType.JSON (default when None):**
+          Exports data in JSON format, split into subsets of max 500 items.
+          Downloads all subset JSON files and concatenates them into a single ``result.json`` file.
+          Returns the path to the concatenated JSON file.
+
+        - **output_export_type = OutputExportType.ZIP:**
+          Same as JSON export, but zips the final ``result.json`` file.
+          Returns the path to the zipped file (``result.json.zip``).
+
+        - **output_export_type = OutputExportType.FOLDERS:**
+          Creates a folder structure mirroring the remote dataset structure.
+          Each item gets its own JSON file named after the original filename.
+
+        **When export_type = ExportType.ZIP:**
+          Exports data as a ZIP file containing the dataset. Returns the downloaded ZIP item directly.
+
+        **V3 Export Behavior (export_version=DatasetExportVersion.V3):**
+
+        - **export_mode = ExportMode.FULL**: Exports all items matching filters (default)
+        - **export_mode = ExportMode.DIFF**: Exports only items changed since ``from_version``
+        - Returns an ExportManifest object with partition info and downloaded file paths
+
+        :param str local_path: Local directory path to save the exported dataset. Must be a directory, not a file path.
         :param Union[dict, dtlpy.entities.filters.Filters] filters: Filters entity or a query dictionary
-        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity
-        :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity
-        :param bool include_feature_vectors: Include item feature vectors in the export
-        :param bool include_annotations: Include item annotations in the export
-        :param bool dataset_lock: Make dataset readonly during the export
-        :param bool export_summary: Download dataset export summary
-        :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds
-        :param entities.ExportType export_type: Type of export ('json' or 'zip')
-        :param entities.OutputExportType output_export_type: Output format ('json', 'zip', or 'folders'). If None, defaults to 'json'
+        :param dtlpy.entities.filters.Filters annotation_filters: Filters entity to filter annotations (V1 only)
+        :param dtlpy.entities.filters.Filters feature_vector_filters: Filters entity to filter feature vectors (V1 only)
+        :param bool include_feature_vectors: Include item feature vectors in the export (V1 only)
+        :param bool include_annotations: Include item annotations in the export (V1 only)
+        :param bool dataset_lock: Make dataset readonly during the export (V1 only)
+        :param bool export_summary: Get summary of the dataset export (V1 only)
+        :param int lock_timeout_sec: Timeout for locking the dataset during export in seconds (V1 only)
+        :param entities.ExportType export_type: Type of export ('json' or 'zip') (V1 only)
+        :param entities.OutputExportType output_export_type: Output format ('json', 'zip', or 'folders') (V1 only)
         :param int timeout: Maximum time in seconds to wait for the export to complete
-        :return: Exported item
-        :rtype: dtlpy.entities.item.Item
+        :param entities.DatasetExportVersion export_version: Export API version - V1 (legacy) or V3 (LanceDB)
+        :param entities.ExportMode export_mode: Export mode for V3 - FULL or DIFF (V3 only)
+        :param int from_version: Starting version for diff mode (V3 only). If not provided in DIFF mode,
+            falls back to last_to_version from dataset metadata. If no previous export exists, falls back to FULL mode.
+        :param int partition_count: Number of partitions, auto-calculated if None (V3 only)
+        :param bool force: Force re-export even if cached (V3 only)
+        :param int parallel_downloads: Number of concurrent partition downloads (V3 only)
+        :return: For V1: Path to exported file/directory, or None if empty. For V3: ExportManifest object
+        :rtype: Union[Optional[str], dtlpy.entities.export_manifest.ExportManifest]
 
-        **Example**:
+        **Example - V1 Export (Legacy)**:
 
         .. code-block:: python
 
-            export_item = dataset.export(filters=filters,
-                                         include_feature_vectors=True,
-                                         include_annotations=True,
-                                         export_type=dl.ExportType.JSON,
-                                         output_export_type=dl.OutputExportType.JSON)
+            export_path = dataset.export(
+                local_path='/path/to/export',
+                include_annotations=True,
+                export_type=dl.ExportType.JSON,
+                output_export_type=dl.OutputExportType.JSON
+            )
+
+        **Example - V3 Export (LanceDB)**:
+
+        .. code-block:: python
+
+            manifest = dataset.export(
+                local_path='/path/to/export',
+                export_version=dl.DatasetExportVersion.V3,
+                export_mode=dl.ExportMode.FULL
+            )
+            print(f"Exported {manifest.total_records} records")
+
+        **Example - V3 Diff Export (Incremental)**:
+
+        .. code-block:: python
+
+            manifest = dataset.export(
+                export_version=dl.DatasetExportVersion.V3,
+                export_mode=dl.ExportMode.DIFF,
+                from_version=5
+            )
+            next_from_version = manifest.to_version
         """
 
         return self.datasets.export(dataset=self,
@@ -777,7 +860,13 @@ class Dataset(entities.BaseEntity):
                                     dataset_lock=dataset_lock,
                                     lock_timeout_sec=lock_timeout_sec,
                                     export_summary=export_summary,
-                                    output_export_type=output_export_type)
+                                    output_export_type=output_export_type,
+                                    export_version=export_version,
+                                    export_mode=export_mode,
+                                    from_version=from_version,
+                                    partition_count=partition_count,
+                                    force=force,
+                                    parallel_downloads=parallel_downloads)
 
     def upload_annotations(self,
                            local_path,

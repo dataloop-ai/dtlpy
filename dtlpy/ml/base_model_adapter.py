@@ -165,11 +165,14 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         self.adapter_defaults = None
         self.model = None
         self.bucket_path = None
-        self._project = None
+        self.project = None
         self._feature_set = None
         # funcs
         self.item_to_batch_mapping = {'text': self._item_to_text, 'image': self._item_to_image}
         if model_entity is not None:
+            # Initialize project from model_entity if not provided
+            if self.project is None and model_entity.project is not None:
+                self.project = model_entity.project
             self.load_from_model(model_entity=model_entity)
         logger.warning(
             "in case of a mismatch between 'model.name' and 'model_info.name' in the model adapter, model_info.name will be updated to align with 'model.name'."
@@ -200,12 +203,6 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
     ############
     # Entities #
     ############
-    @property
-    def project(self):
-        if self._project is None:
-            self._project = self.model_entity.project
-        assert isinstance(self._project, entities.Project)
-        return self._project
 
     @property
     def feature_set(self):
@@ -228,6 +225,9 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
             if self._model_entity.id != model_entity.id:
                 self.logger.warning('Replacing Model from {!r} to {!r}'.format(self._model_entity.name, model_entity.name))
         self._model_entity = model_entity
+        # Update project from model_entity if not already set
+        if self.project is None and model_entity.project is not None:
+            self.project = model_entity.project
         self.adapter_defaults = AdapterDefaults(self)
         self._configuration = self.adapter_defaults
 

@@ -270,8 +270,8 @@ class Dpk(entities.DlEntity):
     url: str = entities.DlProperty(location=['url'], _type=str)
 
     # sdk
-    client_api: ApiClient
-    project: entities.Project
+    client_api: ApiClient = None
+    project: entities.Project = None
     _revisions = None
     __repositories = None
 
@@ -477,6 +477,15 @@ class Dpk(entities.DlEntity):
         :return: App entity
         :rtype: dtlpy.entities.App
         """
+        # Initialize project with minimal JSON if not provided but projectId exists in context
+        if project is None:
+            project_id = _json.get('context', {}).get('project', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
         res = cls(
             _dict=_json,
             client_api=client_api,

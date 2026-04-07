@@ -104,8 +104,8 @@ class Computes:
             json_req=payload
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         compute = self._build_compute_by_type(response.json())
 
@@ -200,8 +200,8 @@ class Computes:
             path=url_path
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         compute = self._build_compute_by_type(response.json())
 
@@ -223,8 +223,8 @@ class Computes:
             json_req=compute.to_json()
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         compute = self._build_compute_by_type(response.json())
 
@@ -251,8 +251,8 @@ class Computes:
             path=url_path
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return False
         if skip_destroy is not True and wait is True:
             command_response = response.json()
             command_id = command_response['id']
@@ -283,8 +283,8 @@ class Computes:
             path=self._base_url + '/{}/validate'.format(compute_id)
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         compute = self._build_compute_by_type(response.json())
 
@@ -317,8 +317,8 @@ class Computes:
             path=self._base_url + '/globals',
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         return response.json()
 
@@ -386,8 +386,8 @@ class Computes:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         return response.json()
 

@@ -1,4 +1,4 @@
-from .. import entities, exceptions
+from .. import entities
 from ..services.api_client import ApiClient
 from typing import List
 
@@ -46,11 +46,10 @@ class Collections:
         success, response = self._client_api.gen_request(
             req_type="post", path=f"/datasets/{self.dataset.id}/items/collections", json_req=payload
         )
-        if success:
-            collection_json = self._single_collection(data=response.json(), name=name)
-            return entities.Collection.from_json(client_api=self._client_api, _json=collection_json)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/items/collections') is False:
+            return None
+        collection_json = self._single_collection(data=response.json(), name=name)
+        return entities.Collection.from_json(client_api=self._client_api, _json=collection_json)
 
     def update(self, collection_name: str, new_name: str) -> entities.Collection:
         """
@@ -65,11 +64,10 @@ class Collections:
         success, response = self._client_api.gen_request(
             req_type="patch", path=f"/datasets/{self.dataset.id}/items/collections/{collection_name}", json_req=payload
         )
-        if success:
-            collection_json = self._single_collection(data=response.json(), name=new_name)
-            return entities.Collection.from_json(client_api=self._client_api, _json=collection_json)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/items/collections') is False:
+            return None
+        collection_json = self._single_collection(data=response.json(), name=new_name)
+        return entities.Collection.from_json(client_api=self._client_api, _json=collection_json)
 
     def delete(self, collection_name: str) -> bool:
         """
@@ -80,14 +78,12 @@ class Collections:
         success, response = self._client_api.gen_request(
             req_type="delete", path=f"/datasets/{self.dataset.id}/items/collections/{collection_name}"
         )
-        if success:
-            # Wait for the split operation to complete
-            command = entities.Command.from_json(_json=response.json(),
-                                                 client_api=self._client_api)
-            command.wait()
-            return True
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/items/collections') is False:
+            return False
+        command = entities.Command.from_json(_json=response.json(),
+                                             client_api=self._client_api)
+        command.wait()
+        return True
 
     def clone(self, collection_name: str) -> entities.Collection:
         """
@@ -129,11 +125,10 @@ class Collections:
         success, response = self._client_api.gen_request(
             req_type="GET", path=f"/datasets/{self.dataset.id}/items/collections"
         )
-        if success:
-            data = response.json()
-            return self._list_collections(data)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/items/collections') is False:
+            return None
+        data = response.json()
+        return self._list_collections(data)
 
     def validate_collection_name(self, name: str):
         """
@@ -234,13 +229,11 @@ class Collections:
             json_req=payload,
         )
 
-        if success:
-            # Wait for the operation to complete
-            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
-            command.wait()
-            return True
-        else:
-            raise exceptions.PlatformException(f"Failed to assign item to collections: {response}")
+        if self._client_api.check_response(success, response, path='/items/collections') is False:
+            return False
+        command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
+        command.wait()
+        return True
 
     def assign(
             self,

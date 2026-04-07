@@ -21,7 +21,7 @@ class Ontologies:
                  dataset: entities.Dataset = None):
         self._client_api = client_api
         self._recipe = recipe
-        self._project = project
+        self.project = project
         self._dataset = dataset
 
     ############
@@ -43,21 +43,6 @@ class Ontologies:
         self._recipe = recipe
 
     @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Missing "project". need to set a Project entity or use project.ontologies repository')
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
-
-    @property
     def dataset(self) -> entities.Dataset:
         if self._dataset is None:
             raise exceptions.PlatformException(
@@ -77,8 +62,8 @@ class Ontologies:
             return project_ids if isinstance(project_ids, list) else [project_ids]
         elif self._recipe is not None:
             return self._recipe.project_ids
-        elif self._project is not None:
-            return [self._project.id]
+        elif self.project is not None:
+            return [self.project.id]
         elif self._dataset is not None:
             return self._dataset.projects
         else:
@@ -129,17 +114,15 @@ class Ontologies:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path="/ontologies",
                                                          json_req=payload)
-        if success:
-            logger.info("Ontology was created successfully")
-            ontology = entities.Ontology.from_json(_json=response.json(),
-                                                   client_api=self._client_api,
-                                                   recipe=self._recipe)
-            if self._recipe:
-                self._recipe.ontology_ids.append(ontology.id)
-                self._recipe.update()
-        else:
-            logger.error("Failed to create Ontology")
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return None
+        logger.info("Ontology was created successfully")
+        ontology = entities.Ontology.from_json(_json=response.json(),
+                                               client_api=self._client_api,
+                                               recipe=self._recipe)
+        if self._recipe:
+            self._recipe.ontology_ids.append(ontology.id)
+            self._recipe.update()
         return ontology
 
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.Ontology]:
@@ -150,7 +133,7 @@ class Ontologies:
             jobs[i_package] = pool.submit(entities.Ontology._protected_from_json,
                                           **{'client_api': self._client_api,
                                              '_json': package,
-                                             'project': self._project,
+                                             'project': self.project,
                                              'dataset': self._dataset,
                                              'recipe': self._recipe})
 
@@ -183,8 +166,8 @@ class Ontologies:
         # request
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return None
         return response.json()
 
     def __list(self, filters: entities.Filters) -> entities.PagedEntities:
@@ -277,14 +260,13 @@ class Ontologies:
         """
         success, response = self._client_api.gen_request(req_type="get",
                                                          path="/ontologies/{}".format(ontology_id))
-        if success:
-            ontology = entities.Ontology.from_json(_json=response.json(),
-                                                   client_api=self._client_api,
-                                                   recipe=self._recipe,
-                                                   dataset=self._dataset,
-                                                   project=self._project)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return None
+        ontology = entities.Ontology.from_json(_json=response.json(),
+                                               client_api=self._client_api,
+                                               recipe=self._recipe,
+                                               dataset=self._dataset,
+                                               project=self.project)
         return ontology
 
     @_api_reference.add(path='/ontologies/{id}', method='delete')
@@ -306,48 +288,44 @@ class Ontologies:
         """
         success, response = self._client_api.gen_request(req_type="delete",
                                                          path="/ontologies/%s" % ontology_id)
-        if success:
-            logger.debug("Ontology was deleted successfully")
-            return success
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return False
+        logger.debug("Ontology was deleted successfully")
+        return True
 
     @_api_reference.add(path='/ontologies/{id}', method='put')
     def update(self, ontology: entities.Ontology, system_metadata=False) -> entities.Ontology:
         """
-        Update the Ontology metadata.
+         Update the Ontology metadata.
 
-        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-       :param dtlpy.entities.ontology.Ontology ontology: Ontology object
-       :param bool system_metadata: bool - True, if you want to change metadata system
-       :return: Ontology object
-       :rtype: dtlpy.entities.ontology.Ontology
+        :param dtlpy.entities.ontology.Ontology ontology: Ontology object
+        :param bool system_metadata: bool - True, if you want to change metadata system
+        :return: Ontology object
+        :rtype: dtlpy.entities.ontology.Ontology
 
-       **Example**:
+        **Example**:
 
-        .. code-block:: python
+         .. code-block:: python
 
-            recipe.ontologies.delete(ontology='ontology_entity')
-       """
+             recipe.ontologies.delete(ontology='ontology_entity')
+        """
         url_path = "/ontologies/%s" % ontology.id
         if system_metadata:
             url_path += "?system=true"
         success, response = self._client_api.gen_request(req_type="put",
                                                          path=url_path,
                                                          json_req=ontology.to_json())
-        if success:
-            logger.debug("Ontology was updated successfully")
-            # update dataset labels
-            ontology = entities.Ontology.from_json(_json=response.json(),
-                                                   client_api=self._client_api,
-                                                   recipe=self._recipe)
-            if self._recipe is not None and self._recipe._dataset is not None:
-                self.recipe.dataset._labels = ontology.labels
-            return ontology
-        else:
-            logger.error("Failed to update ontology:")
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return None
+        logger.debug("Ontology was updated successfully")
+        ontology = entities.Ontology.from_json(_json=response.json(),
+                                               client_api=self._client_api,
+                                               recipe=self._recipe)
+        if self._recipe is not None and self._recipe._dataset is not None:
+            self.recipe.dataset._labels = ontology.labels
+        return ontology
 
     @staticmethod
     def labels_to_roots(labels):
@@ -477,8 +455,8 @@ class Ontologies:
         success, response = self._client_api.gen_request(req_type="PATCH",
                                                          path=url_path,
                                                          json_req=json_req)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return False
         return True
 
     def delete_attributes(self, ontology_id, keys: list):
@@ -506,6 +484,6 @@ class Ontologies:
         success, response = self._client_api.gen_request(req_type="DELETE",
                                                          path=url_path,
                                                          json_req=json_req)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/ontologies") is False:
+            return False
         return True

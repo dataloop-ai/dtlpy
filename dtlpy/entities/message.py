@@ -60,7 +60,7 @@ class Message(entities.BaseEntity):
     _client_api = attr.ib(type=ApiClient, repr=False)
 
     # entities
-    _project = attr.ib(default=None, repr=False)
+    project = attr.ib(default=None, repr=False)
 
     @staticmethod
     def _protected_from_json(
@@ -107,10 +107,20 @@ class Message(entities.BaseEntity):
         :rtype: dtlpy.entities.message.Message
         """
 
+        context = NotificationEventContext.from_json(_json=_json.get('context', None))
+
+        # Initialize project with minimal JSON if not provided but context.project exists
+        if project is None and context and hasattr(context, 'project') and context.project:
+            project = entities.Project.from_json(
+                _json={'id': context.project},
+                client_api=client_api,
+                is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+            )
+
         inst = cls(
             title=_json.get('title', None),
             description=_json.get('description', None),
-            context=NotificationEventContext.from_json(_json=_json.get('context', None)),
+            context=context,
             read=_json.get('read', None),
             dismissed=_json.get('dismissed', None),
             new=_json.get('new', None),
@@ -135,9 +145,10 @@ class Message(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(
-            self, filter=attr.filters.exclude(
+            self,
+            filter=attr.filters.exclude(
                 attr.fields(Message)._client_api,
-                attr.fields(Message)._project,
+                attr.fields(Message).project,
                 attr.fields(Message).is_fetched,
                 attr.fields(Message).context,
                 attr.fields(Message).user_id,
@@ -146,8 +157,8 @@ class Message(entities.BaseEntity):
                 attr.fields(Message).notification_code,
                 attr.fields(Message).resource_type,
                 attr.fields(Message).resource_id,
-                attr.fields(Message).resource_name
-            )
+                attr.fields(Message).resource_name,
+            ),
         )
 
         _json['context'] = self.context.to_json()
@@ -160,16 +171,3 @@ class Message(entities.BaseEntity):
         _json['resourceName'] = self.resource_name
 
         return _json
-
-    @property
-    def project(self):
-        if self._project is None and self.context.project is not None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.context.project)
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @project.setter
-    def project(self, project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project

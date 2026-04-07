@@ -7,7 +7,6 @@ import tempfile
 import time
 from typing import Union, List, Callable
 from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient, _api_reference
-from ..__version__ import version as __version__
 
 logger = logging.getLogger(name='dtlpy')
 FUNCTION_END_LINE = '[Done] Executing function.'
@@ -31,16 +30,22 @@ class Services:
                  model: entities.Model = None):
         self._client_api = client_api
         self._package = package
-        self._project = project
         self._model = model
         if model_id is None:
             if model is not None:
                 model_id = model.id
         self._model_id = model_id
-        if project_id is None:
-            if project is not None:
-                project_id = project.id
-        self._project_id = project_id
+        # Initialize project - try from package first, then from project_id
+        if project is None:
+            if package is not None:
+                project = package.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
         self._settings = repositories.Settings(project=project, client_api=client_api)
 
     ############
@@ -61,30 +66,6 @@ class Services:
             raise ValueError('Must input a valid package entity')
         self._package = package
 
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            # try to get from package
-            if self._package is not None:
-                self._project = self._package._project
-
-        if self._project is None:
-            # try to get checked out project
-            project = self._client_api.state_io.get('project')
-            if project is not None:
-                self._project = entities.Project.from_json(_json=project, client_api=self._client_api)
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='2001',
-                message='Cannot perform action WITHOUT Project entity in services repository. Please set a project')
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Project entity')
-        self._project = project
-        self._project_id = project.id
 
     @property
     def model(self) -> entities.Model:
@@ -142,7 +123,7 @@ class Services:
         if service is not None:
             service = entities.Service.from_json(_json=service,
                                                  client_api=self._client_api,
-                                                 project=self._project,
+                                                 project=self.project,
                                                  package=self._package)
         return service
 
@@ -203,8 +184,8 @@ class Services:
         success, response = self._client_api.gen_request(
             req_type="get",
             path="/services/{}/revisions".format(service_id))
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/services/{id}', method='get')
@@ -248,12 +229,12 @@ class Services:
                     req_type="get",
                     path="/services/{}".format(service_id)
                 )
-                if not success:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(success, response, path="/services") is False:
+                    return None
                 service = entities.Service.from_json(client_api=self._client_api,
                                                      _json=response.json(),
                                                      package=self._package,
-                                                     project=self._project)
+                                                     project=self.project)
                 # verify input service name is same as the given id
                 if service_name is not None and service.name != service_name:
                     logger.warning(
@@ -266,8 +247,8 @@ class Services:
                                            field='name',
                                            values=service_name,
                                            use_defaults=False)
-                if self._project_id is not None:
-                    filters.add(field='projectId', values=self._project_id)
+                if self.project is not None:
+                    filters.add(field='projectId', values=self.project.id)
                 if self._package is not None:
                     filters.add(field='packageId', values=self._package.id)
                 services = self.list(filters=filters)
@@ -285,7 +266,7 @@ class Services:
             service = entities.Service.from_json(_json={'id': service_id,
                                                         'name': service_name},
                                                  client_api=self._client_api,
-                                                 project=self._project,
+                                                 project=self.project,
                                                  package=self._package,
                                                  is_fetched=False)
 
@@ -304,7 +285,7 @@ class Services:
                                           **{'client_api': self._client_api,
                                              '_json': service,
                                              'package': self._package,
-                                             'project': self._project})
+                                             'project': self.project})
 
         # get all results
         results = [j.result() for j in jobs]
@@ -318,9 +299,8 @@ class Services:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/query/faas', method='post')
@@ -351,8 +331,8 @@ class Services:
             raise exceptions.PlatformException(
                 error='400',
                 message='Filters resource must to be FiltersResource.SERVICE. Got: {!r}'.format(filters.resource))
-        if self._project_id is not None:
-            filters.add(field='projectId', values=self._project_id)
+        if self.project is not None:
+            filters.add(field='projectId', values=self.project.id)
         if self._model_id is not None:
             filters.add(field='metadata.ml.modelId', values=self._model_id)
         if self._package is not None:
@@ -399,8 +379,8 @@ class Services:
         # request
         success, response = self._client_api.gen_request(req_type="get",
                                                          path="/services/{}/status".format(service_id))
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/services/{id}/stop', method='post')
@@ -439,9 +419,9 @@ class Services:
             url = '{}?force=true'
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
-        return success
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return False
+        return True
 
     def _notify(
             self,
@@ -473,9 +453,9 @@ class Services:
             path=url,
             json_req=payload
         )
-        if not success:
-            raise exceptions.PlatformException(response)
-        return success
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return False
+        return True
 
     @_api_reference.add(path='/services/{id}/resume', method='post')
     def resume(self,
@@ -513,20 +493,18 @@ class Services:
             url = '{}?force=true'
         success, response = self._client_api.gen_request(req_type="post",
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
         return response.json()
 
     def _get_bot_email(self, bot=None):
 
         if bot is None:
-            project = self._project
-            if project is None and self._project_id is not None:
-                project = repositories.Projects(client_api=self._client_api).get(project_id=self._project_id)
-
+            project = self.project
             if project is None:
-                raise exceptions.PlatformException(error='2001',
-                                                   message='Need project entity or bot to perform this action')
+                raise exceptions.PlatformException(
+                    error='2001',
+                    message='Cannot perform action WITHOUT Project entity in services repository. Please set a project')
             bots = project.bots.list()
             if len(bots) == 0:
                 logger.info('Bot not found for project. Creating a default bot')
@@ -582,8 +560,7 @@ class Services:
         # request
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        self._client_api.check_response(success, response, path="/services")
 
     def _create(self,
                 service_name: str = None,
@@ -660,23 +637,21 @@ class Services:
         if package is not None and package.service_config is not None:
             service_config = package.service_config
 
-        if agent_versions is None:
-            if sdk_version is None:
-                sdk_version = service_config.get('versions', dict()).get('dtlpy', __version__)
-            agent_versions = {
-                "dtlpy": sdk_version
-            }
 
         if project_id is None:
-            if self._project is None and self._project_id is None:
+            if self.project is not None:
+                project_id = self.project.id
+            else:
                 raise exceptions.PlatformException('400', 'Please provide project id')
-            elif self._project_id is not None:
-                project_id = self._project_id
-            elif self._project is not None:
-                project_id = self._project.id
 
         if service_name is None:
             service_name = 'default-service'
+
+        if agent_versions is None:
+            if sdk_version is not None:
+                agent_versions = {
+                    "dtlpy": sdk_version
+                }
 
         # payload
         payload = {
@@ -746,15 +721,15 @@ class Services:
         )
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
 
         # return entity
         return entities.Service.from_json(
             _json=response.json(),
             client_api=self._client_api,
             package=package,
-            project=self._project
+            project=self.project
         )
 
     @_api_reference.add(path='/services/{id}', method='delete')
@@ -794,8 +769,8 @@ class Services:
             req_type="delete",
             path=path
         )
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return False
         return True
 
     @_api_reference.add(path='/services/{id}', method='patch')
@@ -830,8 +805,8 @@ class Services:
                                                          json_req=payload)
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
 
         # return entity
         if self._package is not None:
@@ -842,7 +817,7 @@ class Services:
         return entities.Service.from_json(_json=response.json(),
                                           client_api=self._client_api,
                                           package=package,
-                                          project=self._project)
+                                          project=self.project)
 
     def activate_slots(
             self,
@@ -1081,8 +1056,8 @@ class Services:
                                                          json_req=payload)
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return None
 
         log = ServiceLog(_json=response.json(),
                          service=service,
@@ -1149,7 +1124,7 @@ class Services:
             service = self.get(service_id=service_id, service_name=service_name)
         execution = repositories.Executions(service=service,
                                             client_api=self._client_api,
-                                            project=self._project).create(service_id=service.id,
+                                            project=self.project).create(service_id=service.id,
                                                                           sync=sync,
                                                                           execution_input=execution_input,
                                                                           function_name=function_name,
@@ -1261,7 +1236,7 @@ class Services:
                            'Next time use a 3-level semver for package/service versions'.format(revision))
 
         if func is not None:
-            package = self.__deploy_function(name=service_name, project=self._project, func=func)
+            package = self.__deploy_function(name=service_name, project=self.project, func=func)
 
         if init_input is not None and not isinstance(init_input, dict):
             if not isinstance(init_input, list):
@@ -1281,10 +1256,10 @@ class Services:
                 )
 
         if project_id is None:
-            if self._project is not None:
-                project_id = self._project.id
+            if self.project is not None:
+                project_id = self.project.id
             else:
-                project_id = self._project_id
+                raise exceptions.PlatformException('400', 'Please provide project id')
 
         filters = entities.Filters(resource=entities.FiltersResource.SERVICE, use_defaults=False)
         filters.add(field='name', values=service_name)
@@ -1444,7 +1419,7 @@ class Services:
 
         # get package
         package_name = service_json.get('packageName', None)
-        packages = repositories.Packages(client_api=self._client_api, project=self._project)
+        packages = repositories.Packages(client_api=self._client_api, project=self.project)
 
         if package_name is None:
             package = packages.get()
@@ -1488,7 +1463,7 @@ class Services:
 
         if len(service_triggers) > 0:
             logger.info('Creating triggers...')
-            triggers = repositories.Triggers(client_api=self._client_api, project=self._project)
+            triggers = repositories.Triggers(client_api=self._client_api, project=self.project)
 
             for trigger in service_triggers:
                 name = trigger.get('name', None)
@@ -1579,20 +1554,19 @@ class Services:
         cache_url_path = '/services/cache?mode={}'.format(mode)
 
         success, response = self.__enable_cache(url=apply_fs_url_path, organization=organization, pod_type=pod_type)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return False
 
         if mode == entities.CacheAction.APPLY:
             self.__polling_wait(organization=organization, pod_type=pod_type)
             success, response = self.__enable_cache(url=apply_volume_url_path, organization=organization,
                                                     pod_type=pod_type)
-            if not success:
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/services") is False:
+                return False
 
         success, response = self.__enable_cache(url=cache_url_path, organization=organization, pod_type=pod_type)
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return False
         return True
 
     def restart(self, service: entities.Service, replica_name: str = None):
@@ -1624,9 +1598,8 @@ class Services:
                                                          json_req=payload)
 
         # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path="/services") is False:
+            return False
         return True
 
 

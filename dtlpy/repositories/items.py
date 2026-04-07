@@ -25,7 +25,7 @@ class Items:
         self._dataset = dataset
         self._dataset_id = dataset_id
         self._datasets = datasets
-        self._project = project
+        self.project = project
         # set items entity to represent the item (Item, Codebase, Artifact etc...)
         if items_entity is None:
             self.items_entity = entities.Item
@@ -43,6 +43,8 @@ class Items:
                     error='400',
                     message='Cannot perform action WITHOUT Dataset entity in Items repository. Please set a dataset')
             self._dataset = self.datasets.get(dataset_id=self._dataset_id, fetch=None)
+        if self._dataset is None:
+            return None
         assert isinstance(self._dataset, entities.Dataset)
         return self._dataset
 
@@ -51,21 +53,6 @@ class Items:
         if not isinstance(dataset, entities.Dataset):
             raise ValueError('Must input a valid Dataset entity')
         self._dataset = dataset
-
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None:
-            raise exceptions.PlatformException(
-                error='400',
-                message='Cannot perform action WITHOUT Project entity in Items repository. Please set a project')
-        assert isinstance(self._dataset, entities.Dataset)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError('Must input a valid Dataset entity')
-        self._project = project
 
     ################
     # repositories #
@@ -152,8 +139,8 @@ class Items:
                                                          path="/datasets/{}/query".format(self.dataset.id),
                                                          json_req=filters.prepare(),
                                                          headers={'user_query': filters._user_query})
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/datasets") is False:
+            return None
         return response.json()
 
     @_api_reference.add(path='/datasets/{id}/query', method='post')
@@ -246,20 +233,19 @@ class Items:
             if item_id is not None:
                 success, response = self._client_api.gen_request(req_type="get",
                                                                  path="/items/{}".format(item_id))
-                if success:
-                    item = self.items_entity.from_json(client_api=self._client_api,
-                                                       _json=response.json(),
-                                                       dataset=self._dataset,
-                                                       project=self._project)
-                    # verify input filepath is same as the given id
-                    if filepath is not None and item.filename != filepath:
-                        logger.warning(
-                            "Mismatch found in items.get: filepath is different then item.filename: "
-                            "{!r} != {!r}".format(
-                                filepath,
-                                item.filename))
-                else:
-                    raise exceptions.PlatformException(response)
+                if self._client_api.check_response(success, response, path="/items") is False:
+                    return None
+                item = self.items_entity.from_json(client_api=self._client_api,
+                                                   _json=response.json(),
+                                                   dataset=self._dataset,
+                                                   project=self.project)
+                # verify input filepath is same as the given id
+                if filepath is not None and item.filename != filepath:
+                    logger.warning(
+                        "Mismatch found in items.get: filepath is different then item.filename: "
+                        "{!r} != {!r}".format(
+                            filepath,
+                            item.filename))
             elif filepath is not None:
                 filters = entities.Filters()
                 filters.pop(field='hidden')
@@ -286,7 +272,7 @@ class Items:
                                            client_api=self._client_api,
                                            dataset=self._dataset,
                                            is_fetched=False,
-                                           project=self._project)
+                                           project=self.project)
         assert isinstance(item, entities.Item)
         return item
 
@@ -342,9 +328,8 @@ class Items:
         success, response = self._client_api.gen_request(req_type="post",
                                                          path="/items/{}/clone".format(item_id),
                                                          json_req=payload)
-        # check response
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/items") is False:
+            return None
 
         command = entities.Command.from_json(_json=response.json(),
                                              client_api=self._client_api)
@@ -410,11 +395,10 @@ class Items:
             raise exceptions.PlatformException("400", "Must provide item id, filename or filters")
 
         # check response
-        if success:
-            logger.debug("Item/s deleted successfully")
-            return success
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/items") is False:
+            return False
+        logger.debug("Item/s deleted successfully")
+        return True
 
     @_api_reference.add(path='/items/{id}', method='patch')
     def update(self,
@@ -476,14 +460,12 @@ class Items:
             success, response = self._client_api.gen_request(req_type="patch",
                                                              path=url_path,
                                                              json_req=json_req)
-            if success:
-                logger.debug("Item was updated successfully. Item id: {}".format(item.id))
-                return self.items_entity.from_json(client_api=self._client_api,
-                                                   _json=response.json(),
-                                                   dataset=self._dataset)
-            else:
-                logger.error("Error while updating item")
-                raise exceptions.PlatformException(response)
+            if self._client_api.check_response(success, response, path="/items") is False:
+                return None
+            logger.debug("Item was updated successfully. Item id: {}".format(item.id))
+            return self.items_entity.from_json(client_api=self._client_api,
+                                               _json=response.json(),
+                                               dataset=self._dataset)
         # update by filters
         else:
             # prepare request
@@ -494,11 +476,10 @@ class Items:
             success, response = self._client_api.gen_request(req_type="POST",
                                                              path="/datasets/{}/query".format(self.dataset.id),
                                                              json_req=prepared_filter)
-            if not success:
-                raise exceptions.PlatformException(response)
-            else:
-                logger.debug("Items were updated successfully.")
-                return response.json()
+            if self._client_api.check_response(success, response, path="/datasets") is False:
+                return None
+            logger.debug("Items were updated successfully.")
+            return response.json()
 
     def download(
             self,
@@ -805,13 +786,12 @@ class Items:
                                                          headers=headers,
                                                          path="/datasets/{}/items".format(self._dataset_id),
                                                          data=payload)
-        if success:
-            item = self.items_entity.from_json(client_api=self._client_api,
-                                               _json=response.json(),
-                                               dataset=self._dataset)
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/datasets") is False:
+            return None
 
+        item = self.items_entity.from_json(client_api=self._client_api,
+                                           _json=response.json(),
+                                           dataset=self._dataset)
         return item
 
     def move_items(self,
@@ -871,10 +851,9 @@ class Items:
                                                          path="/datasets/{}/items/{}".format(self._dataset_id,
                                                                                              directory.id),
                                                          json_req=item_ids)
-        if not success:
-            raise exceptions.PlatformException(response)
-
-        return success
+        if self._client_api.check_response(success, response, path="/datasets") is False:
+            return False
+        return True
     
     def task_scores(self, item_id: str, task_id: str, page_offset: int = 0, page_size: int = 100):
         """
@@ -905,8 +884,7 @@ class Items:
         success, response = self._client_api.gen_request(req_type="get",
                                                          path="/scores/tasks/{}/items/{}?page={}&pageSize={}"
                                                          .format(task_id, item_id, page_offset, page_size))
-        if success:
-            return response.json()
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path="/items") is False:
+            return None
+        return response.json()
 

@@ -171,7 +171,7 @@ class Context:
         # objects
         self._service = service
         self._package = package
-        self._project = project
+        self.project = project
         self._task = None
         self._assignment = None
         self._pipeline = None
@@ -192,10 +192,6 @@ class Context:
         assert isinstance(self._package, entities.Package), "Missing `package` in context"
         return self._package
 
-    @property
-    def project(self):
-        assert isinstance(self._project, entities.Project), "Missing `project` in context"
-        return self._project
 
     @property
     def service(self):

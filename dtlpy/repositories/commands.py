@@ -35,8 +35,8 @@ class Commands:
         # request
         success, response = self._client_api.gen_request(req_type='get',
                                                          path=url)
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/commands') is False:
+            return None
 
         commands = miscellaneous.List([entities.Command.from_json(_json=_json,
                                                                   client_api=self._client_api) for _json in
@@ -62,11 +62,9 @@ class Commands:
         success, response = self._client_api.gen_request(req_type="get",
                                                          path=url_path)
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path='/commands') is False:
+            return None
 
-        # return entity
         return entities.Command.from_json(client_api=self._client_api,
                                           _json=response.json())
 
@@ -98,16 +96,18 @@ class Commands:
         pbar = tqdm.tqdm(total=100,
                          disable=self._client_api.verbose.disable_progress_bar_command_progress,
                          file=sys.stdout,
-                         desc='Command Progress')
+                         desc=f'Command {command_id}')
         num_tries = 1
         while elapsed < timeout:
             command = self.get(command_id=command_id, url=url)
+            pbar.set_description(f'Command {command.id} ({command.status})')
+            pbar.update(command.progress - pbar.n)
+
             if command.type == 'ExportDatasetAsJson':
                 self._client_api.callbacks.run_on_event(event=self._client_api.callbacks.CallbackEvent.DATASET_EXPORT,
                                                         context=command.spec,
                                                         progress=command.progress)
 
-            pbar.update(command.progress - pbar.n)
             if not command.in_progress():
                 break
             elapsed = time.time() - start
@@ -144,9 +144,7 @@ class Commands:
         success, response = self._client_api.gen_request(req_type='post',
                                                          path='/commands/{}/abort'.format(command_id))
 
-        # exception handling
-        if not success:
-            raise exceptions.PlatformException(response)
-        else:
-            return entities.Command.from_json(_json=response.json(),
-                                              client_api=self._client_api)
+        if self._client_api.check_response(success, response, path='/commands') is False:
+            return None
+        return entities.Command.from_json(_json=response.json(),
+                                          client_api=self._client_api)

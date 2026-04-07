@@ -33,7 +33,7 @@ class Assignment(entities.BaseEntity):
     _client_api = attr.ib(repr=False)
     _task = attr.ib(default=None, repr=False)
     _assignments = attr.ib(default=None, repr=False)
-    _project = attr.ib(default=None, repr=False)
+    project = attr.ib(default=None, repr=False)
     _dataset = attr.ib(default=None, repr=False)
     _datasets = attr.ib(default=None, repr=False)
 
@@ -43,6 +43,16 @@ class Assignment(entities.BaseEntity):
             if project.id != _json.get('projectId', None):
                 logger.warning('Assignment has been fetched from a project that is not belong to it')
                 project = None
+
+        # Initialize project with minimal JSON if not provided but projectId exists
+        if project is None:
+            project_id = _json.get('projectId', None)
+            if project_id:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
 
         metadata = _json.get('metadata', dict())
         dataset_id = metadata.get('datasetId', None)
@@ -97,25 +107,16 @@ class Assignment(entities.BaseEntity):
     def assignments(self):
         if self._assignments is None:
             self._assignments = repositories.Assignments(client_api=self._client_api,
-                                                         project=self._project,
+                                                         project=self.project,
                                                          task=self._task,
                                                          dataset=self._dataset)
         assert isinstance(self._assignments, repositories.Assignments)
         return self._assignments
 
     @property
-    def project(self):
-        if self._project is None:
-            self._project = repositories.Projects(client_api=self._client_api).get(project_id=self.project_id,
-                                                                                   fetch=None)
-
-        assert isinstance(self._project, entities.Project)
-        return self._project
-
-    @property
     def datasets(self):
         if self._datasets is None:
-            self._datasets = repositories.Datasets(client_api=self._client_api, project=self._project)
+            self._datasets = repositories.Datasets(client_api=self._client_api, project=self.project)
         assert isinstance(self._datasets, repositories.Datasets)
         return self._datasets
 
@@ -141,7 +142,7 @@ class Assignment(entities.BaseEntity):
         :rtype: dict
         """
         _json = attr.asdict(self, filter=attr.filters.exclude(attr.fields(Assignment)._client_api,
-                                                              attr.fields(Assignment)._project,
+                                                              attr.fields(Assignment).project,
                                                               attr.fields(Assignment).project_id,
                                                               attr.fields(Assignment)._assignments,
                                                               attr.fields(Assignment)._dataset,

@@ -45,8 +45,8 @@ class ServiceDrivers:
             json_req=payload
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         service_driver = entities.ServiceDriver.from_json(
             _json=response.json(),
@@ -69,8 +69,8 @@ class ServiceDrivers:
             path=self._base_url + '/{}'.format(service_driver_id)
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         service_driver = entities.ServiceDriver.from_json(
             _json=response.json(),
@@ -92,9 +92,8 @@ class ServiceDrivers:
             path=self._base_url + '/{}'.format(service_driver_id)
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
-
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return False
         return True
 
     def set_default(self, service_driver_id: str, org_id: str, update_existing_services=False):
@@ -119,8 +118,8 @@ class ServiceDrivers:
             }
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url + '/default') is False:
+            return None
 
         service_driver = entities.ServiceDriver.from_json(
             _json=response.json(),
@@ -145,8 +144,8 @@ class ServiceDrivers:
             json_req=service_driver.to_json()
         )
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         service_driver = entities.ServiceDriver.from_json(
             _json=response.json(),
@@ -160,8 +159,8 @@ class ServiceDrivers:
         success, response = self._client_api.gen_request(req_type='POST',
                                                          path=url,
                                                          json_req=filters.prepare())
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=self._base_url) is False:
+            return None
 
         return response.json()
 

@@ -27,34 +27,23 @@ class Tasks:
         project_id: str = None,
     ):
         self._client_api = client_api
-        self._project = project
         self._dataset = dataset
         self._assignments = None
-        self._project_id = project_id
+        # Initialize project - try from dataset first, then from project_id
+        if project is None:
+            if dataset is not None:
+                project = dataset.project
+            elif project_id is not None:
+                project = entities.Project.from_json(
+                    _json={'id': project_id},
+                    client_api=client_api,
+                    is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
+                )
+        self.project = project
 
     ############
     # entities #
     ############
-    @property
-    def project(self) -> entities.Project:
-        if self._project is None and self._project_id is None:
-            if self._dataset is None:
-                raise exceptions.PlatformException(
-                    error="2001",
-                    message='Missing "project". need to set a Project entity or use project.tasks repository',
-                )
-            else:
-                self._project = self._dataset.project
-                self._project_id = self._project.id
-        if self._project is None and self._project_id is not None:
-            self._project = self._client_api.projects.get(project_id=self._project_id)
-        return self._project
-
-    @project.setter
-    def project(self, project: entities.Project):
-        if not isinstance(project, entities.Project):
-            raise ValueError("Must input a valid Project entity")
-        self._project = project
 
     @property
     def dataset(self) -> entities.Dataset:
@@ -74,7 +63,7 @@ class Tasks:
     @property
     def assignments(self) -> repositories.Assignments:
         if self._assignments is None:
-            self._assignments = repositories.Assignments(client_api=self._client_api, project=self._project)
+            self._assignments = repositories.Assignments(client_api=self._client_api, project=self.project)
         assert isinstance(self._assignments, repositories.Assignments)
         return self._assignments
 
@@ -85,7 +74,7 @@ class Tasks:
         for i_task, task in enumerate(response_items):
             jobs[i_task] = pool.submit(
                 entities.Task._protected_from_json,
-                **{"client_api": self._client_api, "_json": task, "project": self._project, "dataset": self._dataset},
+                **{"client_api": self._client_api, "_json": task, "project": self.project, "dataset": self._dataset},
             )
 
         # get all results
@@ -99,11 +88,11 @@ class Tasks:
     def _list(self, filters: entities.Filters):
         url = "{}/query".format(URL_PATH)
         query = filters.prepare()
-        query["context"] = dict(projectIds=[self._project_id])
+        query["context"] = dict(projectIds=[self.project.id if self.project is not None else None])
         success, response = self._client_api.gen_request(req_type="post", path=url, json_req=filters.prepare())
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return None
         return response.json()
 
     def query(self, filters=None, project_ids=None):
@@ -124,8 +113,8 @@ class Tasks:
             dataset.tasks.query(project_ids='project_ids')
         """
         if project_ids is None:
-            if self._project_id is not None:
-                project_ids = self._project_id
+            if self.project is not None:
+                project_ids = self.project.id
             else:
                 project_ids = self.project.id
 
@@ -143,8 +132,8 @@ class Tasks:
         if filters.context is None:
             filters.context = {"projectIds": project_ids}
 
-        if self._project_id is not None:
-            filters.add(field="projectId", values=self._project_id)
+        if self.project is not None:
+            filters.add(field="projectId", values=self.project.id)
 
         if self._dataset is not None:
             filters.add(field="datasetId", values=self._dataset.id)
@@ -154,7 +143,6 @@ class Tasks:
             filters=filters,
             page_offset=filters.page,
             page_size=filters.page_size,
-            project_id=self._project_id,
             client_api=self._client_api,
         )
         paged.get_page()
@@ -216,8 +204,8 @@ class Tasks:
         if project_ids is not None:
             if not isinstance(project_ids, list):
                 project_ids = [project_ids]
-        elif self._project_id is not None:
-            project_ids = [self._project_id]
+        elif self.project is not None:
+            project_ids = [self.project.id]
         else:
             project_ids = [self.project.id]
         filters.context = {"projectIds": project_ids}
@@ -256,18 +244,16 @@ class Tasks:
             filters.add(field="dueDate", values=max_date, operator=entities.FiltersOperations.LESS_THAN)
 
         success, response = self._client_api.gen_request(req_type="post", path=url, json_req=filters.prepare())
-        if success:
-            tasks = miscellaneous.List(
-                [
-                    entities.Task.from_json(
-                        client_api=self._client_api, _json=_json, project=self._project, dataset=self._dataset
-                    )
-                    for _json in response.json()["items"]
-                ]
-            )
-        else:
-            logger.error("Platform error getting annotation task")
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return None
+        tasks = miscellaneous.List(
+            [
+                entities.Task.from_json(
+                    client_api=self._client_api, _json=_json, project=self.project, dataset=self._dataset
+                )
+                for _json in response.json()["items"]
+            ]
+        )
 
         return tasks
 
@@ -296,12 +282,11 @@ class Tasks:
         if task_id is not None:
             url = "{}/{}".format(url, task_id)
             success, response = self._client_api.gen_request(req_type="get", path=url)
-            if not success:
-                raise exceptions.PlatformException(response)
-            else:
-                task = entities.Task.from_json(
-                    _json=response.json(), client_api=self._client_api, project=self._project, dataset=self._dataset
-                )
+            if self._client_api.check_response(success, response, path=URL_PATH) is False:
+                return None
+            task = entities.Task.from_json(
+                _json=response.json(), client_api=self._client_api, project=self.project, dataset=self._dataset
+            )
             # verify input task name is same as the given id
             if task_name is not None and task.name != task_name:
                 logger.warning(
@@ -389,8 +374,8 @@ class Tasks:
         url = f"{url}/{task_id}"
         success, response = self._client_api.gen_request(req_type="delete", path=url, json_req={"asynced": wait})
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return False
         response_json = response.json()
         command = entities.Command.from_json(_json=response_json, client_api=self._client_api)
         if not wait:
@@ -430,12 +415,11 @@ class Tasks:
             )
 
         success, response = self._client_api.gen_request(req_type="patch", path=url, json_req=task.to_json())
-        if success:
-            return entities.Task.from_json(
-                _json=response.json(), client_api=self._client_api, project=self._project, dataset=self._dataset
-            )
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return None
+        return entities.Task.from_json(
+            _json=response.json(), client_api=self._client_api, project=self.project, dataset=self._dataset
+        )
 
     def create_qa_task(self,
                        task: entities.Task,
@@ -929,24 +913,25 @@ class Tasks:
         :rtype: dtlpy.entities.task.Task
         """
         success, response = self._client_api.gen_request(req_type="post", path=URL_PATH, json_req=payload)
-        if success:
-            response_json = response.json()
-            if payload.get("checkIfExist") is not None and "name" in response_json:
-                return entities.Task.from_json(
-                    _json=response.json(), client_api=self._client_api, project=self._project, dataset=self._dataset
-                )
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return None
+        response_json = response.json()
+        if payload.get("checkIfExist") is not None and "name" in response_json:
+            return entities.Task.from_json(
+                _json=response.json(), client_api=self._client_api, project=self.project, dataset=self._dataset
+            )
 
-            command = entities.Command.from_json(_json=response_json, client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
-            if "createTaskPayload" not in command.spec:
-                raise exceptions.PlatformException(
-                    error="400", message="createTaskPayload key is missing in command response: {}".format(response)
-                )
-            task = self.get(task_id=command.spec["createdTaskId"])
-        else:
-            raise exceptions.PlatformException(response)
+        command = entities.Command.from_json(_json=response_json, client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
+        if "createTaskPayload" not in command.spec:
+            raise exceptions.PlatformException(
+                error="400", message="createTaskPayload key is missing in command response: {}".format(response)
+            )
+        task = self.get(task_id=command.spec["createdTaskId"])
+        if task is None:
+            return None
 
         assert isinstance(task, entities.Task)
         return task
@@ -1070,8 +1055,8 @@ class Tasks:
             recipe_id = dataset.get_recipe_ids()[0]
 
         if project_id is None:
-            if self._project_id is not None:
-                project_id = self._project_id
+            if self.project is not None:
+                project_id = self.project.id
             else:
                 project_id = self.project.id
 
@@ -1262,22 +1247,23 @@ class Tasks:
 
         success, response = self._client_api.gen_request(req_type="post", path=url, json_req=payload)
 
-        if success:
-            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
-            if not wait:
-                return command
-            backoff_factor = 2
-            if command.type == "BulkAddToTaskSetting":
-                backoff_factor = 8
-            command = command.wait(timeout=0, backoff_factor=backoff_factor)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return None
+        command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
+        if not wait:
+            return command
+        backoff_factor = 2
+        if command.type == "BulkAddToTaskSetting":
+            backoff_factor = 8
+        command = command.wait(timeout=0, backoff_factor=backoff_factor)
+        if task is None:
+            task = self.get(task_id=task_id)
             if task is None:
-                task = self.get(task_id=task_id)
-            if "addToTaskPayload" not in command.spec:
-                raise exceptions.PlatformException(
-                    error="400", message="addToTaskPayload key is missing in command response: {}".format(response)
-                )
-        else:
-            raise exceptions.PlatformException(response)
+                return None
+        if "addToTaskPayload" not in command.spec:
+            raise exceptions.PlatformException(
+                error="400", message="addToTaskPayload key is missing in command response: {}".format(response)
+            )
 
         assert isinstance(task, entities.Task)
         return task
@@ -1341,18 +1327,17 @@ class Tasks:
 
         success, response = self._client_api.gen_request(req_type="post", path=url, json_req=payload)
 
-        if success:
-            command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
-            if not wait:
-                return command
-            command = command.wait(timeout=0)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return False
+        command = entities.Command.from_json(_json=response.json(), client_api=self._client_api)
+        if not wait:
+            return command
+        command = command.wait(timeout=0)
 
-            if "removeFromTaskId" not in command.spec:
-                raise exceptions.PlatformException(
-                    error="400", message="removeFromTaskId key is missing in command response: {}".format(response)
-                )
-        else:
-            raise exceptions.PlatformException(response)
+        if "removeFromTaskId" not in command.spec:
+            raise exceptions.PlatformException(
+                error="400", message="removeFromTaskId key is missing in command response: {}".format(response)
+            )
         return True
 
     def get_items(
@@ -1442,8 +1427,8 @@ class Tasks:
 
         success, response = self._client_api.gen_request(req_type="post", path=url, json_req=payload)
 
-        if not success:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return False
         if response.json() is not None:
             updated_items = set(response.json().keys())
             log_msg = "Items status was updated successfully."
@@ -1478,7 +1463,6 @@ class Tasks:
         )
         success, response = self._client_api.gen_request(req_type="get", path=url)
 
-        if success:
-            return response.json()
-        else:
-            raise exceptions.PlatformException(response)
+        if self._client_api.check_response(success, response, path=URL_PATH) is False:
+            return None
+        return response.json()
