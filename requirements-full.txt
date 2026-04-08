@@ -24,7 +24,7 @@ urllib3>=1.26
 # extra requirements
 google-cloud-storage
 google-cloud-core
-protobuf>=3.17.3
+protobuf>=6.33.5
 opencv-python
 torch>=1.8
 torchvision>0.9
