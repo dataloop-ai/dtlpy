@@ -1824,7 +1824,12 @@ class ApiClient:
         renewed = False
         try:
             proxy_port = os.environ.get('AGENT_PROXY_MAIN_PORT') or "1001"
-            resp = requests.get('http://localhost:{port}/get_jwt'.format(port=proxy_port))
+            secret = os.environ.get('GET_JWT_ENDPOINT_SECRET')
+            headers = {'X-Get-Jwt-Secret': secret} if secret else None
+            resp = requests.get(
+                'http://localhost:{port}/get_jwt'.format(port=proxy_port),
+                headers=headers,
+            )
             if resp.ok:
                 self.token = resp.json()['jwt']
                 renewed = True
