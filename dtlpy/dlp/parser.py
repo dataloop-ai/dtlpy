@@ -129,7 +129,7 @@ def get_parser():
                           help="Local port for the docker connection, default: 5802")
     optional.add_argument("-d", "--docker-image",
                           default=None,
-                          help="Docker image to create. default: 'dataloopai/dtlpy-agent:1.57.3.gpu.cuda11.5.py3.8.opencv'")
+                          help="Docker image to create. default: 'dataloopai/dtlpy-agent:gpu.cuda.11.8.py3.10.opencv'")
     # pause
     _ = local_subparser_subparser.add_parser(name="pause", help="Pause the local development session (container pause)")
     # stop

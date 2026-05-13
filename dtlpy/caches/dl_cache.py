@@ -2,7 +2,7 @@ import json
 import sqlite3
 import re
 
-from diskcache import Cache
+from diskcache import Cache, JSONDisk
 import os
 from .base_cache import BaseCache
 
@@ -17,7 +17,7 @@ class DiskCache(BaseCache):
         self.cache_dir = options.get(
             "cachePath", os.path.join(self.dataloop_path, "cache", name)
         )
-        self.cache = Cache(directory=self.cache_dir)
+        self.cache = Cache(directory=self.cache_dir, disk=JSONDisk)
         self.cache.stats(enable=enable_stats)
 
         self.conn = sqlite3.connect(os.path.join(self.cache_dir, 'cache.db'), check_same_thread=False)
@@ -37,7 +37,7 @@ class DiskCache(BaseCache):
         """
         if not isinstance(key, str) and not isinstance(key, int):
             raise ValueError("key must be string or int")
-        with Cache(self.cache.directory) as reference:
+        with Cache(self.cache.directory, disk=JSONDisk) as reference:
             reference.set(key=key, value=value, expire=self.ttl)
 
     def _key_fix(self, key):

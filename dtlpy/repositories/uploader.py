@@ -317,6 +317,10 @@ class Uploader:
             elif isinstance(upload_item_element, entities.PromptItem):
                 upload_elem = upload_element.PromptUploadElement(all_upload_elements=all_upload_elements)
 
+            elif isinstance(upload_item_element, entities.LLMTrace):
+                all_upload_elements['upload_item_element'] = upload_item_element.to_bytes_io()
+                upload_elem = upload_element.BinaryUploadElement(all_upload_elements=all_upload_elements)
+
             elif isinstance(upload_item_element, entities.ItemGis):
                 buffer = io.BytesIO(json.dumps(upload_item_element.to_json()).encode('utf-8'))
                 buffer.name = upload_item_element.name

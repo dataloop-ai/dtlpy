@@ -67,6 +67,16 @@ class DlEntity(object):
     _id_param = None  # Parameter name for entity ID in repository.get() (e.g., 'project_id', 'dataset_id')
     _client_api = None  # ApiClient instance (set via __init__ kwargs)
 
+    @classmethod
+    def _split_kwargs(cls, data_dict, kwargs):
+        """Move free-form kwargs into data_dict; DlProperty keys and is_fetched are kept for DlEntity.__init__."""
+        if data_dict is None:
+            data_dict = dict()
+        for key in list(kwargs):
+            if key != 'is_fetched' and not isinstance(getattr(cls, key, None), DlProperty):
+                data_dict.setdefault(key, kwargs.pop(key))
+        return data_dict
+
     def __init__(self, _dict=None, **kwargs):
         # using dict by reference and not creating a new one each time
         if _dict is None:

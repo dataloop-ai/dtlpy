@@ -33,12 +33,11 @@ def spinning_cursor():
 
 
 def copy_files_to_docker_container():
-    from distutils.dir_util import copy_tree
     local_state_directory = os.path.dirname(dl.client_api.state_io.COOKIE)
     root_dir = os.path.dirname(local_state_directory)
     dtlpy_code_server_dir = os.path.join(dl.__path__[0], 'assets', 'code_server')
     local_code_server_dir = os.path.join(local_state_directory, 'code_server')
-    copy_tree(src=dtlpy_code_server_dir, dst=local_code_server_dir)
+    shutil.copytree(src=dtlpy_code_server_dir, dst=local_code_server_dir, dirs_exist_ok=True)
     if not os.path.isdir(os.path.join(root_dir, '.vscode')):
         os.makedirs(os.path.join(root_dir, '.vscode'))
         shutil.copy(src=os.path.join(dl.__path__[0], 'assets', 'code_server', 'launch.json'),

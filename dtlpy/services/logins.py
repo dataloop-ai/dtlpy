@@ -31,14 +31,17 @@ def login_secret(api_client, email, password, client_id, client_secret=None, for
     """
     # TODO add deprecation warning to client_id
     # check if already logged in with SAME email
-    if api_client.token is not None or api_client.token == '':
-        logged_email = api_client.info()['user_email']
-        if logged_email == email and \
-            not api_client.token_expired() and \
-            not force:
-            return True
+    if api_client.token is not None and api_client.token != '':
+        logged_email = api_client.info().get('user_email')
+        if logged_email == email and not api_client.token_expired() and not force:
+            # token looks valid locally — verify server-side (JWT may be revoked)
+            success, response = api_client.gen_request(req_type='get', path='/users/me')
+            if success:
+                return True
+            logger.debug('Token invalid server-side, proceeding to login')
         else:
-            logger.debug('{}'.format('Cant decode token. Force login is used'))
+            logger.debug('Re-login needed (email_match=%s, expired=%s, force=%s)',
+                         logged_email == email, api_client.token_expired(), force)
 
     logger.info('[Start] Login Secret')
     env_params = api_client.environments[api_client.environment]

@@ -245,7 +245,7 @@ class Executions:
                                           kwargs={'execution_id': execution.id,
                                                   'follow': True,
                                                   'until_completed': True})
-                thread.setDaemon(True)
+                thread.daemon = True
                 thread.start()
             execution = self.get(execution_id=execution.id,
                                  sync=True)

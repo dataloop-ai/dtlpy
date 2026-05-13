@@ -91,7 +91,7 @@ class NodePool(entities.DlEntity):
     dl_types: List[str] = entities.DlProperty(location=['dlTypes'], _type=list)
     tolerations: List[Toleration] = entities.DlProperty(location=['tolerations'], _kls='Toleration', default=[])
     description: str = entities.DlProperty(location=['description'], _type=str, default='')
-    node_selector: str = entities.DlProperty(location=['nodeSelector'], _type=str, default='')
+    node_selector: dict = entities.DlProperty(location=['nodeSelector'], _type=dict, default={})
     preemptible: bool = entities.DlProperty(location=['preemptible'], _type=bool, default=False)
     deployment_resources: DeploymentResources = entities.DlProperty(location=['deploymentResources'], _kls='DeploymentResources')
 

@@ -38,7 +38,7 @@ class Dtlpy:
         Webhook, HttpMethod,
         ViewAnnotationOptions, AnnotationStatus, AnnotationType,
         ItemStatus, ExecutionStatus, ExportMetadata,
-        PromptItem, Prompt, PromptType, ItemGis, Layer,
+        PromptItem, Prompt, PromptType, LLMTrace, LLMMessage, LLMContext, ItemGis, Layer,
         ItemLink, UrlLink, LinkTypeEnum,
         Modality, ModalityTypeEnum, ModalityRefTypeEnum,
         Workload, WorkloadUnit, ItemAction,

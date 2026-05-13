@@ -129,7 +129,7 @@ class CommandExecutor:
                 if 'port' not in development:
                     development['port'] = 5802
                 if 'docker_image' not in development:
-                    development['docker_image'] = 'dataloopai/dtlpy-agent:1.57.3.gpu.cuda11.5.py3.8.opencv'
+                    development['docker_image'] = 'dataloopai/dtlpy-agent:gpu.cuda.11.8.py3.10.opencv'
 
                 # get values from input
                 if args.docker_image is not None:
