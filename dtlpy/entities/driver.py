@@ -34,6 +34,7 @@ class ExternalStorage(str, Enum):
     POWERSCALE_S3 = 'powerscaleS3'
     MIN_IO = 's3'
     POWERSCALE_NFS = 'powerscaleNfs'
+    COMPUTE_CLUSTER = 'computeCluster'
 
 
 @attr.s()
@@ -233,4 +234,37 @@ class S3Driver(Driver):
         inst.bucket_name = _json.get('bucketName', None)
         inst.region = _json.get('region', None)
         inst.storage_class = _json.get('storageClass', None)
+        return inst
+
+
+@attr.s()
+class ComputeClusterDriver(Driver):
+    compute_id = attr.ib(default=None)
+    compute_storage_name = attr.ib(default=None)
+    public = attr.ib(default=False)
+
+    def to_json(self):
+        _json = super().to_json()
+        _json['payload'] = {
+            'computeId': self.compute_id,
+            'computeStorageName': self.compute_storage_name,
+            'public': self.public,
+        }
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build a ComputeClusterDriver entity from a JSON response.
+
+        :param _json: JSON response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: ComputeClusterDriver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=True)
+        payload = _json.get('payload', {})
+        inst.compute_id = payload.get('computeId', None)
+        inst.compute_storage_name = payload.get('computeStorageName', None)
+        inst.public = payload.get('public', False)
         return inst

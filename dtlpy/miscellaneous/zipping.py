@@ -41,7 +41,7 @@ class Zipping:
         ignore_lines = spec_src.splitlines() + ['.git', '.dataloop']
         if ignore_directories is not None:
             ignore_lines += ignore_directories
-        spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
+        spec = pathspec.PathSpec.from_lines('gitignore', ignore_lines)
 
         # init zip file
         zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)
@@ -83,7 +83,7 @@ class Zipping:
         else:
             spec_src = ''
         ignore_lines = spec_src.splitlines() + ['.git', '.dataloop']
-        spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, ignore_lines)
+        spec = pathspec.PathSpec.from_lines('gitignore', ignore_lines)
 
         # init zip file
         zip_file = zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED)

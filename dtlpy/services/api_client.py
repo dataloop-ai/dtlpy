@@ -713,7 +713,6 @@ class ApiClient:
     def __del__(self):
         for name, pool in self._thread_pools.items():
             pool.shutdown()
-        self.event_loop.stop()
 
     def _build_request_headers(self, headers=None):
         if headers is None:

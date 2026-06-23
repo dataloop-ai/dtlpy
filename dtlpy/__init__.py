@@ -101,7 +101,7 @@ from .entities import (
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption, Variable, CompositionStatus,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
-    Driver, S3Driver, GcsDriver, AzureBlobDriver, CacheAction, PodType,
+    Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, CacheAction, PodType,
     ExternalStorage, IntegrationType, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
     SettingScope, BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample,
     ResourceExecution, Message, NotificationEventContext,

@@ -47,7 +47,7 @@ class Drivers:
             return None
 
         _json = response.json()
-        driver = self._getDriverClass(_json).from_json(client_api=self._client_api, _json=_json)
+        driver = self._get_driver_class(_json).from_json(client_api=self._client_api, _json=_json)
         return driver
 
     @_api_reference.add(path="/drivers", method="get")
@@ -75,18 +75,18 @@ class Drivers:
             return None
         drivers = miscellaneous.List(
             [
-                self._getDriverClass(_json).from_json(_json=_json, client_api=self._client_api)
+                self._get_driver_class(_json).from_json(_json=_json, client_api=self._client_api)
                 for _json in response.json()
             ]
         )
         return drivers
 
-    def _getDriverClass(self, _json):
+    def _get_driver_class(self, _json):
         """
         Determine the appropriate driver class based on the driver type in the JSON response.
 
         :param dict _json: The JSON response containing driver information
-        :return: The appropriate driver class (S3Driver, GcsDriver, AzureBlobDriver, or Driver)
+        :return: The appropriate driver class (S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, or Driver)
         :rtype: type
         """
         driver_type = _json.get("type", None)
@@ -96,6 +96,8 @@ class Drivers:
             driver_class = entities.GcsDriver
         elif driver_type in [entities.ExternalStorage.AZUREBLOB, entities.ExternalStorage.AZURE_DATALAKE_GEN2]:
             driver_class = entities.AzureBlobDriver
+        elif driver_type == entities.ExternalStorage.COMPUTE_CLUSTER:
+            driver_class = entities.ComputeClusterDriver
         else:
             driver_class = entities.Driver
         return driver_class
@@ -156,7 +158,7 @@ class Drivers:
         if self._client_api.check_response(success, response, path="/drivers") is False:
             return None
         _json = response.json()
-        return self._getDriverClass(_json).from_json(_json=_json, client_api=self._client_api)
+        return self._get_driver_class(_json).from_json(_json=_json, client_api=self._client_api)
 
     def create_powerscale_s3(
         self,
@@ -421,7 +423,7 @@ class Drivers:
 
         return self._create_driver(payload)
 
-    def create_network_storage(
+    def create_compute_cluster(
         self,
         name: str,
         compute_id: str,
@@ -432,7 +434,7 @@ class Drivers:
         org_id: str = None
     ):
         """
-        Create a hybrid (network storage) driver linking compute storage to a project.
+        Create a Compute Cluster driver linking compute storage to a project.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
@@ -443,15 +445,15 @@ class Drivers:
         :param str project_id: project id. If not provided, uses the current project
         :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
         :param str org_id: optional organization ID. If not provided, uses the project's organization
-        :return: driver object
-        :rtype: dtlpy.entities.driver.Driver
+        :return: ComputeClusterDriver object
+        :rtype: dtlpy.entities.driver.ComputeClusterDriver
 
         **Example**:
 
         .. code-block:: python
 
-            project.drivers.create_network_storage(
-                name='my-hybrid-driver',
+            project.drivers.create_compute_cluster(
+                name='my-compute-cluster-driver',
                 compute_id='684c0a5d3cb7280017576fba',
                 compute_storage_name='s3driver',
                 public=False
@@ -460,7 +462,7 @@ class Drivers:
         payload = {
             "name": name,
             "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
-            "type": "hybrid",
+            "type": entities.ExternalStorage.COMPUTE_CLUSTER,
             "payload": {
                 "computeId": compute_id,
                 "computeStorageName": compute_storage_name,

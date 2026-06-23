@@ -10,10 +10,11 @@ class BaseSample:
                  end_time,
                  project_id,
                  org_id,
-                 pipeline_id,
+                 pipeline_id,       
                  event_type,
                  action,
                  status,
+                 entity_type= None,
                  other_keys: dict = None
                  ):
         self.start_time = start_time
@@ -21,6 +22,7 @@ class BaseSample:
         self.project_id = project_id
         self.org_id = org_id
         self.pipeline_id = pipeline_id
+        self.entity_type = entity_type
         self.event_type = event_type
         self.action = action
         self.status = status
@@ -41,6 +43,9 @@ class BaseSample:
                 'status': self.status
             }
         }
+        if self.entity_type is not None:
+            _json['entityType'] = self.entity_type
+
         if self.other_keys is not None:
             if 'context' in self.other_keys:
                 _json['context'].update(self.other_keys['context'])
@@ -63,8 +68,8 @@ class ServiceSample(BaseSample):
                  service_id=None,
                  pod_id=None,
                  pod_type=None,
-                 event_type=None,
-                 entity_type=None,
+                 event_type='service',
+                 entity_type='service',
                  action=None,
                  status=None,
                  num_restarts=None,
@@ -91,6 +96,7 @@ class ServiceSample(BaseSample):
             project_id=project_id,
             org_id=org_id,
             pipeline_id=pipeline_id,
+            entity_type=entity_type,
             event_type=event_type,
             action=action,
             status=status,
@@ -101,7 +107,6 @@ class ServiceSample(BaseSample):
         self.service_id = service_id
         self.pod_id = pod_id
         self.pod_type = pod_type
-        self.entity_type = entity_type
         self.num_restarts = num_restarts
         self.cpu = cpu
         self.ram = ram
@@ -146,9 +151,6 @@ class ServiceSample(BaseSample):
             'gpuMemory': self.gpu_memory,
             'gpuMemoryLimit': self.gpu_memory_limit
         })
-        _json.update({
-            'entityType': self.entity_type
-        })
         _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
         _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}
         return {k: v for k, v in _json.items() if v is not None}
@@ -167,7 +169,7 @@ class ServiceSample(BaseSample):
             pod_id=_json.get('context', {}).get('podId', None),
             pod_type=_json.get('context', {}).get('podType', None),
             event_type=_json.get('eventType', None),
-            entity_type=_json.get('EntityType', None),
+            entity_type=_json.get('entityType', None),
             action=_json.get('action', None),
             status=_json.get('data', {}).get('status', None),
             num_restarts=_json.get('data', {}).get('numRestarts', None),
@@ -197,7 +199,8 @@ class ExecutionSample(BaseSample):
                  project_id=None,
                  org_id=None,
                  pipeline_id=None,
-                 event_type=None,
+                 event_type='execution',
+                 entity_type='execution',
                  action=None,
                  status=None,
                  user_id=None,
@@ -219,6 +222,7 @@ class ExecutionSample(BaseSample):
             org_id=org_id,
             pipeline_id=pipeline_id,
             event_type=event_type,
+            entity_type=entity_type,
             action=action,
             status=status,
             other_keys=other_keys
@@ -269,6 +273,7 @@ class ExecutionSample(BaseSample):
             execution_id=_json.get('context', {}).get('pipelineExecutionId', None),
             trigger_id=_json.get('context', {}).get('triggerId', None),
             event_type=_json.get('eventType', None),
+            entity_type=_json.get('entityType', None),
             action=_json.get('action', None),
             status=_json.get('data', {}).get('status', None),
             function_name=_json.get('data', {}).get('functionName', None),
@@ -285,7 +290,8 @@ class PipelineExecutionSample(BaseSample):
                  project_id=None,
                  org_id=None,
                  pipeline_id=None,
-                 event_type=None,
+                 event_type='pipeline_execution',
+                 entity_type='pipeline_execution',
                  action=None,
                  status=None,
                  account_id=None,
@@ -302,6 +308,7 @@ class PipelineExecutionSample(BaseSample):
             org_id=org_id,
             pipeline_id=pipeline_id,
             event_type=event_type,
+            entity_type=entity_type,
             action=action,
             status=status,
             other_keys=other_keys
@@ -339,6 +346,7 @@ class PipelineExecutionSample(BaseSample):
             pipeline_execution_id=_json.get('context', {}).get('pipelineExecutionId', None),
             trigger_id=_json.get('context', {}).get('triggerId', None),
             event_type=_json.get('eventType', None),
+            entity_type=_json.get('entityType', None),
             action=_json.get('action', None),
             status=_json.get('data', {}).get('status', None),
             pipeline_node_id=_json.get('data', {}).get('pipelineNodeId', None),

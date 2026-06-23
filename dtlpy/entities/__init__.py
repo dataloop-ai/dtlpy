@@ -54,7 +54,7 @@ from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model, DatasetSubsetType, PlotSample, ModelStatus
-from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver
+from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver
 from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings, Variable, CompositionStatus
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
@@ -64,7 +64,7 @@ from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
 from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample
 from .integration import Integration, IntegrationType
-from .driver import Driver, ExternalStorage
+from .driver import Driver, ExternalStorage, ComputeClusterDriver
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, UserSetting, Setting
 from .reflect_dict import ReflectDict
