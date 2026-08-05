@@ -1793,6 +1793,8 @@ class FrameAnnotation(entities.BaseEntity):
             annotation = entities.Pose.from_json(_json)
         elif _json['type'] == 'gis':
             annotation = entities.Gis.from_json(_json)
+        elif _json['type'] == 'text':
+            annotation = entities.FreeText.from_json(_json)
         else:
             annotation = entities.UndefinedAnnotationType.from_json(_json)
         return annotation

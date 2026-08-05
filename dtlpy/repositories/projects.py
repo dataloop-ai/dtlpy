@@ -304,6 +304,43 @@ class Projects:
         return members
 
     @_api_reference.add(path='/projects', method='get')
+    def get_system_project(self, org_id: str = None) -> entities.Project:
+        """
+        Get the system project for an organization.
+
+        The system project is a special project created automatically for each
+        organization, identified by ``project.systemProject == True``.
+        Org-scoped apps and services are installed in this project.
+
+        :param str org_id: optional - the org id. If omitted, uses the first
+            project's org when listing all projects.
+        :return: The system project for the organization.
+        :rtype: entities.Project
+
+        **Example**:
+
+        .. code-block:: python
+
+            system_project = dl.projects.get_system_project(org_id='org_id')
+        """
+        if org_id is not None:
+            url_path = '/orgs/{}/projects'.format(org_id)
+        else:
+            url_path = '/projects'
+        success, response = self._client_api.gen_request(req_type='get', path=url_path)
+        if self._client_api.check_response(success, response, path=url_path) is False:
+            raise exceptions.PlatformException(error='404',
+                                               message='System project not found for org_id: {}'.format(org_id))
+        projects_json = response.json()
+        for project_json in projects_json:
+            if project_json.get('systemProject', False) is True:
+                return entities.Project.from_json(_json=project_json, client_api=self._client_api)
+        raise exceptions.PlatformException(
+            error='404',
+            message='System project not found for org_id: {}. '
+                    'Ensure the org has a system project (systemProject=true).'.format(org_id)
+        )
+
     def list(self) -> miscellaneous.List[entities.Project]:
         """
         Get the user's project list

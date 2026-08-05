@@ -44,7 +44,7 @@ from .package_slot import PackageSlot, SlotPostAction, SlotPostActionType, SlotD
     UiBindingPanel
 from .package_function import PackageFunction, FunctionIO, PackageInputType
 from .service import Service, KubernetesAutoscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRPSAutoscaler, \
-    InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType, DynamicConcurrencyUpdateMethod
+    InstanceCatalog, KubernetesRuntime, ServiceType, ServiceModeType, DynamicConcurrencyUpdateMethod, ServiceScope
 from .execution import Execution, ExecutionStatus
 from .command import Command, CommandsStatus
 from .assignment import Assignment, Workload, WorkloadUnit
@@ -54,7 +54,7 @@ from .user import User
 from .bot import Bot
 from .webhook import Webhook, HttpMethod
 from .model import Model, DatasetSubsetType, PlotSample, ModelStatus
-from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver
+from .driver import Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, NfsDriver, HostPathDriver
 from .pipeline import Pipeline, PipelineStats, PipelineResumeOption, PipelineSettings, Variable, CompositionStatus
 from .node import PipelineConnection, PipelineNode, PipelineConnectionPort, PipelineNodeIO, TaskNode, \
     CodeNode, FunctionNode, PipelineNodeType, PipelineNameSpace, DatasetNode
@@ -63,7 +63,7 @@ from .feature import Feature
 from .feature_set import FeatureSet, FeatureEntityType
 from .organization import Organization, OrganizationsPlans, MemberOrgRole, CacheAction, PodType
 from .analytic import ServiceSample, ExecutionSample, PipelineExecutionSample
-from .integration import Integration, IntegrationType
+from .integration import Integration, IntegrationType, IntegrationProvider, IntegrationAuthMethod, HostPathType
 from .driver import Driver, ExternalStorage, ComputeClusterDriver
 from .setting import Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames, SettingScope, \
     BaseSetting, UserSetting, Setting

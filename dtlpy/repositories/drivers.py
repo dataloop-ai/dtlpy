@@ -98,6 +98,8 @@ class Drivers:
             driver_class = entities.AzureBlobDriver
         elif driver_type == entities.ExternalStorage.COMPUTE_CLUSTER:
             driver_class = entities.ComputeClusterDriver
+        elif driver_type == entities.ExternalStorage.STORAGE:
+            driver_class = entities.Driver
         else:
             driver_class = entities.Driver
         return driver_class
@@ -159,195 +161,6 @@ class Drivers:
             return None
         _json = response.json()
         return self._get_driver_class(_json).from_json(_json=_json, client_api=self._client_api)
-
-    def create_powerscale_s3(
-        self,
-        name: str,
-        integration: entities.Integration,
-        elastic_index: str,
-        endpoint: str,
-        bucket_name: str,
-        region: str,
-        elastic_index_path: str,
-        path: str = None,
-        project_id: str = None,
-        allow_external_delete: bool = False
-    ):
-        """
-        Create a PowerScale S3 driver.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*.
-
-        :param str name: The driver name
-        :param Integration integration: The S3 integration to use
-        :param str elastic_index: The elastic index for PowerScale S3 driver
-        :param str project_id: Optional project ID. If not provided, uses the current project
-        :param bool allow_external_delete: True to allow deleting files from external storage when files are deleted in your Dataloop storage
-        :param str endpoint: The endpoint URL. Must be in the format 'http://<hostname>:<port>' or 'https://<hostname>:<port>'
-        :param str bucket_name: The external bucket name
-        :param str region: The bucket region (relevant for S3)
-        :param str elastic_index_path: The elastic index path for PowerScale S3 driver
-        :param str path: The path to the NFS driver
-        :return: The created PowerScale S3 driver object
-        :rtype: dtlpy.entities.driver.Driver
-        :raises ValueError: If the integration type is not S3
-        :raises PlatformException: If the driver creation fails
-
-        **Example**:
-
-        .. code-block:: python
-
-            project.drivers.create_powerscale_s3(
-                name='powerscale_driver',
-                integration=integration,
-                elastic_index='my_index',
-                elastic_index_path='my_index_path',
-                endpoint='http://location:8765',
-                bucket_name='my_bucket',
-                region='us-west-1',
-                path='my_path'
-            )
-        """
-        if not integration.type == entities.IntegrationType.S3:
-            raise ValueError("Integration type must be S3 for PowerScale S3 driver")
-
-        payload = {
-            "integrationId": integration.id,
-            "integrationType": integration.type,
-            "name": name,
-            "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
-            "type": entities.ExternalStorage.POWERSCALE_S3,
-            "payload": {
-                "elasticIndex": elastic_index, 
-                "endpoint": endpoint,
-                "path": path,
-                "elasticIndexPath": elastic_index_path,
-                "bucketName": bucket_name,
-                "region": region
-            },
-            "allowExternalDelete": allow_external_delete,
-            "creator": self._client_api.info().get("user_email"),
-        }
-        return self._create_driver(payload)
-
-
-    def create_powerscale_nfs(
-        self,
-        name: str,
-        elastic_index: str,
-        elastic_index_path: str,
-        integration: entities.Integration = None,
-        project_id: str = None,
-        allow_external_delete: bool = False
-    ):
-        """
-        Create a PowerScale NFS driver.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*.
-
-        :param str name: The driver name
-        :param str elastic_index: The elastic index for PowerScale NFS driver
-        :param Integration integration (optional): The S3 integration to use. If not provided, integration id will be 'system'
-        :param str project_id: Optional project ID. If not provided, uses the current project
-        :param bool allow_external_delete: True to allow deleting files from external storage when files are deleted in your Dataloop storage
-        :param str elastic_index_path: The elastic index path for PowerScale NFS driver
-        :return: The created PowerScale NFS driver object
-        :rtype: dtlpy.entities.driver.Driver
-        :raises PlatformException: If the driver creation fails
-
-        **Example**:
-
-        .. code-block:: python
-
-            project.drivers.create_powerscale_nfs(
-                name='powerscale_driver',
-                elastic_index='my_index',
-                elastic_index_path='my_index_path',
-            )
-        """
-
-        integration_id = 'system'
-        integration_type = None
-        if integration is not None:
-            if not integration.type == entities.IntegrationType.S3:
-                raise ValueError("Integration type must be S3 for PowerScale NFS driver")
-            integration_id = integration.id
-            integration_type = integration.type
-
-        payload = {
-            "integrationId": integration_id,
-            "integrationType": integration_type,
-            "name": name,
-            "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
-            "type": entities.ExternalStorage.POWERSCALE_NFS,
-            "payload": {"elasticIndex": elastic_index, "elasticIndexPath": elastic_index_path},
-            "allowExternalDelete": allow_external_delete,
-            "creator": self._client_api.info().get("user_email"),
-        }
-        return self._create_driver(payload)
-
-    def create_min_io(
-        self,
-        name: str,
-        integration: entities.Integration,
-        bucket_name: str,
-        endpoint: str,
-        project_id: str = None,
-        allow_external_delete: bool = True,
-        region: str = None,
-        storage_class: str = "",
-        path: str = "",
-    ):
-        """
-        Create a MinIO driver.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*.
-
-        :param str name: The driver name
-        :param Integration integration: The S3 integration to use
-        :param str bucket_name: The external bucket name
-        :param str endpoint: The MinIO endpoint URL. Must be in the format 'http://<hostname>:<port>' or 'https://<hostname>:<port>'
-        :param str project_id: Optional project ID. If not provided, uses the current project
-        :param bool allow_external_delete: True to allow deleting files from external storage when files are deleted in your Dataloop storage
-        :param str region: The bucket region (relevant for S3)
-        :param str storage_class: The storage class (relevant for S3)
-        :param str path: Optional path. By default path is the root folder. Path is case sensitive
-        :return: The created MinIO driver object
-        :rtype: dtlpy.entities.driver.Driver
-        :raises ValueError: If the integration type is not S3 or if the endpoint URL format is invalid
-        :raises PlatformException: If the driver creation fails
-
-        **Example**:
-
-        .. code-block:: python
-
-            project.drivers.create_min_io(
-                name='minio_driver',
-                integration=integration,
-                bucket_name='my_bucket',
-                endpoint='http://localhost:9000'
-            )
-        """
-        if not integration.type == entities.IntegrationType.S3:
-            raise ValueError("Integration type must be S3 for Minio driver")
-        
-        if not re.match(r"^https?://[A-Za-z0-9.-]+:\d+$", endpoint):
-            raise ValueError(
-                f"Invalid endpoint URL '{endpoint}'. Must be 'http://<hostname>:<port>' or 'https://<hostname>:<port>'."
-            )
-        
-        payload = {
-            "integrationId": integration.id,
-            "integrationType": integration.type,
-            "name": name,
-            "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
-            "type": entities.ExternalStorage.MIN_IO,
-            "payload": {"bucketName": bucket_name, "storageClass": storage_class, "region": region, "path": path, "endpoint": endpoint},
-            "allowExternalDelete": allow_external_delete,
-            "creator": self._client_api.info().get("user_email"),
-        }
-
-        return self._create_driver(payload)
 
     def create(
         self,
@@ -423,60 +236,100 @@ class Drivers:
 
         return self._create_driver(payload)
 
-    def create_compute_cluster(
+
+    def create_storage_driver(
         self,
         name: str,
-        compute_id: str,
-        compute_storage_name: str,
-        public: bool = False,
-        project_id: str = None,
+        integration: entities.Integration,
+        bucket_name: str = None,
+        directory: str = None,
+        path: str = None,
         allow_external_delete: bool = True,
-        org_id: str = None
-    ):
+        project_id: str = None,
+        elastic_index: str = None,
+        elastic_index_path: str = None,
+    ) -> entities.Driver:
         """
-        Create a Compute Cluster driver linking compute storage to a project.
+        Create a storage driver for NFS, hostPath, or S3-compatible API integrations.
+
+        The driver type is determined automatically from the integration type:
+
+        - **NFS / hostPath**: use ``directory`` for the subdirectory within the mount.
+        - **S3-compatible API**: use ``bucket_name`` (required) and optionally ``path`` for prefix.
+        - **Dell PowerScale**: pass ``elastic_index`` and ``elastic_index_path`` for Elastifile-backed volumes.
+
+        The compute cluster association and endpoint/region (for S3) are resolved automatically by the backend.
 
         **Prerequisites**: You must be in the role of an *owner* or *developer*.
 
-        :param str name: the driver name
-        :param str compute_id: the compute ID to link
-        :param str compute_storage_name: the storage name configured on the compute
-        :param bool public: whether the driver is public (default: False)
-        :param str project_id: project id. If not provided, uses the current project
-        :param bool allow_external_delete: true to allow deleting files from external storage when files are deleted in your Dataloop storage
-        :param str org_id: optional organization ID. If not provided, uses the project's organization
-        :return: ComputeClusterDriver object
-        :rtype: dtlpy.entities.driver.ComputeClusterDriver
+        :param str name: driver name
+        :param Integration integration: storage integration (type must be NFS, hostPath, or S3)
+        :param str bucket_name: bucket name (required for S3-compatible API integrations)
+        :param str directory: optional - subdirectory within the NFS share or hostPath volume. Leading slash is enforced.
+        :param str path: optional - path prefix within an S3 bucket (e.g. 'datasets/project1')
+        :param bool allow_external_delete: True to allow deleting files from external storage (default: True)
+        :param str project_id: optional - project ID. If not provided, uses the current project
+        :param str elastic_index: optional - Elastifile index name (Dell PowerScale only)
+        :param str elastic_index_path: optional - Elastifile index path (Dell PowerScale only)
+        :return: Driver object
+        :rtype: dtlpy.entities.driver.Driver
+        :raises ValueError: If the integration type is not supported or required params are missing
 
         **Example**:
 
         .. code-block:: python
 
-            project.drivers.create_compute_cluster(
-                name='my-compute-cluster-driver',
-                compute_id='684c0a5d3cb7280017576fba',
-                compute_storage_name='s3driver',
-                public=False
+            # NFS driver
+            nfs_integration = project.integrations.create_nfs(
+                name='my-nfs', server='10.0.0.50', path='/exports/data'
             )
+            project.drivers.create_storage_driver(
+                name='my-nfs-driver', integration=nfs_integration
+            )
+
+            # S3-compatible API driver
+            s3_integration = project.integrations.create_s3_compatible_api(
+                name='my-minio', key='key', secret='secret',
+                endpoint='http://10.0.0.1:9000'
+            )
+            project.drivers.create_storage_driver(
+                name='my-minio-driver', integration=s3_integration,
+                bucket_name='my-bucket'
+            )
+
         """
+        supported_types = [entities.IntegrationType.NFS, entities.IntegrationType.HOST_PATH, entities.IntegrationType.S3]
+        if integration.type not in supported_types:
+            raise ValueError(
+                f"Integration type must be one of {[t.value for t in supported_types]}, got '{integration.type}'"
+            )
+
+        if integration.type == entities.IntegrationType.S3:
+            if bucket_name is None:
+                raise ValueError("bucket_name is required for S3-compatible API drivers")
+            driver_payload = {"bucketName": bucket_name, "path": path}
+        else:
+            if directory is not None and not directory.startswith('/'):
+                directory = '/' + directory
+            driver_payload = {"directory": directory}
+
+        if elastic_index is not None:
+            driver_payload["elasticIndex"] = elastic_index
+        if elastic_index_path is not None:
+            driver_payload["elasticIndexPath"] = elastic_index_path
+
         payload = {
+            "integrationId": integration.id,
+            "integrationType": integration.type,
             "name": name,
             "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
-            "type": entities.ExternalStorage.COMPUTE_CLUSTER,
-            "payload": {
-                "computeId": compute_id,
-                "computeStorageName": compute_storage_name,
-                "public": public,
-            },
+            "type": entities.ExternalStorage.STORAGE,
+            "payload": driver_payload,
             "allowExternalDelete": allow_external_delete,
             "creator": self._client_api.info().get("user_email"),
         }
-
-        if org_id is not None:
-            payload["metadata"]["system"]["orgId"] = org_id
-
         return self._create_driver(payload)
-    
+
     @_api_reference.add(path="/drivers/{id}", method="delete")
     def delete(self, driver_name: str = None, driver_id: str = None, sure: bool = False, really: bool = False):
         """

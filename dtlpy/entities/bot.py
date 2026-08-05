@@ -1,5 +1,6 @@
 import traceback
 import logging
+import warnings
 import attr
 
 from .. import entities, exceptions, repositories
@@ -14,6 +15,7 @@ class Bot(entities.User):
     """
     _bots = attr.ib(repr=False, default=None)
     password = attr.ib(default=None)
+    org_bot = attr.ib(default=None)
 
     @staticmethod
     def _protected_from_json(_json, project, client_api, bots=None):
@@ -73,6 +75,7 @@ class Bot(entities.User):
             client_api=client_api,
             bots=bots,
             password=_json.get('password', None),
+            org_bot=_json.get('orgBot', None),
         )
 
     @property
@@ -98,18 +101,28 @@ class Bot(entities.User):
                                                         attr.fields(Bot).last_name,
                                                         attr.fields(Bot).created_at,
                                                         attr.fields(Bot).updated_at,
+                                                        attr.fields(Bot).org_bot,
                                                         ))
         _json['firstName'] = self.name
         _json['lastName'] = self.last_name
         _json['createdAt'] = self.created_at
         _json['updatedAt'] = self.updated_at
+        if self.org_bot is not None:
+            _json['orgBot'] = self.org_bot
         return _json
 
     def delete(self):
         """
-        Delete the bot
+        .. deprecated::
+            Bot deletion is no longer supported. Bots are managed automatically by the backend.
 
         :return: True
         :rtype: bool
         """
+        warnings.warn(
+            "Bot.delete() is deprecated and no longer supported. "
+            "Bots are managed automatically by the backend.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.bots.delete(bot_id=self.id)

@@ -411,6 +411,52 @@ class Triggers:
                                               project=self.project,
                                               service=self._service)
 
+    @_api_reference.add(path='/triggers/{id}/clone', method='post')
+    def clone(self, trigger_id, project_id, name=None) -> entities.BaseTrigger:
+        """
+        Clone a template trigger into a project.
+
+        **Prerequisites**: The trigger must be a template trigger (template=True).
+
+        :param str trigger_id: ID of the template trigger to clone
+        :param str project_id: target project ID for the clone
+        :param str name: optional - custom name for the clone (defaults to template name)
+        :return: cloned Trigger entity
+        :rtype: dtlpy.entities.trigger.BaseTrigger
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.triggers.clone(trigger_id='template_trigger_id',
+                                   project_id='target_project_id')
+        """
+        payload = {
+            'projectId': project_id,
+        }
+
+        if name is not None:
+            payload['name'] = name
+
+        # request
+        success, response = self._client_api.gen_request(
+            req_type='post',
+            path='/triggers/{}/clone'.format(trigger_id),
+            json_req=payload
+        )
+
+        # exception handling
+        if self._client_api.check_response(success, response, path="/triggers") is False:
+            return None
+
+        # return entity
+        return entities.BaseTrigger.from_json(
+            _json=response.json(),
+            client_api=self._client_api,
+            project=self.project if (self.project is not None and self.project.id == project_id) else None,
+            service=self._service
+        )
+
     def _build_entities_from_response(self, response_items) -> miscellaneous.List[entities.BaseTrigger]:
         pool = self._client_api.thread_pools(pool_name='entity.create')
         jobs = [None for _ in range(len(response_items))]

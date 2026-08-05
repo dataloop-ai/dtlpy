@@ -836,6 +836,8 @@ class Downloader:
         return item, url, is_url, url.startswith('file://')
 
     def __file_validation(self, item, downloaded_file):
+        if item.type == 'db_row' and item.metadata.get('system', {}).get('size', 0) == 0:
+            return True, 0, True
         res = False
         resume = True
         if isinstance(downloaded_file, io.BytesIO):

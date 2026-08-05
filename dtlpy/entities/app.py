@@ -27,9 +27,12 @@ class AppScope(str, Enum):
          - Dataloop internal app
        * - PROJECT
          - Project app
+       * - ORG
+         - Organization-scoped app, visible to all projects in the org
     """
     SYSTEM = 'system'
     PROJECT = 'project'
+    ORG = 'organization'
 
 
 @attr.s

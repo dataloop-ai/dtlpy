@@ -56,7 +56,7 @@ if len(logger.handlers) == 0:
 
 from .services.api_client import client as client_api
 from .services.api_client import VerboseLoggingLevel, ApiClient, ErrorSuppression
-from .services import DataloopLogger, DtlpyFilter, check_sdk, Reporter, service_defaults
+from .services import DataloopLogger, DtlpyFilter, Reporter, service_defaults
 from .services.api_reference import api_reference as _api_reference
 from .caches.cache import CacheConfig, CacheType
 from .exceptions import PlatformException
@@ -78,7 +78,7 @@ from .entities import (
     TriggerResource, TriggerAction, TriggerExecutionMode, TriggerType,
     # faas
     FunctionIO, KubernetesAutoscalerType, KubernetesRabbitmqAutoscaler, KubernetesAutoscaler, KubernetesRuntime,
-    InstanceCatalog, PackageInputType, ServiceType, ServiceModeType, KubernetesRPSAutoscaler,
+    InstanceCatalog, PackageInputType, ServiceType, ServiceScope, ServiceModeType, KubernetesRPSAutoscaler,
     PackageSlot, SlotPostAction, SlotPostActionType, SlotDisplayScope, SlotDisplayScopeResource, UiBindingPanel,
     # roberto
     DatasetSubsetType, ModelStatus, PlotSample, ArtifactType, Artifact, ItemArtifact, LinkArtifact, LocalArtifact,
@@ -101,8 +101,9 @@ from .entities import (
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption, Variable, CompositionStatus,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
-    Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, CacheAction, PodType,
-    ExternalStorage, IntegrationType, Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
+    Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, NfsDriver, HostPathDriver, CacheAction, PodType,
+    ExternalStorage, IntegrationType, IntegrationProvider, IntegrationAuthMethod, HostPathType,
+    Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
     SettingScope, BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample,
     ResourceExecution, Message, NotificationEventContext,
     # compute
@@ -172,11 +173,6 @@ compositions = repositories.Compositions(client_api=client_api)
 computes = repositories.Computes(client_api=client_api)
 service_drivers = repositories.ServiceDrivers(client_api=client_api)
 collections = repositories.Collections(client_api=client_api)
-
-try:
-    check_sdk.check(version=__version__, client_api=client_api)
-except Exception:
-    logger.debug("Failed to check SDK! Continue without")
 
 verbose = client_api.verbose
 error_suppression = client_api.error_suppression

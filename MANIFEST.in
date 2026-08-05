@@ -8,6 +8,8 @@ prune .pytest_cache
 prune .cursor
 prune .idea
 prune .dataloop
+prune personal
+prune .windsurf
 include README.md
 include LICENSE
 include requirements.txt

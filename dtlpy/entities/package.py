@@ -7,6 +7,7 @@ import inspect
 import typing
 import json
 import os
+import warnings
 
 from .package_module import PackageModule
 from .package_slot import PackageSlot
@@ -325,7 +326,7 @@ class Package(entities.DlEntity):
         :param dict runtime: runtime resources
         :param str sdk_version:  - optional - string - sdk version
         :param dict agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
-        :param str bot: bot email
+        :param str bot: deprecated - ignored, bots are selected automatically by the backend
         :param str pod_type: pod type dl.InstanceCatalog
         :param bool verify: verify the inputs
         :param str module_name: module name
@@ -357,6 +358,13 @@ class Package(entities.DlEntity):
                                              )
 
         """
+        if bot is not None:
+            warnings.warn(
+                "'bot' parameter is deprecated and ignored. Bots are selected automatically by the backend.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         return self.project.packages.deploy(package=self,
                                             service_name=service_name,
                                             project_id=self.project_id,
@@ -366,7 +374,6 @@ class Package(entities.DlEntity):
                                             sdk_version=sdk_version,
                                             agent_versions=agent_versions,
                                             pod_type=pod_type,
-                                            bot=bot,
                                             verify=verify,
                                             module_name=module_name,
                                             run_execution_as_process=run_execution_as_process,

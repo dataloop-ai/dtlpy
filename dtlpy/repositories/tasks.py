@@ -1338,6 +1338,9 @@ class Tasks:
             raise exceptions.PlatformException(
                 error="400", message="removeFromTaskId key is missing in command response: {}".format(response)
             )
+        if command.spec.get("removeItemsCount") is not None and command.spec.get("totalItemsCount") is not None:
+            logger.debug("Successfully removed %s out of %s item(s) from the task.",
+                         command.spec["removeItemsCount"], command.spec["totalItemsCount"])
         return True
 
     def get_items(

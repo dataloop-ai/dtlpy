@@ -35,6 +35,7 @@ class ExternalStorage(str, Enum):
     MIN_IO = 's3'
     POWERSCALE_NFS = 'powerscaleNfs'
     COMPUTE_CLUSTER = 'computeCluster'
+    STORAGE = 'storage'
 
 
 @attr.s()
@@ -234,6 +235,64 @@ class S3Driver(Driver):
         inst.bucket_name = _json.get('bucketName', None)
         inst.region = _json.get('region', None)
         inst.storage_class = _json.get('storageClass', None)
+        return inst
+
+
+@attr.s()
+class NfsDriver(Driver):
+    """
+    NFS storage driver entity.
+    Used for NFS-backed storage (compute cluster or on-prem).
+    """
+    path = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        if self.path is not None:
+            _json['path'] = self.path
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build an NfsDriver entity object from a json
+
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: NfsDriver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=is_fetched)
+        inst.path = _json.get('path', None)
+        return inst
+
+
+@attr.s()
+class HostPathDriver(Driver):
+    """
+    HostPath storage driver entity.
+    Used for K8s hostPath-backed storage (compute cluster only).
+    """
+    path = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        if self.path is not None:
+            _json['path'] = self.path
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build a HostPathDriver entity object from a json
+
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: HostPathDriver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=is_fetched)
+        inst.path = _json.get('path', None)
         return inst
 
 

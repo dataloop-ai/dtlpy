@@ -1,4 +1,5 @@
 import logging
+import warnings
 from .. import entities, miscellaneous, exceptions
 from ..services.api_client import ApiClient
 
@@ -132,24 +133,20 @@ class Bots:
                bot_id: str = None,
                bot_email: str = None):
         """
-        Delete a Bot.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
-
-        You must provide at least ONE of the following params: bot_id, bot_email
+        .. deprecated::
+            Bot deletion is no longer supported. Bots are managed automatically by the backend.
 
         :param str bot_id: bot id to delete
         :param str bot_email: bot email to delete
         :return: True if successful
         :rtype: bool
-
-        **Example**:
-
-        .. code-block:: python
-
-            service.bots.delete(bot_id='bot_id')
-
         """
+        warnings.warn(
+            "Bots.delete() is deprecated and no longer supported. "
+            "Bots are managed automatically by the backend.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if bot_id is None:
             if bot_email is None:
                 raise exceptions.PlatformException(error='400',
@@ -168,29 +165,18 @@ class Bots:
                name: str,
                return_credentials: bool = False):
         """
-        Create a new Bot.
-
-        **Prerequisites**: You must be in the role of an *owner* or *developer*. You must have a service.
+        .. deprecated::
+            Bot creation is no longer supported. Bots are managed automatically by the backend.
 
         :param str name: bot name
-        :param str return_credentials: True will return the password when created
-        :return: Bot object
-        :rtype: dtlpy.entities.bot.Bot
-
-        **Example**:
-
-        .. code-block:: python
-
-            service.bots.delete(name='bot', return_credentials=False)
+        :param bool return_credentials: True will return the password when created
+        :return: None
+        :rtype: None
         """
-        success, response = self._client_api.gen_request(req_type='post',
-                                                         path='/projects/{}/bots'.format(self.project.id),
-                                                         json_req={'name': name,
-                                                                   'returnCredentials': return_credentials})
-        if self._client_api.check_response(success, response, path="/bots") is False:
-            return None
-        bot = entities.Bot.from_json(_json=response.json(),
-                                     project=self.project,
-                                     bots=self, client_api=self._client_api)
-        assert isinstance(bot, entities.Bot)
-        return bot
+        warnings.warn(
+            "Bots.create() is deprecated and no longer supported. "
+            "Bots are managed automatically by the backend.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return None

@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import time
+import warnings
 from typing import Union, List, Callable
 from .. import miscellaneous, exceptions, entities, repositories, assets, ApiClient, _api_reference
 
@@ -497,32 +498,6 @@ class Services:
             return None
         return response.json()
 
-    def _get_bot_email(self, bot=None):
-
-        if bot is None:
-            project = self.project
-            if project is None:
-                raise exceptions.PlatformException(
-                    error='2001',
-                    message='Cannot perform action WITHOUT Project entity in services repository. Please set a project')
-            bots = project.bots.list()
-            if len(bots) == 0:
-                logger.info('Bot not found for project. Creating a default bot')
-                bot = project.bots.create(name='default')
-            else:
-                bot = bots[0]
-                if len(bots) > 1:
-                    logger.debug('More than one bot users. Choosing first. email: {}'.format(bots[0].email))
-
-        if isinstance(bot, str):
-            bot_email = bot
-        elif isinstance(bot, entities.Bot) or isinstance(bot, entities.User):
-            bot_email = bot.email
-        else:
-            raise ValueError('input "bot" must be a str or a Bot type, got: {}'.format(type(bot)))
-
-        return bot_email
-
     @staticmethod
     def _parse_init_input(init_input):
         if not isinstance(init_input, dict):
@@ -566,7 +541,6 @@ class Services:
                 service_name: str = None,
                 package: entities.Package = None,
                 module_name: str = None,
-                bot: Union[entities.Bot, str] = None,
                 revision: str or int = None,
                 init_input: Union[List[entities.FunctionIO], entities.FunctionIO, dict] = None,
                 runtime: Union[entities.KubernetesRuntime, dict] = None,
@@ -589,11 +563,9 @@ class Services:
         """
         Create service entity.
 
-
         :param str service_name: service name
         :param dtlpy.entities.package.Package package: package entity
         :param str module_name: module name
-        :param str bot: bot email
         :param str revision: package revision - default=latest
         :param init_input: config to run at startup
         :param dict runtime: runtime resources
@@ -659,7 +631,6 @@ class Services:
             'projectId': project_id,
             'packageId': package.id,
             'initParams': self._parse_init_input(init_input=init_input),
-            'botUserName': self._get_bot_email(bot=bot),
             'versions': agent_versions,
             'packageRevision': revision if revision is not None else package.version,
             'driverId': driver_id,
@@ -1170,7 +1141,7 @@ class Services:
 
         :param str service_name: name
         :param dtlpy.entities.package.Package package: package entity
-        :param str bot: bot email
+        :param str bot: deprecated - ignored, bots are selected automatically by the backend
         :param str revision: package revision of version
         :param init_input: config to run at startup
         :param dict runtime: runtime resources
@@ -1214,6 +1185,13 @@ class Services:
                                     )
                                 )
         """
+        if bot is not None:
+            warnings.warn(
+                "'bot' parameter is deprecated and ignored. Bots are selected automatically by the backend.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         if package is None and isinstance(package, entities.Dpk):
             raise exceptions.PlatformException('400', 'cannot deploy dpk package. Please install the app')
         package = package if package is not None else self._package
@@ -1297,7 +1275,6 @@ class Services:
             service = self._create(service_name=service_name,
                                    package=package,
                                    project_id=project_id,
-                                   bot=bot,
                                    revision=revision,
                                    init_input=init_input,
                                    runtime=runtime,
@@ -1389,7 +1366,7 @@ class Services:
 
         :param str cwd: optional - package working directory. Default=cwd
         :param str service_file: optional - service file. Default=None
-        :param str bot: bot
+        :param str bot: deprecated - ignored, bots are selected automatically by the backend
         :param checkout: checkout
         :param bool force: optional - terminate old replicas immediately
         :return: Service object
@@ -1440,8 +1417,14 @@ class Services:
         on_reset = service_json.get('on_reset', None)
         max_attempts = service_json.get('maxAttempts', None)
 
-        service = self.deploy(bot=bot,
-                              service_name=name,
+        if bot is not None:
+            warnings.warn(
+                "'bot' parameter is deprecated and ignored. Bots are selected automatically by the backend.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        service = self.deploy(service_name=name,
                               package=package,
                               revision=revision,
                               runtime=runtime,

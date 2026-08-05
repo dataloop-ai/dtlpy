@@ -287,13 +287,14 @@ class Dpk(entities.DlEntity):
     def _repositories(self):
         if self.__repositories is None:
             reps = namedtuple('repositories',
-                              field_names=['dpks', 'codebases', 'organizations', 'services'])
+                              field_names=['dpks', 'codebases', 'organizations', 'services', 'apps'])
 
             self.__repositories = reps(
                 dpks=repositories.Dpks(client_api=self.client_api, project=self.project),
                 codebases=repositories.Codebases(client_api=self.client_api),
                 organizations=repositories.Organizations(client_api=self.client_api),
                 services=repositories.Services(client_api=self.client_api, project=self.project, package=self),
+                apps=repositories.Apps(client_api=self.client_api, dpk_name=self.name),
             )
 
         return self.__repositories
@@ -317,6 +318,11 @@ class Dpk(entities.DlEntity):
     def services(self):
         assert isinstance(self._repositories.services, repositories.Services)
         return self._repositories.services
+
+    @property
+    def apps(self):
+        assert isinstance(self._repositories.apps, repositories.Apps)
+        return self._repositories.apps
 
     ###########
     # methods #

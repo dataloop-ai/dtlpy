@@ -145,6 +145,8 @@ stats.json
 src/
 
 sandbox/
+personal/
+.windsurf/
 
 # dlp xray files
 create_test_execution.json

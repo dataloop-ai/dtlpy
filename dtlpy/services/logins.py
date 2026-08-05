@@ -3,7 +3,6 @@ import base64
 import requests
 import logging
 import json
-import jwt
 import os
 
 logger = logging.getLogger(name='dtlpy')
@@ -204,31 +203,22 @@ def login(api_client, auth0_url=None, audience=None, client_id=None, login_domai
 
         success, tokens = server.process_request()
 
-        if success:
-            # oxsec-disable jwt-signature-disabled - Client-side SDK: signature verification disabled intentionally to extract claims for display; server validates on API calls
-            decoded_jwt = jwt.decode(
-                tokens['id'],
-                options={
-                    "verify_signature": False,
-                    "verify_exp": False,
-                    "verify_aud": False,
-                    "verify_iss": False,
-                }
-            )
-
-            if 'email' in decoded_jwt:
-                logger.info('Logged in: {}'.format(decoded_jwt['email']))
-            else:
-                logger.info('Logged in: unknown user')
-
-            api_client.token = tokens['id']
-            api_client.refresh_token = tokens['refresh']
-
-            return True
-        else:
+        if not success:
             logout(api_client=api_client)
             logger.error('Login failed: no tokens obtained')
             return False
+
+        api_client.token = tokens['id']
+        api_client.refresh_token = tokens['refresh']
+
+        info = api_client.info()
+        if 'user_email' not in info:
+            logout(api_client=api_client)
+            logger.error('Login failed: invalid token')
+            return False
+
+        logger.info('Logged in: {}'.format(info['user_email']))
+        return True
     except Exception as err:
         logout(api_client=api_client)
         logger.exception('Login failed: error while getting token', err)

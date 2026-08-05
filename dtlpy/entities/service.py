@@ -12,6 +12,27 @@ from .dpk import Dpk
 
 logger = logging.getLogger(name='dtlpy')
 
+class ServiceScope(str, Enum):
+    """ The deployment scope of a service.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - Scope
+         - Description
+       * - SYSTEM
+         - Dataloop internal service, visible globally
+       * - PROJECT
+         - Service belongs to a single project
+       * - ORGANIZATION
+         - Org-scoped service, visible to all projects in the org
+    """
+    SYSTEM = 'system'
+    PROJECT = 'project'
+    ORGANIZATION = 'organization'
+
+
 class DynamicConcurrencyUpdateMethod(str, Enum):
     """ The method of updating the dynamic concurrency.
     """
@@ -251,6 +272,7 @@ class Service(entities.BaseEntity):
     project = attr.ib(default=None, repr=False)
     _repositories = attr.ib(repr=False)
     updated_by = attr.ib(default=None)
+    scope = attr.ib(default=None)
     app = attr.ib(default=None)
     integrations = attr.ib(default=None)
     crashloop = attr.ib(default=None, repr=False)
@@ -366,6 +388,7 @@ class Service(entities.BaseEntity):
             app=_json.get('app', None),
             integrations=_json.get('integrations', None),
             org_id=_json.get('orgId', None),
+            scope=_json.get('scope', None),
             panels=_json.get('panels', None),
             crashloop=_json.get('crashloop', None)
         )
@@ -549,6 +572,7 @@ class Service(entities.BaseEntity):
                 attr.fields(Service).app,
                 attr.fields(Service).integrations,
                 attr.fields(Service).org_id,
+                attr.fields(Service).scope,
                 attr.fields(Service).panels,
                 attr.fields(Service).crashloop
             )
@@ -556,12 +580,15 @@ class Service(entities.BaseEntity):
 
         _json['projectId'] = self.project_id
         _json['orgId'] = self.org_id
+        if self.scope is not None:
+            _json['scope'] = self.scope if isinstance(self.scope, str) else self.scope.value
         _json['packageId'] = self.package_id
         _json['initParams'] = self.init_input
         _json['moduleName'] = self.module_name
         _json['botUserName'] = self.bot
         _json['useUserJwt'] = self.use_user_jwt
-        _json['global'] = self.is_global
+        if self.is_global is not None:
+            _json['global'] = self.is_global
         _json['driverId'] = self.driver_id
         _json['packageRevision'] = self.package_revision
         _json['runExecutionAsProcess'] = self.run_execution_as_process
@@ -579,9 +606,6 @@ class Service(entities.BaseEntity):
 
         if self.max_attempts is not None:
             _json['maxAttempts'] = self.max_attempts
-
-        if self.is_global is not None:
-            _json['global'] = self.is_global
 
         if self.runtime:
             _json['runtime'] = self.runtime if isinstance(self.runtime, dict) else self.runtime.to_json()

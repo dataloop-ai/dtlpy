@@ -237,6 +237,7 @@ class ExecutionSample(BaseSample):
         self.function_name = function_name
         self.duration = duration
         self.function_duration = function_duration
+        self.entity_type = entity_type
 
     def to_json(self):
         _json = super().to_json()
@@ -252,6 +253,9 @@ class ExecutionSample(BaseSample):
             'functionName': self.function_name,
             'duration': self.duration,
             'functionDuration': self.function_duration,
+        })
+        _json.update({
+            'entityType': self.entity_type
         })
         _json['context'] = {k: v for k, v in _json['context'].items() if v is not None}
         _json['data'] = {k: v for k, v in _json['data'].items() if v is not None}

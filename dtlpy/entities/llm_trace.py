@@ -4,7 +4,8 @@ import logging
 import json
 import io
 import os
-from typing import List, Union, Optional
+import time
+from typing import List, Union, Optional, Iterator
 
 from dtlpy.services.api_client import client as client_api
 from .. import entities, repositories
@@ -276,6 +277,105 @@ class LLMTrace(entities.DlEntity):
             raise ValueError('Cannot update LLMTrace without an item.')
         self._item._Item__update_item_binary(_json=self.to_json())
         self._item = self._item.update()
+
+    def stream_response(
+        self,
+        stream: Iterator[str],
+        dataset: entities.Dataset = None,
+        role: str = "assistant",
+        model_info: dict = None,
+        update_interval: float = 2.0,
+    ) -> str:
+        """
+        Consume a streaming LLM response, pushing intermediate text via
+        a lightweight ``FreeText`` annotation and only calling
+        :meth:`update` once when the stream finishes.
+
+        If the trace has not been uploaded yet (no underlying item),
+        provide a *dataset* and the trace will be uploaded automatically
+        before streaming begins.
+
+        During iteration a ``FreeText`` annotation is created on the
+        underlying item and updated every *update_interval* seconds so
+        that consumers (e.g. the UI) can display partial results without
+        the cost of a full trace update.  When the stream is exhausted
+        the annotation is removed, the complete message is added to the
+        trace, and :meth:`update` is called exactly once.
+
+        :param stream: an iterator that yields text chunks (strings)
+        :param dataset: optional :class:`Dataset` used to upload the
+            trace when it has no item yet
+        :param str role: message role (default ``"assistant"``)
+        :param dict model_info: optional dict attached to the message
+            (e.g. ``{'name': 'gpt-4o', 'confidence': 1.0, 'model_id': '...'}``).
+        :param float update_interval: minimum seconds between annotation
+            updates (default ``2.0``)
+        :return: the fully accumulated response text
+        :rtype: str
+
+        **Example**:
+
+        .. code-block:: python
+
+            stream = openai_client.chat.completions.create(stream=True, ...)
+            response = trace.stream_response(
+                stream=(chunk.choices[0].delta.content or "" for chunk in stream),
+                dataset=dataset,
+                model_info={'name': 'gpt-4o', 'confidence': 1.0, 'model_id': model.id},
+                update_interval=2.0,
+            )
+        """
+        logger.info("stream_response started for trace %r", self.name)
+        if self._item is None:
+            if dataset is None:
+                raise ValueError("Cannot stream without an item. Provide a dataset to auto-upload the trace.")
+            self._item = dataset.items.upload(local_path=self, overwrite=True)
+            logger.info("Trace auto-uploaded as item %s", self._item.id)
+
+        # Create a streaming annotation on the item
+        builder = self._item.annotations.builder()
+        builder.add(
+            annotation_definition=entities.FreeText(label="streaming", text=""),
+            model_info=model_info or {"confidence": 0.0},
+        )
+        streaming_annotation = builder.upload()[0]
+
+        response = ""
+        last_update = time.time()
+        logger.info("Starting to stream response for trace %r", self.name)
+        for chunk in stream:
+            response += chunk
+            now = time.time()
+            if now - last_update >= update_interval:
+                streaming_annotation.annotation_definition = entities.FreeText(
+                    label=streaming_annotation.label,
+                    text=response,
+                )
+                try:
+                    streaming_annotation = streaming_annotation.update()
+                except Exception:
+                    logger.warning("Failed to update streaming annotation", exc_info=True)
+                last_update = now
+        
+        logger.info("Finished streaming response for trace %r", self.name)
+        logger.info("Added final message to trace %r", self.name)
+        # Add the final message to the trace and push once
+        msg = LLMMessage(
+            role=role,
+            content=response,
+            **({"model_info": model_info} if model_info else {}),
+        )
+        self.add_message(msg)
+        self.update()
+
+        # Remove the temporary streaming annotation
+        try:
+            streaming_annotation.delete()
+        except Exception:
+            logger.warning("Failed to delete streaming annotation", exc_info=True)
+
+        logger.info("stream_response completed for trace %r, response length: %d", self.name, len(response))
+        return response
 
     def __repr__(self):
         return f'<LLMTrace name={self.name!r} messages={len(self.messages)}>'

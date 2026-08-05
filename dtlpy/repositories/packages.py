@@ -8,6 +8,7 @@ import json
 import sys
 import os
 import re
+import warnings
 from copy import deepcopy
 from shutil import copyfile
 from concurrent.futures import ThreadPoolExecutor
@@ -844,7 +845,7 @@ class Packages:
         :param dict runtime: runtime resources
         :param str sdk_version:  - optional - string - sdk version
         :param dict agent_versions: - dictionary - - optional -versions of sdk, agent runner and agent proxy
-        :param str bot: bot email
+        :param str bot: deprecated - ignored, bots are selected automatically by the backend
         :param str pod_type: pod type dl.InstanceCatalog
         :param bool verify: verify the inputs
         :param bool checkout: checkout
@@ -878,6 +879,13 @@ class Packages:
                                 )
         """
 
+        if bot is not None:
+            warnings.warn(
+                "'bot' parameter is deprecated and ignored. Bots are selected automatically by the backend.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         if package is None:
             package = self.get(package_id=package_id, package_name=package_name)
 
@@ -890,7 +898,6 @@ class Packages:
                                        agent_versions=agent_versions,
                                        project_id=project_id,
                                        pod_type=pod_type,
-                                       bot=bot,
                                        verify=verify,
                                        module_name=module_name,
                                        checkout=checkout,

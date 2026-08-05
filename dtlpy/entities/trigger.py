@@ -86,6 +86,14 @@ class BaseTrigger(entities.BaseEntity):
 
     updated_by = attr.ib(default=None)
 
+    # Template/clone fields (from Preprocess Management MVP)
+    template = attr.ib(default=None)
+    template_trigger_id = attr.ib(default=None)
+    locked = attr.ib(default=None)
+    app_paused = attr.ib(default=None)
+    app = attr.ib(default=None)
+    org_id = attr.ib(default=None)
+
     @staticmethod
     def _get_operation(operation):
         op_type = operation.get('type', None)
@@ -249,6 +257,12 @@ class BaseTrigger(entities.BaseEntity):
                                                               attr.fields(BaseTrigger).updated_at,
                                                               attr.fields(BaseTrigger).operation,
                                                               attr.fields(BaseTrigger).updated_by,
+                                                              attr.fields(BaseTrigger).template,
+                                                              attr.fields(BaseTrigger).template_trigger_id,
+                                                              attr.fields(BaseTrigger).locked,
+                                                              attr.fields(BaseTrigger).app_paused,
+                                                              attr.fields(BaseTrigger).app,
+                                                              attr.fields(BaseTrigger).org_id,
                                                               ))
 
         # rename
@@ -259,6 +273,18 @@ class BaseTrigger(entities.BaseEntity):
             _json['global'] = self.is_global
         if self.updated_by is not None:
             _json['updatedBy'] = self.updated_by
+        if self.template is not None:
+            _json['template'] = self.template
+        if self.template_trigger_id is not None:
+            _json['templateTriggerId'] = self.template_trigger_id
+        if self.locked is not None:
+            _json['locked'] = self.locked
+        if self.app_paused is not None:
+            _json['appPaused'] = self.app_paused
+        if self.app is not None:
+            _json['app'] = self.app
+        if self.org_id is not None:
+            _json['orgId'] = self.org_id
         return _json
 
     def delete(self):
@@ -276,6 +302,19 @@ class BaseTrigger(entities.BaseEntity):
         :return: Trigger entity
         """
         return self.project.triggers.update(trigger=self)
+
+    def clone(self, project_id, name=None):
+        """
+        Clone this trigger (must be a template) into a project.
+
+        :param str project_id: target project ID
+        :param str name: optional custom name for the clone
+        :return: cloned Trigger entity
+        :rtype: dtlpy.entities.trigger.BaseTrigger
+        """
+        return self.triggers.clone(trigger_id=self.id,
+                                   project_id=project_id,
+                                   name=name)
 
 
 @attr.s
@@ -352,6 +391,12 @@ class Trigger(BaseTrigger):
             pipeline_id=pipeline_id,
             operation=operation,
             updated_by=_json.get('updatedBy', None),
+            template=_json.get('template', None),
+            template_trigger_id=_json.get('templateTriggerId', None),
+            locked=_json.get('locked', None),
+            app_paused=_json.get('appPaused', None),
+            app=_json.get('app', None),
+            org_id=_json.get('orgId', None),
         )
 
 
@@ -425,5 +470,12 @@ class CronTrigger(BaseTrigger):
             op_type=operation.get('type', None),
             spec=spec,
             pipeline_id=pipeline_id,
-            operation=operation
+            operation=operation,
+            updated_by=_json.get('updatedBy', None),
+            template=_json.get('template', None),
+            template_trigger_id=_json.get('templateTriggerId', None),
+            locked=_json.get('locked', None),
+            app_paused=_json.get('appPaused', None),
+            app=_json.get('app', None),
+            org_id=_json.get('orgId', None),
         )

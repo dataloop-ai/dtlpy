@@ -8,7 +8,8 @@ logger = logging.getLogger(name='dtlpy')
 
 class Apps:
 
-    def __init__(self, client_api: ApiClient, project: entities.Project = None, project_id: str = None):
+    def __init__(self, client_api: ApiClient, project: entities.Project = None, project_id: str = None,
+                 dpk_name: str = None):
         self._client_api = client_api
         # Initialize project with minimal JSON if not provided but project_id exists
         if project is None and project_id is not None:
@@ -18,6 +19,7 @@ class Apps:
                 is_fetched=False  # Not fully fetched yet, will lazy fetch when needed
             )
         self.project = project
+        self._dpk_name = dpk_name
         self._commands = None
 
     @property
@@ -149,6 +151,9 @@ class Apps:
 
         if project_id is not None:
             filters.add(field='projectId', values=project_id)
+
+        if self._dpk_name is not None:
+            filters.add(field='dpkName', values=self._dpk_name)
 
         paged = entities.PagedEntities(items_repository=self,
                                        filters=filters,

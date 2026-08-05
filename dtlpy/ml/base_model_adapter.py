@@ -342,6 +342,13 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         :param item:
         :return: preprocessed: the var with the loaded item information (e.g. ndarray for image, dict for json files etc)
         """
+
+        if item.type == 'db_row':
+            buffer: io.BytesIO = item.download(save_locally=False)
+            data = json.loads(buffer.read())
+            column_name = self.model_entity.configuration.get("column", "content")
+            processed = data.get(column_name, data)
+
         # Item to batch func
         if isinstance(self.model_entity.input_type, list):
             if 'text' in self.model_entity.input_type and 'text' in item.mimetype:
@@ -1060,7 +1067,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
                 single_filters = entities.Filters(custom_filter=filter_dict)
                 pages = dataset.items.list(filters=single_filters)
                 self.logger.info(f"Processing filter on: {pages.items_count} items")
-                items = [item for page in pages for item in page if item.type == 'file']
+                items = [item for page in pages for item in page if item.type == 'file' or item.type =='db_row']
                 self.logger.debug(f"Items length: {len(items)}")
 
                 if operation_type == 'embed':

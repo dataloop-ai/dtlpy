@@ -45,6 +45,88 @@ class IntegrationType(str, Enum):
     KEY_VALUE = "key_value"
     GCP_WORKLOAD_IDENTITY_FEDERATION = "gcp-workload-identity-federation",
     PRIVATE_REGISTRY = "private-registry"
+    NFS = "nfs"
+    HOST_PATH = "hostPath"
+    BLOB = "blob"
+    PVC = "pvc"
+
+
+class IntegrationProvider(str, Enum):
+    """ The provider (infrastructure manager) for an Integration.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - Provider
+         - Description
+       * - SELF_MANAGED
+         - Self-managed on-premises storage
+       * - DELL
+         - Dell PowerScale (Isilon) on-premises storage
+       * - AWS
+         - Amazon Web Services
+       * - GCP
+         - Google Cloud Platform
+       * - AZURE
+         - Microsoft Azure
+    """
+    SELF_MANAGED = "self-managed"
+    DELL = "dell"
+    AWS = "aws"
+    GCP = "gcp"
+    AZURE = "azure"
+
+
+class IntegrationAuthMethod(str, Enum):
+    """ Authentication method for an Integration.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - Method
+         - Description
+       * - STS
+         - AWS STS assume-role
+       * - CROSS_ACCOUNT
+         - AWS cross-account role
+       * - WORKLOAD_IDENTITY
+         - GCP Workload Identity Federation
+       * - SERVICE_ACCOUNT
+         - GCP Service Account key
+       * - CONNECTION_STRING
+         - Generic connection string (used for NFS, hostPath)
+       * - KEY_SECRET
+         - Access key + secret (S3, MinIO, Azure)
+       * - MOUNT
+         - Direct filesystem mount (default for NFS and hostPath integrations)
+    """
+    STS = "sts"
+    CROSS_ACCOUNT = "cross-account"
+    WORKLOAD_IDENTITY = "workload-identity"
+    SERVICE_ACCOUNT = "service-account"
+    CONNECTION_STRING = "connection-string"
+    KEY_SECRET = "key-secret"
+    MOUNT = "mount"
+
+
+class HostPathType(str, Enum):
+    """ Volume type for a hostPath integration.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - Type
+         - Description
+       * - DIRECTORY_OR_CREATE
+         - Create the directory if it does not exist
+       * - DIRECTORY
+         - Directory must already exist on the host node
+    """
+    DIRECTORY_OR_CREATE = "DirectoryOrCreate"
+    DIRECTORY = "Directory"
 
 
 @attr.s

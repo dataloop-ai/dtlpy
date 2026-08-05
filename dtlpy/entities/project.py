@@ -35,6 +35,7 @@ class Project(entities.DlEntity):
     is_blocked = entities.DlProperty(location=['isBlocked'], _type=bool)
     archived = entities.DlProperty(location=['archived'], _type=bool)
     feature_constraints = entities.DlProperty(location=['featureConstraints'], _type=dict)
+    system_project = entities.DlProperty(location=['systemProject'], _type=bool, default=False)
 
     @property
     def isBlocked(self):

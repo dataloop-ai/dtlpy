@@ -322,6 +322,175 @@ class Integrations:
         available_integrations = miscellaneous.List(response.json())
         return available_integrations
 
+    def create_nfs(
+        self,
+        name: str,
+        server: str,
+        path: str,
+        provider: entities.IntegrationProvider = entities.IntegrationProvider.SELF_MANAGED,
+        auth_method: entities.IntegrationAuthMethod = entities.IntegrationAuthMethod.MOUNT,
+        organization_id: str = None,
+    ) -> entities.Integration:
+        """
+        Create an NFS storage integration.
+
+        NFS integrations store their configuration in metadata (no secrets to Vault).
+        They can be used with compute cluster or on-prem storage.
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param str name: integration name
+        :param str server: NFS server hostname or IP address
+        :param str path: exported path on the NFS server (e.g. '/exports/data'). Leading slash is required.
+        :param IntegrationProvider provider: storage provider (default: dl.IntegrationProvider.SELF_MANAGED)
+        :param IntegrationAuthMethod auth_method: authentication method (default: dl.IntegrationAuthMethod.MOUNT)
+        :param str organization_id: optional - organization id
+        :return: Integration object
+        :rtype: dtlpy.entities.integration.Integration
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.create_nfs(
+                name='my-nfs-integration',
+                server='10.0.0.50',
+                path='/exports/data',
+                provider=dl.IntegrationProvider.DELL
+            )
+
+        """
+        if not path.startswith('/'):
+            path = '/' + path
+        metadata = {
+            'server': server,
+            'path': path,
+            'provider': provider.value if isinstance(provider, entities.IntegrationProvider) else provider,
+            'authMethod': auth_method.value if isinstance(auth_method, entities.IntegrationAuthMethod) else auth_method,
+        }
+        return self.create(
+            integrations_type=entities.IntegrationType.NFS,
+            name=name,
+            options={},
+            metadata=metadata,
+            organization_id=organization_id,
+        )
+
+    def create_hostpath(
+        self,
+        name: str,
+        path: str,
+        host_path_type: entities.HostPathType = None,
+        read_only: bool = False,
+        provider: entities.IntegrationProvider = entities.IntegrationProvider.SELF_MANAGED,
+        auth_method: entities.IntegrationAuthMethod = entities.IntegrationAuthMethod.MOUNT,
+        organization_id: str = None,
+    ) -> entities.Integration:
+        """
+        Create a hostPath storage integration.
+
+        hostPath integrations mount a directory from the host node's filesystem into the pod.
+        They are used exclusively with compute cluster storage.
+        Configuration is stored in metadata (no secrets to Vault).
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param str name: integration name
+        :param str path: path on the host node (e.g. '/data/ml-cache'). Leading slash is required.
+        :param HostPathType host_path_type: optional - volume type (default: dl.HostPathType.DIRECTORY)
+        :param bool read_only: optional - mount as read-only (default: False)
+        :param IntegrationProvider provider: storage provider (default: dl.IntegrationProvider.SELF_MANAGED)
+        :param IntegrationAuthMethod auth_method: authentication method (default: dl.IntegrationAuthMethod.MOUNT)
+        :param str organization_id: optional - organization id
+        :return: Integration object
+        :rtype: dtlpy.entities.integration.Integration
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.create_hostpath(
+                name='my-hostpath-integration',
+                path='/data/ml-cache',
+                host_path_type=dl.HostPathType.DIRECTORY_OR_CREATE
+            )
+
+        """
+        if not path.startswith('/'):
+            path = '/' + path
+        if host_path_type is None:
+            host_path_type = entities.HostPathType.DIRECTORY
+        metadata = {
+            'path': path,
+            'type': host_path_type.value if isinstance(host_path_type, entities.HostPathType) else host_path_type,
+            'readOnly': read_only,
+            'provider': provider.value if isinstance(provider, entities.IntegrationProvider) else provider,
+            'authMethod': auth_method.value if isinstance(auth_method, entities.IntegrationAuthMethod) else auth_method,
+        }
+        return self.create(
+            integrations_type=entities.IntegrationType.HOST_PATH,
+            name=name,
+            options={},
+            metadata=metadata,
+            organization_id=organization_id,
+        )
+
+    def create_s3_compatible_api(
+        self,
+        name: str,
+        key: str,
+        secret: str,
+        endpoint: str,
+        region: str = None,
+        organization_id: str = None,
+    ) -> entities.Integration:
+        """
+        Create an S3-compatible API storage integration.
+
+        Used for S3-compatible object storage (e.g. MinIO, Dell ECS, Ceph).
+        Credentials are stored in Vault via ``options``; endpoint and region live in metadata.
+        ``provider`` is always ``self-managed`` and ``authMethod`` is always ``key-secret``.
+
+        **Prerequisites**: You must be an *owner* in the organization.
+
+        :param str name: integration name
+        :param str key: S3-compatible access key ID
+        :param str secret: S3-compatible secret access key
+        :param str endpoint: endpoint URL (e.g. 'http://10.0.0.1:9000')
+        :param str region: optional - bucket region (default: 'us-east-1' if omitted)
+        :param str organization_id: optional - organization id
+        :return: Integration object
+        :rtype: dtlpy.entities.integration.Integration
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.integrations.create_s3_compatible_api(
+                name='my-minio-integration',
+                key='minio-access-key',
+                secret='minio-secret',
+                endpoint='http://10.0.0.1:9000',
+                region='us-east-1'
+            )
+
+        """
+        options = {'key': key, 'secret': secret}
+        metadata = {
+            'endpoint': endpoint,
+            'provider': entities.IntegrationProvider.SELF_MANAGED.value,
+            'authMethod': entities.IntegrationAuthMethod.KEY_SECRET.value,
+        }
+        if region is not None:
+            metadata['region'] = region
+        return self.create(
+            integrations_type=entities.IntegrationType.S3,
+            name=name,
+            options=options,
+            metadata=metadata,
+            organization_id=organization_id,
+        )
+
     @staticmethod
     def generate_gar_options(service_account: str, location: str, email: str = None) -> dict:
         """
