@@ -85,6 +85,9 @@ from .entities import (
     EntityScopeLevel,
     # features
     FeatureEntityType, Feature, FeatureSet,
+    # embeddings drivers
+    EmbeddingsDriver, FeatureSetSchemaMapping, EmbeddingsDriverStoreType, EmbeddingsDriverStatus,
+    EmbeddingsDistanceMetric,
     #
     RequirementOperator, PackageRequirement,
     Command, CommandsStatus,
@@ -101,8 +104,9 @@ from .entities import (
     PipelineNode, TaskNode, CodeNode, PipelineStats, PipelineSettings,
     PipelineNodeType, PipelineNameSpace, PipelineResumeOption, Variable, CompositionStatus,
     FunctionNode, DatasetNode, PipelineConnectionPort, PipelineNodeIO, Organization, OrganizationsPlans, Integration,
-    Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, NfsDriver, HostPathDriver, CacheAction, PodType,
-    ExternalStorage, IntegrationType, IntegrationProvider, IntegrationAuthMethod, HostPathType,
+    Driver, S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, NfsDriver, HostPathDriver, DatabaseDriver,
+    CacheAction, PodType,
+    ExternalStorage, MetadataDriver, IntegrationType, IntegrationProvider, IntegrationAuthMethod, HostPathType,
     Role, PlatformEntityType, SettingsValueTypes, SettingsTypes, SettingsSectionNames,
     SettingScope, BaseSetting, UserSetting, Setting, ServiceSample, ExecutionSample, PipelineExecutionSample,
     ResourceExecution, Message, NotificationEventContext,
@@ -173,6 +177,7 @@ compositions = repositories.Compositions(client_api=client_api)
 computes = repositories.Computes(client_api=client_api)
 service_drivers = repositories.ServiceDrivers(client_api=client_api)
 collections = repositories.Collections(client_api=client_api)
+embeddings_drivers = repositories.EmbeddingsDrivers(client_api=client_api)
 
 verbose = client_api.verbose
 error_suppression = client_api.error_suppression
@@ -318,6 +323,7 @@ INSTANCE_CATALOG_HIGHMEM_XS = InstanceCatalog.HIGHMEM_XS
 INSTANCE_CATALOG_HIGHMEM_S = InstanceCatalog.HIGHMEM_S
 INSTANCE_CATALOG_HIGHMEM_M = InstanceCatalog.HIGHMEM_M
 INSTANCE_CATALOG_HIGHMEM_L = InstanceCatalog.HIGHMEM_L
+INSTANCE_CATALOG_HIGHCPU_XS = InstanceCatalog.HIGHCPU_XS
 INSTANCE_CATALOG_GPU_T4_S = InstanceCatalog.GPU_T4_S
 INSTANCE_CATALOG_GPU_T4_M = InstanceCatalog.GPU_T4_M
 

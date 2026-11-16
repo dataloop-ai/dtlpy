@@ -67,7 +67,11 @@ class PagedEntities:
         # Keyset pagination only works for page 0 (first page)
         if self.page_offset != 0:
             return False
-                
+
+        # raw database rows are plain dicts with no 'id' to use as a cursor
+        if self._is_raw_data_only():
+            return False
+
         # can't use add to custom filter
         if self.filters.custom_filter is not None:
             return False
@@ -88,6 +92,12 @@ class PagedEntities:
             
         return True
 
+    def _is_raw_data_only(self) -> bool:
+        """
+        Whether the filters ask the platform for raw database rows instead of Item entities.
+        """
+        return bool(getattr(self.filters, 'database_driver_raw_data_only', None))
+
     def process_result(self, result: dict) -> List[Any]:
         """
         Process the API result and update pagination state.
@@ -105,10 +115,12 @@ class PagedEntities:
             self.items_count = result['totalItemsCount']
         if 'totalPagesCount' in result:
             self.total_pages_count = result['totalPagesCount']
-        if 'items' in result:
-            items = self.items_repository._build_entities_from_response(response_items=result['items'])
-        else:
+        if 'items' not in result:
             items = miscellaneous.List(list())
+        elif self._is_raw_data_only():
+            items = miscellaneous.List(result['items'])
+        else:
+            items = self.items_repository._build_entities_from_response(response_items=result['items'])
         return items
 
     def __getitem__(self, y: int) -> List[Any]:

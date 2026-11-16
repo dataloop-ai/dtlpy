@@ -215,9 +215,9 @@ class Item(entities.BaseEntity):
         binary.write(json.dumps(_json).encode())
         binary.seek(0)
         binary.name = self.name
-        success, resp = client_api.gen_request(req_type='post',
-                                      path=f'/items/{self.id}/revisions',
-                                      files={'file': (binary.name, binary)})
+        success, resp = self._client_api.gen_request(req_type='post',
+                                           path=f'/items/{self.id}/revisions',
+                                           files={'file': (binary.name, binary)})
         if not success:
             raise exceptions.PlatformException(resp)
 

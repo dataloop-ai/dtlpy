@@ -20,12 +20,11 @@ class LLMTrace(entities.DlEntity):
     Represents a trace of an LLM conversation session.
 
     Uses a single internal ``_dict`` dict as the source of truth.
-    The enforced fields are ``shebang`` (always ``"dataloop"``),
-    ``metadata`` (always contains ``{"dltype": "llm_trace"}``), and
-    ``messages`` (a list).  Everything else is free-form and stored
-    directly in ``_dict``.
+    The only enforced field is ``messages`` (a list).  Everything else
+    is free-form and stored directly in ``_dict``.
 
-    The trace is persisted as a regular JSON file item in a Dataloop dataset.
+    The trace is persisted as a plain JSON file item in a Dataloop dataset
+    (no shebang is written, so Evaluation Studio can open it).
 
     :param str name: Filename for the trace (e.g. ``"session_001.json"``)
     :param item: Optional Dataloop Item (when loaded from platform)
@@ -42,9 +41,7 @@ class LLMTrace(entities.DlEntity):
         dataset.items.upload(local_path=trace)
     """
 
-    shebang: str = entities.DlProperty(location=['shebang'], _type=str, default='dataloop')
     messages: list = entities.DlProperty(location=['messages'], default=lambda self: [], _kls='LLMMessage')
-    metadata: dict = entities.DlProperty(location=['metadata'], _type=dict, default=lambda self: {'dltype': 'llm_trace'})
 
     @staticmethod
     def _validate_dict(json_data: dict):
@@ -57,7 +54,6 @@ class LLMTrace(entities.DlEntity):
     def __init__(self, name: str, data_dict=None, item: entities.Item = None, **kwargs):
         # free-form kwargs are moved to data_dict and DlProperty keys and is_fetched are kept for DlEntity.__init__
         data_dict = self._split_kwargs(data_dict=data_dict, kwargs=kwargs)
-        data_dict.setdefault('metadata', {}).setdefault('dltype', 'llm_trace')
         super().__init__(_dict=data_dict, **kwargs)
 
         self.name = name
@@ -220,8 +216,8 @@ class LLMTrace(entities.DlEntity):
             item = dataset.items.get(filepath="/session.json")
             trace = dl.LLMTrace.from_item(item)
         """
-        if 'json' not in item.mimetype or item.system.get('shebang', dict()).get('dltype') != 'llm_trace':
-            raise ValueError('Expecting a JSON item with system.shebang.dltype = llm_trace')
+        if 'json' not in item.mimetype:
+            raise ValueError('Expecting a JSON item')
         return cls(name=item.name, item=item)
 
     @classmethod
@@ -260,14 +256,12 @@ class LLMTrace(entities.DlEntity):
         """
         if self._item is None:
             raise ValueError('Missing item, nothing to fetch.')
-        items_repo = repositories.Items(client_api=client_api)
+        items_repo = repositories.Items(client_api=self._item._client_api)
         items_repo._client_api.default_headers['x-dl-sanitize'] = '0'
         self._item = items_repo.get(item_id=self._item.id)
         trace_json = json.load(self._item.download(save_locally=False))
         self._validate_dict(json_data=trace_json)
         self._dict = trace_json
-        self._dict.setdefault('shebang', 'dataloop')
-        self._dict.setdefault('metadata', {}).setdefault('dltype', 'llm_trace')
 
     def update(self):
         """

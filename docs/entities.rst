@@ -50,6 +50,13 @@ Driver
   :members:
   :show-inheritance:
 
+Embeddings Driver
+~~~~~~~~~~~~~~~~~
+
+.. automodule:: dtlpy.entities.embeddings_driver
+  :members:
+  :show-inheritance:
+
 Item
 ----
 

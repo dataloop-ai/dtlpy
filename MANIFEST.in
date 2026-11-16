@@ -10,6 +10,8 @@ prune .idea
 prune .dataloop
 prune personal
 prune .windsurf
+prune google-cloud-sdk
+prune piper-agent-runner
 include README.md
 include LICENSE
 include requirements.txt

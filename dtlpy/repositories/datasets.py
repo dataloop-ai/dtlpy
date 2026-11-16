@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import zipfile
+from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Generator, Optional, Union
@@ -169,8 +170,19 @@ class Datasets:
         return out_path
 
     @staticmethod
+    def _prepare_items_query(filters: entities.Filters, dataset: entities.Dataset = None, **prepare_kwargs) -> dict:
+        """
+        The item query for a dataset, through Items._prepare_filters when the dataset entity is at hand. Without
+        it, the filters are prepared as they are - fetching the dataset only for this is not worth a request.
+        """
+        if dataset is None:
+            return filters.prepare(**prepare_kwargs)
+        return dataset.items._prepare_filters(filters, **prepare_kwargs)
+
+    @staticmethod
     def _build_payload(filters, include_feature_vectors, include_annotations,
-                       export_type, annotation_filters, feature_vector_filters, dataset_lock, lock_timeout_sec, export_summary):
+                       export_type, annotation_filters, feature_vector_filters, dataset_lock, lock_timeout_sec, export_summary,
+                       dataset=None):
         valid_list = [e.value for e in entities.ExportType]
         valid_types = ', '.join(valid_list)
         if export_type not in ['json', 'zip']:
@@ -180,7 +192,8 @@ class Datasets:
             filters = entities.Filters()
 
         if isinstance(filters, entities.Filters):
-            payload['itemsQuery'] = {'filter': filters.prepare()['filter'], 'join': filters.prepare().get("join", {})}
+            query = Datasets._prepare_items_query(filters, dataset=dataset)
+            payload['itemsQuery'] = {'filter': query['filter'], 'join': query.get("join", {})}
         elif isinstance(filters, dict):
             payload['itemsQuery'] = filters
         else:
@@ -596,7 +609,8 @@ class Datasets:
               with_metadata: bool = True,
               with_task_annotations_status: bool = True,
               dst_dataset_id: str = None,
-              target_directory: str = None):
+              target_directory: str = None,
+              dataset: entities.Dataset = None):
         """
         Clone a dataset. Read more about cloning datatsets and items in our `documentation <https://dataloop.ai/docs/clone-merge-dataset#cloned-dataset>`_ and `SDK documentation <https://developers.dataloop.ai/tutorials/data_management/data_versioning/chapter/>`_.
 
@@ -610,6 +624,7 @@ class Datasets:
         :param bool with_task_annotations_status: true to clone with task annotations' status
         :param str dst_dataset_id: destination dataset id
         :param str target_directory: target directory
+        :param dtlpy.entities.dataset.Dataset dataset: optional - the source dataset entity, to fit the filters to it
         :return: dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -642,7 +657,7 @@ class Datasets:
 
         payload = {
             "name": clone_name,
-            "filter": copy_filters.prepare(),
+            "filter": self._prepare_items_query(copy_filters, dataset=dataset),
             "cloneDatasetParams": {
                 "withItemsAnnotations": with_items_annotations,
                 "withMetadata": with_metadata,
@@ -748,6 +763,7 @@ class Datasets:
                 dataset_lock=dataset_lock,
                 lock_timeout_sec=lock_timeout_sec,
                 export_summary=export_summary,
+                dataset=dataset_entity,
             )
 
             # Make API request for this subset
@@ -762,7 +778,7 @@ class Datasets:
             commands.append( entities.Command.from_json(_json=response.json(), client_api=self._client_api))
 
         time.sleep(2)  # as the command have wrong progress in the beginning
-        logger.debug("start waiting for all commands")
+        logger.debug(f"start waiting for all commands. ids: {', '.join([command.id for command in commands])}")
         # Second loop: Wait for all commands and process results
         for command in commands:
             command = command.wait(timeout=timeout)
@@ -1186,7 +1202,7 @@ class Datasets:
             if isinstance(filters, entities.Filters):
                 payload['filters'] = {
                     'itemsQuery': {
-                        'filter': filters.prepare().get('filter', {})
+                        'filter': self._prepare_items_query(filters, dataset=dataset).get('filter', {})
                     }
                 }
             elif isinstance(filters, dict):
@@ -1534,7 +1550,8 @@ class Datasets:
                checkout: bool = False,
                expiration_options: entities.ExpirationOptions = None,
                index_driver: entities.IndexDriver = None,
-               recipe_id: str = None
+               recipe_id: str = None,
+               metadata_driver_id: str = None
                ) -> entities.Dataset:
         """
         Create a new dataset
@@ -1551,6 +1568,8 @@ class Datasets:
         :param ExpirationOptions expiration_options: dl.ExpirationOptions object that contain definitions for dataset like MaxItemDays
         :param str index_driver: dl.IndexDriver, dataset driver version
         :param str recipe_id: optional - recipe id
+        :param str metadata_driver_id: optional - store the items' metadata in Elastic. An Elastic database driver id
+            (external Elastic), or dl.MetadataDriver.SYSTEM for the platform's internal Elastic. Requires a storage driver
         :return: Dataset object
         :rtype: dtlpy.entities.dataset.Dataset
 
@@ -1559,6 +1578,10 @@ class Datasets:
         .. code-block:: python
 
             dataset = project.datasets.create(dataset_name='dataset_name', ontology_ids='ontology_ids')
+            # metadata in the internal Elastic
+            dataset = project.datasets.create(dataset_name='dataset_name',
+                                              driver_id='storage_driver_id',
+                                              metadata_driver_id=dl.MetadataDriver.SYSTEM)
         """
         create_default_recipe = True
         if any([labels, attributes, ontology_ids, recipe_id]):
@@ -1591,6 +1614,10 @@ class Datasets:
                         type(driver)))
         if driver_id is not None:
             payload['driver'] = driver_id
+        if metadata_driver_id is not None:
+            # the SDK enums subclass str, so isinstance(x, str) can't tell a member from a plain string
+            payload['metadataDriverId'] = metadata_driver_id.value if isinstance(metadata_driver_id, Enum) \
+                else metadata_driver_id
 
         if expiration_options:
             payload['expirationOptions'] = expiration_options.to_json()
@@ -1620,6 +1647,44 @@ class Datasets:
         if checkout:
             self.checkout(dataset=dataset)
         return dataset
+
+    def create_storage_analytics(self,
+                                 dataset_name: str,
+                                 driver_id: str,
+                                 metadata_driver_id: str = None,
+                                 checkout: bool = False
+                                 ) -> entities.Dataset:
+        """
+        Create a dataset on external storage (NFS, PowerScale, S3) whose items' metadata is stored in Elastic.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str dataset_name: The Name of the dataset
+        :param str driver_id: the storage driver id
+        :param str metadata_driver_id: optional - an external Elastic database driver id. If not provided, the
+            platform's internal Elastic is used (dl.MetadataDriver.SYSTEM)
+        :param bool checkout: set the dataset as a default dataset object (cookies)
+        :return: Dataset object
+        :rtype: dtlpy.entities.dataset.Dataset
+
+        **Example**:
+
+        .. code-block:: python
+
+            # internal Elastic - the platform creates the metadata driver
+            dataset = project.datasets.create_storage_analytics(dataset_name='dataset_name',
+                                                                driver_id='storage_driver_id')
+            # external Elastic
+            dataset = project.datasets.create_storage_analytics(dataset_name='dataset_name',
+                                                                driver_id='storage_driver_id',
+                                                                metadata_driver_id='elastic_driver_id')
+        """
+        if metadata_driver_id is None:
+            metadata_driver_id = entities.MetadataDriver.SYSTEM
+        return self.create(dataset_name=dataset_name,
+                           driver_id=driver_id,
+                           metadata_driver_id=metadata_driver_id,
+                           checkout=checkout)
 
     @staticmethod
     def _convert_single(downloader,
@@ -1949,13 +2014,15 @@ class Datasets:
     def split_ml_subsets(self,
                         dataset_id: str,
                         items_query: entities.filters,
-                        ml_split_list: dict) -> bool:
+                        ml_split_list: dict,
+                        dataset: entities.Dataset = None) -> bool:
         """
         Split dataset items into ML subsets.
 
         :param str dataset_id: The ID of the dataset.
         :param dict items_query: Query to select items.
         :param dict ml_split_list: Dictionary with 'train', 'validation', 'test' keys and integer percentages.
+        :param dtlpy.entities.dataset.Dataset dataset: optional - the dataset entity, to fit the query to it
         :return: True if the split operation was successful.
         :rtype: bool
         :raises: PlatformException on failure and ValueError if percentages do not sum to 100 or invalid keys/values.
@@ -1967,7 +2034,7 @@ class Datasets:
         if not items_query:
             items_query = entities.Filters()
 
-        items_query_dict = items_query.prepare()
+        items_query_dict = self._prepare_items_query(items_query, dataset=dataset)
         required_keys = {'train', 'validation', 'test'}
         if set(ml_split_list.keys()) != required_keys:
             raise ValueError("MLSplitList must have exactly the keys 'train', 'validation', 'test'.")
@@ -1997,7 +2064,8 @@ class Datasets:
         return True
 
     @_api_reference.add(path='/datasets/{id}/items/bulk-update-metadata', method='post')
-    def bulk_update_ml_subset(self, dataset_id: str, items_query: dict, subset: str = None, deleteTag: bool = False) -> bool:
+    def bulk_update_ml_subset(self, dataset_id: str, items_query: dict, subset: str = None, deleteTag: bool = False,
+                              dataset: entities.Dataset = None) -> bool:
         """
         Bulk update ML subset assignment for selected items.
         If subset is None, remove subsets. Otherwise, assign the specified subset.
@@ -2005,12 +2073,13 @@ class Datasets:
         :param str dataset_id: ID of the dataset
         :param dict items_query: DQLResourceQuery (filters) for selecting items
         :param str subset: 'train', 'validation', 'test' or None to remove all
+        :param dtlpy.entities.dataset.Dataset dataset: optional - the dataset entity, to fit the query to it
         :return: True if success
         :rtype: bool
         """
         if items_query is None:
             items_query = entities.Filters()
-        items_query_dict = items_query.prepare()
+        items_query_dict = self._prepare_items_query(items_query, dataset=dataset)
         if not deleteTag and subset not in ['train', 'validation', 'test']:
             raise ValueError("subset must be one of: 'train', 'validation', 'test'")
         # Determine tag values based on subset

@@ -242,6 +242,7 @@ class Dtlpy:
         HIGHMEM_S = 'highmem-s'
         HIGHMEM_M = 'highmem-m'
         HIGHMEM_L = 'highmem-l'
+        HIGHCPU_XS = 'highcpu-xs'
         GPU_T4_S = "gpu-t4-s"
         GPU_T4_M = "gpu-t4-m"
 

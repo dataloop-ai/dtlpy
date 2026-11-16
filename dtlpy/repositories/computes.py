@@ -1,6 +1,7 @@
 import base64
 import datetime
 import json
+import uuid
 
 from dtlpy import miscellaneous
 
@@ -376,7 +377,7 @@ class Computes:
             project = self.projects.get(project_name=project_name)
         org = self.organizations.get(organization_id=org_id)
         integration_name = ('cluster_integration_test_' + datetime.datetime.now().isoformat().split('.')[0]
-                            .replace(':', '_'))
+                            .replace(':', '_') + '_' + uuid.uuid4().hex[:4])
         integration = self.create_integration(org, integration_name, config['authentication'])
         compute = self.setup_compute_cluster(config, integration, org_id, project, is_global=is_global)
         return compute

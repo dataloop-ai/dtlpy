@@ -113,6 +113,12 @@ class Dataset(entities.BaseEntity):
     # syncing status
     is_syncing = attr.ib(default=False, repr=False)
 
+    # derived by the platform from the dataset's driver - response only, never sent back
+    is_database_backed = attr.ib(default=None, repr=False)
+
+    # the dataset's Elastic metadata driver ('system' for the internal one) - response only, never sent back
+    metadata_driver_id = attr.ib(default=None, repr=False)
+
     # entities
     project = attr.ib(default=None, repr=False)
 
@@ -220,6 +226,8 @@ class Dataset(entities.BaseEntity):
                    index_driver=_json.get('indexDriver', None),
                    enable_sync_with_cloned=_json.get('enableSyncWithCloned', None),
                    is_syncing=_json.get('isSyncing', False),
+                   is_database_backed=_json.get('isDatabaseBacked', None),
+                   metadata_driver_id=_json.get('metadataDriverId', None),
                    src_dataset=_json.get('srcDataset', None))
         inst.is_fetched = is_fetched
         return inst
@@ -253,6 +261,8 @@ class Dataset(entities.BaseEntity):
                                                               attr.fields(Dataset).index_driver,
                                                               attr.fields(Dataset).enable_sync_with_cloned,
                                                               attr.fields(Dataset).is_syncing,
+                                                              attr.fields(Dataset).is_database_backed,
+                                                              attr.fields(Dataset).metadata_driver_id,
                                                               attr.fields(Dataset).src_dataset,
                                                               ))
         _json.update({'items': self.items_url})
@@ -270,6 +280,8 @@ class Dataset(entities.BaseEntity):
         if self.enable_sync_with_cloned is not None:
             _json['enableSyncWithCloned'] = self.enable_sync_with_cloned
         _json['isSyncing'] = self.is_syncing
+        if self.is_database_backed is not None:
+            _json['isDatabaseBacked'] = self.is_database_backed
         if self.src_dataset is not None:
             _json['srcDataset'] = self.src_dataset
         return _json
@@ -335,7 +347,8 @@ class Dataset(entities.BaseEntity):
     def set_repositories(self):
         reps = namedtuple('repositories',
                           field_names=['items', 'recipes', 'datasets', 'assignments', 'tasks', 'annotations',
-                                       'ontologies', 'features', 'feature_sets', 'settings', 'schema', 'collections'])
+                                       'ontologies', 'features', 'feature_sets', 'settings', 'schema', 'collections',
+                                       'embeddings_drivers'])
         if self.project is None:
             datasets = repositories.Datasets(client_api=self._client_api, project=None)
             if self.projects is not None and len(self.projects) > 0:
@@ -359,8 +372,16 @@ class Dataset(entities.BaseEntity):
             feature_sets=repositories.FeatureSets(client_api=self._client_api, project=self.project, dataset=self),
             settings=repositories.Settings(client_api=self._client_api, dataset=self),
             schema=repositories.Schema(client_api=self._client_api, dataset=self),
-            collections=repositories.Collections(client_api=self._client_api, dataset=self)
+            collections=repositories.Collections(client_api=self._client_api, dataset=self),
+            embeddings_drivers=repositories.EmbeddingsDrivers(client_api=self._client_api,
+                                                              project=self.project,
+                                                              dataset=self)
         )
+
+    @property
+    def embeddings_drivers(self):
+        assert isinstance(self._repositories.embeddings_drivers, repositories.EmbeddingsDrivers)
+        return self._repositories.embeddings_drivers
 
     @property
     def settings(self):
@@ -632,7 +653,8 @@ class Dataset(entities.BaseEntity):
                                    with_items_annotations=with_items_annotations,
                                    with_task_annotations_status=with_task_annotations_status,
                                    dst_dataset_id=dst_dataset_id,
-                                   target_directory=target_directory)
+                                   target_directory=target_directory,
+                                   dataset=self)
 
     def sync(self, wait=True):
         """
@@ -1357,7 +1379,8 @@ class Dataset(entities.BaseEntity):
         """
         return self.datasets.split_ml_subsets(dataset_id=self.id,
                                               items_query=items_query,
-                                              ml_split_list=percentages)
+                                              ml_split_list=percentages,
+                                              dataset=self)
 
     def assign_subset_to_items(self, subset: str, items_query=None) -> bool:
         """
@@ -1372,7 +1395,8 @@ class Dataset(entities.BaseEntity):
    
         return self.datasets.bulk_update_ml_subset(dataset_id=self.id,
                                                    items_query=items_query,
-                                                   subset=subset)
+                                                   subset=subset,
+                                                   dataset=self)
 
     def remove_subset_from_items(self, items_query= None,) -> bool:
         """
@@ -1386,7 +1410,8 @@ class Dataset(entities.BaseEntity):
         return self.datasets.bulk_update_ml_subset(dataset_id=self.id,
                                                    items_query=items_query,
                                                    subset=None,
-                                                   deleteTag=True)
+                                                   deleteTag=True,
+                                                   dataset=self)
 
     def get_items_missing_ml_subset(self, filters = None) -> list:
         """

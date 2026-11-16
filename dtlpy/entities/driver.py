@@ -25,6 +25,9 @@ class ExternalStorage(str, Enum):
          - Microsoft AZURE BLOB drivers
        * - AZURE_DATALAKE_GEN2
          - Microsoft AZURE GEN2 drivers
+       * - DATABASE
+         - Database drivers - for database-backed datasets. The concrete engine
+           (elasticsearch, starburst) is set by the integration type
     """
     S3 = "s3"
     GCS = "gcs"
@@ -36,6 +39,22 @@ class ExternalStorage(str, Enum):
     POWERSCALE_NFS = 'powerscaleNfs'
     COMPUTE_CLUSTER = 'computeCluster'
     STORAGE = 'storage'
+    DATABASE = 'database'
+
+
+class MetadataDriver(str, Enum):
+    """ Reserved metadata driver ids for datasets that store their item metadata in Elastic.
+
+    .. list-table::
+       :widths: 15 150
+       :header-rows: 1
+
+       * - State
+         - Description
+       * - SYSTEM
+         - The platform-managed (internal) Elastic - the backend creates the metadata driver
+    """
+    SYSTEM = "system"
 
 
 @attr.s()
@@ -60,6 +79,7 @@ class Driver(entities.BaseEntity):
     elastic_index_path = attr.ib()
     directory = attr.ib()
     mount_path = attr.ib()
+    disable_manual_sync = attr.ib()
     # api
     _client_api = attr.ib(type=ApiClient, repr=False)
     _repositories = attr.ib(repr=False)
@@ -104,7 +124,8 @@ class Driver(entities.BaseEntity):
                    elastic_index=_json.get('elasticIndex', None),
                    elastic_index_path=_json.get('elasticIndexPath', None),
                    directory=_json.get('directory', None),
-                   mount_path=_json.get('mountPath', None)
+                   mount_path=_json.get('mountPath', None),
+                   disable_manual_sync=_json.get('disableManualSync', False)
                    )
 
         inst.is_fetched = is_fetched
@@ -124,12 +145,14 @@ class Driver(entities.BaseEntity):
                                                               attr.fields(Driver).created_at,
                                                               attr.fields(Driver).integration_id,
                                                               attr.fields(Driver).integration_type,
+                                                              attr.fields(Driver).disable_manual_sync,
                                                               ))
         output_dict['allowExternalDelete'] = self.allow_external_delete
         output_dict['allowExternalModification'] = self.allow_external_modification
         output_dict['createdAt'] = self.created_at
         output_dict['integrationId'] = self.integration_id
         output_dict['integrationType'] = self.integration_type
+        output_dict['disableManualSync'] = self.disable_manual_sync
 
         if self.path is not None:
             output_dict['path'] = self.path
@@ -326,4 +349,45 @@ class ComputeClusterDriver(Driver):
         inst.compute_id = payload.get('computeId', None)
         inst.compute_storage_name = payload.get('computeStorageName', None)
         inst.public = payload.get('public', False)
+        return inst
+
+
+@attr.s()
+class DatabaseDriver(Driver):
+    """
+    Database storage driver entity - for database-backed datasets.
+    The driver type is always 'database'; the engine (elasticsearch, starburst) comes from the integration.
+    """
+    database_table = attr.ib(default=None)
+    dynamic_partitions = attr.ib(default=None)
+    read_only = attr.ib(default=None)
+    is_use_default_s2_schema = attr.ib(default=None)
+
+    def to_json(self):
+        _json = super().to_json()
+        if self.database_table is not None:
+            _json['databaseTable'] = self.database_table
+        if self.dynamic_partitions is not None:
+            _json['dynamicPartitions'] = self.dynamic_partitions
+        if self.read_only is not None:
+            _json['readOnly'] = self.read_only
+        if self.is_use_default_s2_schema is not None:
+            _json['isUseDefaultS2Schema'] = self.is_use_default_s2_schema
+        return _json
+
+    @classmethod
+    def from_json(cls, _json, client_api, is_fetched=True):
+        """
+        Build a DatabaseDriver entity object from a json
+
+        :param _json: _json response from host
+        :param client_api: ApiClient entity
+        :param is_fetched: is Entity fetched from Platform
+        :return: DatabaseDriver object
+        """
+        inst = super().from_json(_json, client_api, is_fetched=is_fetched)
+        inst.database_table = _json.get('databaseTable', None)
+        inst.dynamic_partitions = _json.get('dynamicPartitions', None)
+        inst.read_only = _json.get('readOnly', None)
+        inst.is_use_default_s2_schema = _json.get('isUseDefaultS2Schema', None)
         return inst

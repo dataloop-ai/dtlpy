@@ -26,6 +26,7 @@ import concurrent
 from concurrent.futures import ThreadPoolExecutor
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+import urllib3
 from functools import wraps
 import numpy as np
 import inspect
@@ -570,6 +571,7 @@ class ApiClient:
     """
     API calls to Dataloop gate
     """
+    _insecure_request_warnings_disabled = False
 
     def __init__(self, token=None, num_processes=None, cookie_filepath=None):
         ############
@@ -651,6 +653,8 @@ class ApiClient:
         # set logging level
         logging.getLogger(name='dtlpy').handlers[0].setLevel(logging._nameToLevel[self.verbose.logging_level.upper()])
         os.environ["USE_ATTRIBUTE_2"] = json.dumps(self.attributes_mode.use_attributes_2)
+        # environment may already be set (e.g. from the cookie) without going through "setenv"
+        self._handle_insecure_request_warnings()
 
         self.cache = None
         #######################
@@ -782,6 +786,20 @@ class ApiClient:
             if 'verify_ssl' in environments[self.environment]:
                 verify = environments[self.environment]['verify_ssl']
         return verify
+
+    def _handle_insecure_request_warnings(self):
+        """
+        When the current environment is configured with verify_ssl=False, urllib3 emits an
+        InsecureRequestWarning for every single request, which floods the logs.
+        Log it once and suppress the rest.
+        """
+        if self.verify or ApiClient._insecure_request_warnings_disabled:
+            return
+        ApiClient._insecure_request_warnings_disabled = True
+        logger.warning(
+            'SSL verification is disabled for environment: {}. Unverified HTTPS requests will be made '
+            'and further InsecureRequestWarning messages are suppressed.'.format(self.environment))
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     @property
     def use_ssl_context(self):
@@ -1697,6 +1715,7 @@ class ApiClient:
             self._token = None
             self.refresh_token_active = True
         logger.info('Platform environment: {}'.format(self.environment))
+        self._handle_insecure_request_warnings()
         if self.token_expired():
             logger.info('Token expired, Please login.')
 

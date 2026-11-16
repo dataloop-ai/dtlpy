@@ -124,6 +124,23 @@ class Features:
         return entities.Feature.from_json(client_api=self._client_api,
                                           _json=response.json())
 
+    @staticmethod
+    def _get_dataset_id(entity):
+        """
+        Get the dataset id of the entity the feature vector is linked to.
+
+        Items (including rows of a database-backed dataset) and annotations carry the id directly,
+        so use it and avoid fetching the dataset.
+
+        :param entity: the entity the featureVector is linked to (item, annotation, etc)
+        :return: dataset id
+        :rtype: str
+        """
+        dataset_id = getattr(entity, 'dataset_id', None)
+        if dataset_id is None:
+            dataset_id = entity.dataset.id
+        return dataset_id
+
     @_api_reference.add(path='/features/vectors', method='post')
     def create(self,
                value,
@@ -180,7 +197,7 @@ class Features:
         for (single_entity, single_value) in zip(entity, value):
             entry = {'entityId': single_entity.id,
                             'value': single_value,
-                            'datasetId': single_entity.dataset.id
+                            'datasetId': self._get_dataset_id(entity=single_entity)
                         }
             entry.update(additional_payload)
             payload.append(entry)

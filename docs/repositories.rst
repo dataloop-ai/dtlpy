@@ -44,6 +44,13 @@ Drivers
   :members:
   :show-inheritance:
 
+Embeddings Drivers
+~~~~~~~~~~~~~~~~~~
+
+.. automodule:: dtlpy.repositories.embeddings_drivers
+  :members:
+  :show-inheritance:
+
 Items
 -----
 

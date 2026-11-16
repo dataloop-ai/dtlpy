@@ -53,3 +53,4 @@ from .schema import Schema
 from .computes import Computes
 from .service_drivers import ServiceDrivers
 from .collections import Collections
+from .embeddings_drivers import EmbeddingsDrivers

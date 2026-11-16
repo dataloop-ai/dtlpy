@@ -96,7 +96,7 @@ class Filters:
         method: FiltersMethod = None,
         custom_filter=None,
         resource: FiltersResource = FiltersResource.ITEM,
-        use_defaults=True,
+        use_defaults=None,
         context=None,
         page_size=None,
     ):
@@ -127,7 +127,10 @@ class Filters:
         self._ref_assignment_id = None
         self._ref_task_id = None
         self._system_space = None
+        self._database_driver_raw_data_only = None
 
+        # None (unset) - the defaults are added and the dataset decides whether they apply (they are left out on a
+        # database-backed dataset). True - the defaults are always sent. False - no defaults
         self._use_defaults = use_defaults
         self.__add_defaults()
         self.context = context
@@ -169,6 +172,19 @@ class Filters:
     @system_space.setter
     def system_space(self, val: bool):
         self._system_space = val
+
+    @property
+    def database_driver_raw_data_only(self):
+        return self._database_driver_raw_data_only
+
+    @database_driver_raw_data_only.setter
+    def database_driver_raw_data_only(self, val: bool):
+        """
+        Return the raw database rows of a database-backed dataset instead of Item entities.
+        Note the platform also skips the driver's field mappings, so columns come back under
+        their raw database names rather than their mapped 'metadata.user.*' paths.
+        """
+        self._database_driver_raw_data_only = val
 
     def reset(self):
         self.or_filter_list = list()
@@ -325,12 +341,17 @@ class Filters:
         self.join["filter"][join_method].append(SingleFilter(field=field, values=values, operator=operator).prepare())
 
     def __add_defaults(self):
-        if self._use_defaults:
+        if self._use_defaults is not False:
             # add items defaults
             if self.resource == FiltersResource.ITEM:
                 self._unique_fields = ["type", "hidden"]
                 self.add(field="hidden", values=False, method=FiltersMethod.AND)
                 self.add(field="type", values="file", method=FiltersMethod.AND)
+                # unset defaults are tagged so prepare(item_defaults=False) can leave out exactly these - explicitly
+                # requested defaults (use_defaults=True) and a condition the user adds on the same field are kept
+                if self._use_defaults is None:
+                    for single_filter in self.and_filter_list:
+                        single_filter._is_item_default = True
             # add service defaults
             elif self.resource == FiltersResource.SERVICE:
                 self._unique_fields = ["global"]
@@ -345,7 +366,7 @@ class Filters:
                 values.remove(entities.AnnotationType.NOTE.value)
                 self.add(field="type", values=values, operator=FiltersOperations.IN, method=FiltersMethod.AND)
 
-    def __generate_query(self):
+    def __generate_query(self, item_defaults=True):
         filters_dict = dict()
 
         if len(self.or_filter_list) > 0:
@@ -356,9 +377,11 @@ class Filters:
                 )
             filters_dict["$or"] = or_filters
 
-        if len(self.and_filter_list) > 0:
+        and_filter_list = [single_filter for single_filter in self.and_filter_list
+                           if item_defaults or not single_filter._is_item_default]
+        if len(and_filter_list) > 0:
             and_filters = list()
-            for single_filter in self.and_filter_list:
+            for single_filter in and_filter_list:
                 and_filters.append(
                     single_filter.prepare(recursive=self.recursive and self.resource == FiltersResource.ITEM)
                 )
@@ -415,7 +438,8 @@ class Filters:
 
         return refs
 
-    def prepare(self, operation=None, update=None, query_only=False, system_update=None, system_metadata=False):
+    def prepare(self, operation=None, update=None, query_only=False, system_update=None, system_metadata=False,
+                item_defaults=True):
         """
         To dictionary for platform call
 
@@ -424,6 +448,8 @@ class Filters:
         :param bool query_only: query only
         :param system_update: system update
         :param system_metadata: True, if you want to change metadata system
+        :param bool item_defaults: False to leave out the item defaults (hidden == False, type == 'file'), which
+            match nothing on a database-backed dataset. Raw (custom) queries are always sent as they are
         :return: dict of the filter
         :rtype: dict
         """
@@ -436,7 +462,7 @@ class Filters:
             _json = self.__generate_custom_query()
             return _json
 
-        _json["filter"] = self.__generate_query()
+        _json["filter"] = self.__generate_query(item_defaults=item_defaults)
 
         ##################
         # filter options #
@@ -485,6 +511,8 @@ class Filters:
             _json["context"] = self.context
         if self._system_space is not None:
             _json["systemSpace"] = self._system_space
+        if self._database_driver_raw_data_only is not None:
+            _json["databaseDriverRawDataOnly"] = self._database_driver_raw_data_only
         return _json
 
     def print(self, indent=2):
@@ -624,6 +652,7 @@ class Filters:
         """
         Generator that yields filter chunks for large datasets using a bounded
         thread pool. Splits ranges by id until each subset holds <= max_items.
+        A database-backed dataset is a single chunk - its rows have no ObjectId ids to split by.
 
         :param dataset: Dataset object to get filters for
         :param filters: Base filters to apply
@@ -638,6 +667,10 @@ class Filters:
         if filters is None:
             filters = entities.Filters()
 
+        if dataset.is_database_backed:
+            yield copy.deepcopy(dataset.items._prepare_filters(filters))
+            return
+
         from_id, count = Filters._get_first_last_item(
             items_repo=dataset.items, filters=filters, order_by_direction=FiltersOrderByDirection.ASCENDING
         )
@@ -651,7 +684,7 @@ class Filters:
         max_depth = max_depth if max_depth is not None else np.ceil(np.log2(count / max_items) + 3)
 
         def make_filter_dict(range_from_id, range_to_id, strict_from: bool = False):
-            fdict = copy.deepcopy(filters.prepare())
+            fdict = copy.deepcopy(dataset.items._prepare_filters(filters))
             lower_op = "$gt" if strict_from else "$gte"
             fdict["filter"].setdefault("$and", []).extend(
                 [{"id": {lower_op: range_from_id}}, {"id": {"$lte": range_to_id}}]
@@ -717,7 +750,7 @@ class Filters:
     def _get_first_last_item(
         items_repo, filters, order_by_direction=FiltersOrderByDirection.ASCENDING
     ) -> Tuple[Optional[str], int]:
-        filters_dict = copy.deepcopy(filters.prepare())
+        filters_dict = copy.deepcopy(items_repo._prepare_filters(filters))
         filters_dict["sort"] = {"id": order_by_direction.value}
         filters_dict["page"] = 0
         filters_dict["pageSize"] = 1
@@ -759,6 +792,7 @@ class SingleFilter:
         self.field = field
         self.values = values
         self.operator = operator
+        self._is_item_default = False
 
     @staticmethod
     def __add_recursive(value):

@@ -150,4 +150,6 @@ personal/
 
 # dlp xray files
 create_test_execution.json
-
+.plans
+.pytest_cache/
+AGENTS.md

@@ -1338,9 +1338,23 @@ class Tasks:
             raise exceptions.PlatformException(
                 error="400", message="removeFromTaskId key is missing in command response: {}".format(response)
             )
-        if command.spec.get("removeItemsCount") is not None and command.spec.get("totalItemsCount") is not None:
-            logger.debug("Successfully removed %s out of %s item(s) from the task.",
-                         command.spec["removeItemsCount"], command.spec["totalItemsCount"])
+        removed_count = command.spec.get("removeItemsCount")
+        total_count = command.spec.get("totalItemsCount")
+        if removed_count is not None and total_count is not None:
+            blocked_count = total_count - removed_count
+            if blocked_count <= 0:
+                logger.info("Successfully removed all %s item(s) from the task.", total_count)
+            elif removed_count == 0:
+                logger.info(
+                    "No items were removed from the task. All %s item(s) have an assigned status and cannot be removed.",
+                    total_count,
+                )
+            else:
+                logger.info(
+                    "Successfully removed %s out of %s item(s) from the task. "
+                    "%s item(s) with an assigned status cannot be removed.",
+                    removed_count, total_count, blocked_count,
+                )
         return True
 
     def get_items(

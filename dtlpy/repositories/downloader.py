@@ -166,7 +166,10 @@ class Downloader:
         :param dataset_lock: Lock dataset during download
         :param lock_timeout_sec: Lock timeout in seconds
         """
-        filters, annotation_filters = self._prepare_filters(filters=filters,annotation_filters=annotation_filters,file_types=file_types)
+        filters, annotation_filters = self._prepare_filters(filters=filters,
+                                                            annotation_filters=annotation_filters,
+                                                            file_types=file_types,
+                                                            items_repository=self.items_repository)
         filter_copy = copy.deepcopy(filters)
         filter_copy.page_size = 0
         num_items = self.items_repository.list(filters=filter_copy).items_count
@@ -234,13 +237,16 @@ class Downloader:
     @staticmethod
     def _prepare_filters(filters: entities.Filters = None,
                         annotation_filters: entities.Filters = None,
-                        file_types=None):
+                        file_types=None,
+                        items_repository=None):
         """
         Prepare and merge filters with annotation filters.
 
         :param filters: Filters entity or None
         :param annotation_filters: Annotation filters to merge with item filters
         :param file_types: List of file types to filter
+        :param items_repository: Items repository of the dataset, to prepare the item query when it is merged
+            into a raw query
         :return: Prepared filters entity
         """
         # filters
@@ -264,7 +270,8 @@ class Downloader:
                                     method=entities.FiltersMethod.OR)
             elif annotation_filters.custom_filter is not None:
                 annotation_query_dict = annotation_filters.prepare()
-                items_query_dict = filters.prepare()
+                items_query_dict = filters.prepare() if items_repository is None \
+                    else items_repository._prepare_filters(filters)
                 items_query_dict["join"] = annotation_query_dict
                 filters.reset()
                 filters.custom_filter = items_query_dict
@@ -384,7 +391,8 @@ class Downloader:
             filters, annotation_filters = self._prepare_filters(
                 filters=filters,
                 annotation_filters=annotation_filters,
-                file_types=file_types
+                file_types=file_types,
+                items_repository=self.items_repository
             )
 
             items_to_download = self.items_repository.list(filters=filters)
@@ -627,7 +635,7 @@ class Downloader:
         try:
             payload = dict()
             if filters is not None:
-                payload['itemsQuery'] = filters.prepare()
+                payload['itemsQuery'] = dataset.items._prepare_filters(filters)
             payload['annotations'] = {
                 "include": include_annotations_in_output,
                 "convertSemantic": export_png_files

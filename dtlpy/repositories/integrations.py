@@ -598,12 +598,17 @@ class IntegrationUtils:
         if not location:
             raise ValueError('Missing Location')
 
+        # GAR image hosts are "<location>-docker.pkg.dev" (e.g. "europe" -> "europe-docker.pkg.dev").
+        # The auths key in the generated dockerconfigjson must match that host exactly, or kubelet
+        # will never present these credentials when pulling the image (silent ImagePullBackOff).
+        registry_host = location if location.endswith('.pkg.dev') else f"{location}-docker.pkg.dev"
+
         username = "_json_key"
         cred = f"{username}:{service_account}"
         auth = IntegrationUtils.encode(cred)
 
         return IntegrationUtils.generate_json_key_options(
-            location=location,
+            location=registry_host,
             username=username,
             password=service_account,
             auth=auth,

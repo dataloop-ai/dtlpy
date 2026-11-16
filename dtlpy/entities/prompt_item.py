@@ -233,11 +233,11 @@ class PromptItem:
             annotation_id = annotation.id
             if annotation.type == 'ref_image':
                 prompt = Prompt(key=prompt_id, role='assistant')
-                prompt.add_element(value=annotation.annotation_definition.coordinates.get('ref'),
+                prompt.add_element(value=annotation.annotation_definition.to_coordinates(color=None).get('ref'),
                                    mimetype=PromptType.IMAGE)
             elif annotation.type == 'text':
                 prompt = Prompt(key=prompt_id, role='assistant')
-                prompt.add_element(value=annotation.annotation_definition.coordinates,
+                prompt.add_element(value=annotation.annotation_definition.to_coordinates(color=None),
                                    mimetype=PromptType.TEXT)
             else:
                 raise ValueError(f"Unsupported annotation type: {annotation.type}")

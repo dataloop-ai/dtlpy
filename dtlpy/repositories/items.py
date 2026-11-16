@@ -1,5 +1,7 @@
 import logging
 
+import pandas
+
 from .. import entities, exceptions, repositories, miscellaneous, _api_reference
 from ..services.api_client import ApiClient
 
@@ -80,6 +82,20 @@ class Items:
             raise exceptions.PlatformException(error="403",
                                                message="Unable to set given entity. Entity give: {}".format(entity))
 
+    def _prepare_filters(self, filters: entities.Filters, **prepare_kwargs) -> dict:
+        """
+        The single place item filters become a query for this dataset. On a database-backed dataset the item
+        defaults are left out, because a row has neither 'type' nor 'hidden' - unless they were explicitly
+        requested with use_defaults=True. A dataset that was not fetched has no isDatabaseBacked, so nothing is
+        assumed. The given filters are never modified.
+
+        :param dtlpy.entities.filters.Filters filters: item filters
+        :param prepare_kwargs: passed on to Filters.prepare
+        :return: the prepared query
+        :rtype: dict
+        """
+        return filters.prepare(item_defaults=not self.dataset.is_database_backed, **prepare_kwargs)
+
     def get_all_items(self, filters: entities.Filters = None) -> [entities.Item]:
         """
         Get all items in dataset.
@@ -99,8 +115,8 @@ class Items:
         """
         if filters is None:
             filters = entities.Filters()
+            # the defaults already ask for type == 'file'
             filters._user_query = 'false'
-            filters.add(field='type', values='file')
         pages = self.list(filters=filters)
         num_items = pages.items_count
         items = [None for _ in range(num_items)]
@@ -126,6 +142,22 @@ class Items:
         items = miscellaneous.List([r[1] for r in results if r[0] is True])
         return items
 
+    def _list_raw_rows(self, filters: entities.Filters) -> pandas.DataFrame:
+        """
+        Drain a raw-data-only query into a DataFrame, one row per database row.
+
+        :param dtlpy.entities.filters.Filters filters: filters with database_driver_raw_data_only set
+        :return: DataFrame of the raw database rows
+        :rtype: pandas.DataFrame
+        """
+        paged = entities.PagedEntities(items_repository=self,
+                                       filters=filters,
+                                       page_offset=filters.page,
+                                       page_size=filters.page_size,
+                                       client_api=self._client_api)
+        rows = [row for page in paged for row in page]
+        return pandas.DataFrame(rows)
+
     def _list(self, filters: entities.Filters):
         """
         Get dataset items list This is a browsing endpoint, for any given path item count will be returned,
@@ -137,7 +169,7 @@ class Items:
         # prepare request
         success, response = self._client_api.gen_request(req_type="POST",
                                                          path="/datasets/{}/query".format(self.dataset.id),
-                                                         json_req=filters.prepare(),
+                                                         json_req=self._prepare_filters(filters),
                                                          headers={'user_query': filters._user_query})
         if self._client_api.check_response(success, response, path="/datasets") is False:
             return None
@@ -157,7 +189,7 @@ class Items:
         :param dtlpy.entities.filters.Filters filters: Filters entity or a dictionary containing filters parameters
         :param int page_offset: start page
         :param int page_size: page size
-        :return: Pages object
+        :return: Pages object, or a DataFrame of raw rows when filters.database_driver_raw_data_only is set
         :rtype: dtlpy.entities.paged_entities.PagedEntities
 
         **Example**:
@@ -186,6 +218,9 @@ class Items:
         # page offset
         if page_offset is not None:
             filters.page = page_offset
+
+        if filters.database_driver_raw_data_only:
+            return self._list_raw_rows(filters=filters)
 
         if filters.resource == entities.FiltersResource.ITEM:
             items_repository = self
@@ -390,7 +425,7 @@ class Items:
             # prepare request
             success, response = self._client_api.gen_request(req_type="POST",
                                                              path="/datasets/{}/query".format(self.dataset.id),
-                                                             json_req=filters.prepare(operation='delete'))
+                                                             json_req=self._prepare_filters(filters, operation='delete'))
         else:
             raise exceptions.PlatformException("400", "Must provide item id, filename or filters")
 
@@ -469,10 +504,11 @@ class Items:
         # update by filters
         else:
             # prepare request
-            prepared_filter = filters.prepare(operation='update',
-                                              system_update=system_update_values,
-                                              system_metadata=system_metadata,
-                                              update=update_values)
+            prepared_filter = self._prepare_filters(filters,
+                                                    operation='update',
+                                                    system_update=system_update_values,
+                                                    system_metadata=system_metadata,
+                                                    update=update_values)
             success, response = self._client_api.gen_request(req_type="POST",
                                                              path="/datasets/{}/query".format(self.dataset.id),
                                                              json_req=prepared_filter)
@@ -621,8 +657,13 @@ class Items:
         :param str item_description: add a string description to the uploaded item
         :param bool raise_on_error: raise an exception if an error occurs
         :param bool return_as_list: return a list of items instead of a generator
-        
-        :return: Output (generator/single item)
+
+        :return: Output (generator/single item). On a database-backed dataset, when local_path holds rows
+            (DataFrame, dict or list of dicts), the rows are uploaded in chunks of up to 1000 rows and the output
+            is the created items, not fetched (single item, generator, or list with return_as_list).
+            Each row needs an '_id' (or the driver's primary key field) or a 'filename' to derive one from - rows are
+            stored as-is (the driver's field mappings are not applied), rows with the same id overwrite each other,
+            and they may take a moment to appear in queries
         :rtype: generator or single item
 
         **Example**:

@@ -1,5 +1,6 @@
 import logging
 import re
+from enum import Enum
 
 from .. import entities, miscellaneous, exceptions, _api_reference
 from ..services.api_client import ApiClient
@@ -86,7 +87,8 @@ class Drivers:
         Determine the appropriate driver class based on the driver type in the JSON response.
 
         :param dict _json: The JSON response containing driver information
-        :return: The appropriate driver class (S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver, or Driver)
+        :return: The appropriate driver class (S3Driver, GcsDriver, AzureBlobDriver, ComputeClusterDriver,
+            DatabaseDriver, or Driver)
         :rtype: type
         """
         driver_type = _json.get("type", None)
@@ -100,6 +102,9 @@ class Drivers:
             driver_class = entities.ComputeClusterDriver
         elif driver_type == entities.ExternalStorage.STORAGE:
             driver_class = entities.Driver
+        # 'elasticsearch'/'starburst' are legacy driver types - they are now integration types only
+        elif driver_type in [entities.ExternalStorage.DATABASE, 'elasticsearch', 'starburst']:
+            driver_class = entities.DatabaseDriver
         else:
             driver_class = entities.Driver
         return driver_class
@@ -174,7 +179,8 @@ class Drivers:
         region: str = None,
         storage_class: str = "",
         path: str = "",
-        endpoint: str = None
+        endpoint: str = None,
+        disable_manual_sync: bool = False
     ):
         """
         Create a storage driver.
@@ -192,6 +198,7 @@ class Drivers:
         :param str storage_class: relevant only for s3
         :param str path: Optional. By default path is the root folder. Path is case sensitive integration
         :param str endpoint: Optional. Custom endpoint for minio storage. Must be in the format 'http://<hostname>:<port>' or 'https://<hostname>:<port>'.
+        :param bool disable_manual_sync: True to hide the sync buttons in the UI, so the dataset can only be synced from the SDK or by a direct API call (default: False)
         :return: driver object
         :rtype: dtlpy.entities.driver.Driver
 
@@ -228,6 +235,7 @@ class Drivers:
             "type": driver_type,
             "payload": {bucket_payload: bucket_name, "storageClass": storage_class, "region": region, "path": path},
             "allowExternalDelete": allow_external_delete,
+            "disableManualSync": disable_manual_sync,
             "creator": self._client_api.info().get("user_email"),
         }
 
@@ -248,6 +256,7 @@ class Drivers:
         project_id: str = None,
         elastic_index: str = None,
         elastic_index_path: str = None,
+        disable_manual_sync: bool = False,
     ) -> entities.Driver:
         """
         Create a storage driver for NFS, hostPath, or S3-compatible API integrations.
@@ -271,6 +280,7 @@ class Drivers:
         :param str project_id: optional - project ID. If not provided, uses the current project
         :param str elastic_index: optional - Elastifile index name (Dell PowerScale only)
         :param str elastic_index_path: optional - Elastifile index path (Dell PowerScale only)
+        :param bool disable_manual_sync: True to hide the sync buttons in the UI, so the dataset can only be synced from the SDK or by a direct API call (default: False)
         :return: Driver object
         :rtype: dtlpy.entities.driver.Driver
         :raises ValueError: If the integration type is not supported or required params are missing
@@ -326,8 +336,77 @@ class Drivers:
             "type": entities.ExternalStorage.STORAGE,
             "payload": driver_payload,
             "allowExternalDelete": allow_external_delete,
+            "disableManualSync": disable_manual_sync,
             "creator": self._client_api.info().get("user_email"),
         }
+        return self._create_driver(payload)
+
+    @_api_reference.add(path="/drivers", method="post")
+    def create_database_driver(
+        self,
+        name: str,
+        integration_id: str,
+        integration_type: entities.IntegrationType,
+        database_table: dict,
+        project_id: str = None,
+        dynamic_partitions: dict = None,
+        is_use_default_s2_schema: bool = False,
+        disable_manual_sync: bool = False,
+    ) -> entities.Driver:
+        """
+        Create a database storage driver, for a database-backed dataset.
+
+        The driver type is always dl.ExternalStorage.DATABASE. The concrete engine (elasticsearch,
+        starburst) is determined by the integration, so it is set through ``integration_type``.
+
+        **Prerequisites**: You must be in the role of an *owner* or *developer*.
+
+        :param str name: the driver name
+        :param str integration_id: the integration id holding the database credentials
+        :param IntegrationType integration_type: dl.IntegrationType - the database engine (e.g. dl.IntegrationType.ELASTICSEARCH)
+        :param dict database_table: table configuration - 'collection', 'schemaMapping' and optional 'itemType'
+        :param str project_id: optional - project id. Uses the repository's project if not provided
+        :param dict dynamic_partitions: optional - dynamic partitions configuration
+        :param bool is_use_default_s2_schema: optional - replace schemaMapping with the platform default schema
+        :param bool disable_manual_sync: True to hide the sync buttons in the UI, so the dataset can only be synced from the SDK or by a direct API call (default: False)
+        :return: DatabaseDriver object
+        :rtype: dtlpy.entities.driver.DatabaseDriver
+
+        **Example**:
+
+        .. code-block:: python
+
+            project.drivers.create_database_driver(
+                name='my-es-driver',
+                integration_id='integration_id',
+                integration_type=dl.IntegrationType.ELASTICSEARCH,
+                database_table={
+                    'collection': 'my_index',
+                    'schemaMapping': {
+                        'primaryKey': {'fields': ['_id'], 'composite': False, 'type': 'string'},
+                        'fieldMappings': [
+                            {'sourceField': 'text', 'targetPath': 'metadata.user.text', 'type': 'string'}
+                        ],
+                    },
+                    'itemType': 'db_row',
+                },
+            )
+        """
+        # the SDK enums subclass str, so isinstance(x, str) can't tell a member from a plain string
+        payload = {
+            "name": name,
+            "type": entities.ExternalStorage.DATABASE.value,
+            "integrationId": integration_id,
+            "integrationType": integration_type.value if isinstance(integration_type, Enum) else integration_type,
+            "metadata": {"system": {"projectId": self.project.id if project_id is None else project_id}},
+            "databaseTable": database_table,
+            "isUseDefaultS2Schema": is_use_default_s2_schema,
+            "disableManualSync": disable_manual_sync,
+            "creator": self._client_api.info().get("user_email"),
+        }
+        if dynamic_partitions is not None:
+            payload["dynamicPartitions"] = dynamic_partitions
+
         return self._create_driver(payload)
 
     @_api_reference.add(path="/drivers/{id}", method="delete")

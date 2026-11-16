@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dtlpy"
+version = "1.127.13"
+description = "SDK and CLI for Dataloop platform"
+readme = "README.md"
+license = {text = "Apache License 2.0"}
+authors = [
+    {name = "Dataloop Team", email = "info@dataloop.ai"}
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "urllib3>=2.3.0,<3",
+    "tqdm>=4.63",
+    "certifi>=2020.12.5",
+    "webvtt-py==0.4.3",
+    "aiohttp>=3.8",
+    "requests-toolbelt>=1.0.0",
+    "requests>=2.32.0",
+    "numpy>=1.16.2",
+    "pandas>=0.24.2",
+    "tabulate>=0.8.9",
+    "Pillow>=12.0.0",
+    "PyJWT>=2.12.0",
+    "jinja2>=2.11.3",
+    "attrs>=22.2.0,<25.0",
+    "prompt_toolkit>=2.0.9",
+    "fuzzyfinder<=2.1.0",
+    "dictdiffer>=0.8.1",
+    "validators<=0.18.2",
+    "pathspec>=1.0.0",
+    "filelock>=3.0.12",
+    "diskcache>=5.4",
+    "redis>=3.5",
+    "inquirer",
+    "dtlpymetrics",
+    "pymongo>=4.9,<5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/dataloop-ai/dtlpy"
+Documentation = "https://sdk-docs.dataloop.ai/en/latest/"
+Repository = "https://github.com/dataloop-ai/dtlpy"
+
+[project.scripts]
+dlp = "dtlpy.dlp.dlp:main"
+
+[tool.setuptools]
+packages = {find = {exclude = ["docs", "samples", "*venv*", "*env*", "build*", "dist*", "*.egg-info*", ".cursor", ".idea", ".dataloop", "personal", "personal.*", ".windsurf", ".windsurf.*"]}}
+include-package-data = true

@@ -35,6 +35,8 @@ class IntegrationType(str, Enum):
          - GCP Workload Identity Federation Integration - for GCP drivers
        * - PRIVATE_REGISTRY
          - PRIVATE REGISTRY Integration - for private registry drivers
+       * - ELASTICSEARCH
+         - ELASTICSEARCH Integration - for database drivers and embeddings drivers
     """
     S3 = "s3"
     AWS_CROSS_ACCOUNT = 'aws-cross'
@@ -49,6 +51,7 @@ class IntegrationType(str, Enum):
     HOST_PATH = "hostPath"
     BLOB = "blob"
     PVC = "pvc"
+    ELASTICSEARCH = "elasticsearch"
 
 
 class IntegrationProvider(str, Enum):

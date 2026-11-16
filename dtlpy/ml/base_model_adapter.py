@@ -337,34 +337,22 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         """
         Prepare the Dataloop item before calling the `predict` function with a batch.
         A user can override this function to load item differently
-        Default will load the item according the input_type (mapping type to function is in self.item_to_batch_mapping)
+        Default will load the item according to its mimetype, regardless of the model input_type
+        (mapping of the mimetype top-level type to function is in self.item_to_batch_mapping)
 
         :param item:
         :return: preprocessed: the var with the loaded item information (e.g. ndarray for image, dict for json files etc)
         """
 
         if item.type == 'db_row':
+            # a database row has no file - its stream is the content column of the row. the item
+            # mimetype is 'application/json' regardless, so the branches below cannot route it
             buffer: io.BytesIO = item.download(save_locally=False)
-            data = json.loads(buffer.read())
-            column_name = self.model_entity.configuration.get("column", "content")
-            processed = data.get(column_name, data)
+            return buffer.read().decode()
 
-        # Item to batch func
-        if isinstance(self.model_entity.input_type, list):
-            if 'text' in self.model_entity.input_type and 'text' in item.mimetype:
-                processed = self._item_to_text(item)
-            elif 'image' in self.model_entity.input_type and 'image' in item.mimetype:
-                processed = self._item_to_image(item)
-            else:
-                processed = self._item_to_item(item)
-
-        elif self.model_entity.input_type in self.item_to_batch_mapping:
-            processed = self.item_to_batch_mapping[self.model_entity.input_type](item)
-
-        else:
-            processed = self._item_to_item(item)
-
-        return processed
+        # Item to batch func - routed by the item mimetype top-level type (e.g. 'image/png' -> 'image')
+        mimetype = item.mimetype or ''
+        return self.item_to_batch_mapping.get(mimetype.split('/')[0], self._item_to_item)(item)
 
     def __include_model_annotations(self, annotation_filters):
         include_model_annotations = self.model_entity.configuration.get("include_model_annotations", False)
@@ -1028,7 +1016,7 @@ class BaseModelAdapter(utilities.BaseServiceRunner):
         predict_embed_subset_limit = self.configuration.get('predict_embed_subset_limit', PREDICT_EMBED_DEFAULT_SUBSET_LIMIT)
         predict_embed_timeout = self.configuration.get('predict_embed_timeout', PREDICT_EMBED_DEFAULT_TIMEOUT)
         self.logger.debug(f"Inputs: predict_embed_subset_limit: {predict_embed_subset_limit}, predict_embed_timeout: {predict_embed_timeout}")
-        tmp_filters = copy.deepcopy(filters.prepare())
+        tmp_filters = copy.deepcopy(dataset.items._prepare_filters(filters))
         tmp_filters['pageSize'] = 0
         num_items = dataset.items.list(filters=entities.Filters(custom_filter=tmp_filters)).items_count
         self.logger.debug(f"Number of items for current filters: {num_items}")

@@ -199,6 +199,8 @@ def login(api_client, auth0_url=None, audience=None, client_id=None, login_domai
         if login_domain is not None:
             login_page_url = "{}&domain={}".format(login_page_url, login_domain)
         logger.info("Launching interactive login via {}".format(remote_ep))
+        print("If the browser did not open, open this URL manually: {}".format(login_page_url))
+        print("Waiting for login callback on local url: {}".format(local_ep))
         webbrowser.open(url=login_page_url, new=2, autoraise=True)
 
         success, tokens = server.process_request()

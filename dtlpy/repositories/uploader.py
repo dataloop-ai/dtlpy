@@ -26,6 +26,8 @@ from ..services import Reporter
 logger = logging.getLogger(name='dtlpy')
 
 NUM_TRIES = 5  # try to upload 3 time before fail on item
+ROWS_UPLOAD_MAX_ROWS = 1000  # rows per upload request of a database-backed dataset
+ROWS_UPLOAD_CONCURRENCY = 5
 
 
 class Uploader:
@@ -37,15 +39,20 @@ class Uploader:
         self.mode = 'skip'
         self.num_files = 0
         self.i_item = 0
+        self.no_output = no_output
+        self.output_entity = output_entity
         self.pbar = tqdm.tqdm(total=0,
                               disable=self.items_repository._client_api.verbose.disable_progress_bar_upload_items,
                               file=sys.stdout, desc='Upload Items')
-        self.reporter = Reporter(num_workers=0,
-                                 resource=Reporter.ITEMS_UPLOAD,
-                                 print_error_logs=items_repository._client_api.verbose.print_error_logs,
-                                 output_entity=output_entity,
-                                 client_api=items_repository._client_api,
-                                 no_output=no_output)
+        self.reporter = self._build_reporter(output_entity=output_entity)
+
+    def _build_reporter(self, output_entity):
+        return Reporter(num_workers=0,
+                        resource=Reporter.ITEMS_UPLOAD,
+                        print_error_logs=self.items_repository._client_api.verbose.print_error_logs,
+                        output_entity=output_entity,
+                        client_api=self.items_repository._client_api,
+                        no_output=self.no_output)
 
     def upload(
             self,
@@ -68,6 +75,11 @@ class Uploader:
         Local filesystem will remain.
         If `*` at the end of local_path (e.g. '/images/*') items will be uploaded without head directory
 
+        On a database-backed dataset, rows (dict, list of dicts or DataFrame) are uploaded to the external
+        database through the items endpoint, in NDJSON chunks of up to ROWS_UPLOAD_MAX_ROWS rows.
+        The output is then the created items (not fetched), returned by the same single/generator/list rules.
+        Uploaded rows may not be visible to queries immediately.
+
         :param local_path: local file or folder to upload
         :param local_annotations_path: path to Dataloop format annotations json files.
         :param remote_path: remote path to save.
@@ -87,7 +99,24 @@ class Uploader:
         ###################
         if overwrite:
             self.mode = 'overwrite'
-        if isinstance(local_path, pandas.DataFrame):
+        is_rows_upload = self._is_rows_input(local_path) and self.items_repository.dataset.is_database_backed
+        if is_rows_upload:
+            self._warn_ignored_rows_options(local_annotations_path=local_annotations_path,
+                                            remote_name=remote_name,
+                                            file_types=file_types,
+                                            overwrite=overwrite,
+                                            item_metadata=item_metadata,
+                                            item_description=item_description)
+            # the output is item json or item ids, converted to items by _rows_output
+            self.reporter = self._build_reporter(output_entity=None)
+            futures = self._build_rows_upload_futures(rows=local_path)
+        elif isinstance(local_path, pandas.DataFrame):
+            self._raise_on_dataframe_options(local_annotations_path=local_annotations_path,
+                                             remote_path=remote_path,
+                                             remote_name=remote_name,
+                                             file_types=file_types,
+                                             item_metadata=item_metadata,
+                                             item_description=item_description)
             futures = self._build_elements_from_df(local_path)
         else:
             start_time = time.time()
@@ -102,7 +131,7 @@ class Uploader:
                                                        export_version=export_version,
                                                        item_description=item_description)
             logger.debug(f"Building elements from inputs completed:  time taken: {time.time() - start_time}")
-        num_files = len(futures)
+        num_files = self.num_files
         while futures:
             futures.popleft().result()
         logger.info("Uploading {} items..".format(num_files))
@@ -133,18 +162,19 @@ class Uploader:
             else:
                 logger.warning(error_message)
 
+        output = self._rows_output(self.reporter.output) if is_rows_upload else self.reporter.output
         if return_as_list is True:
             # return list of items
-            return list(self.reporter.output)
+            return list(output)
         if len(status_list) == 1:
             # if there is only one item, return it
             try:
-                return next(self.reporter.output)
+                return next(output)
             except StopIteration:
                 # if there is no items, return None
                 return None
         # if there are multiple items, return the generator
-        return self.reporter.output
+        return output
 
     def _build_elements_from_inputs(self,
                                     local_path,
@@ -365,6 +395,28 @@ class Uploader:
             loop=self.items_repository._client_api.event_loop.loop)
         return future
 
+    @staticmethod
+    def _raise_on_dataframe_options(local_annotations_path, remote_path, remote_name, file_types, item_metadata,
+                                    item_description):
+        """
+        A DataFrame of file uploads carries its upload options per row, as columns - the same options passed to
+        upload() would not be applied, so they are rejected instead of being dropped.
+        """
+        options = {'local_annotations_path': local_annotations_path,
+                   'remote_name': remote_name,
+                   'file_types': file_types,
+                   'item_metadata': item_metadata,
+                   'item_description': item_description}
+        given = [name for name, value in options.items() if value is not None]
+        # '/' is items.upload's default remote_path
+        if remote_path not in (None, '/'):
+            given.append('remote_path')
+        if given:
+            raise PlatformException(
+                error='400',
+                message='When local_path is a DataFrame, upload options are set per row as DataFrame columns. '
+                        'Move {} into the DataFrame instead of passing them to upload()'.format(', '.join(given)))
+
     def _build_elements_from_df(self, df: pandas.DataFrame):
         futures = deque()
         for index, row in df.iterrows():
@@ -380,6 +432,134 @@ class Uploader:
             # append deque using +
             futures += future
         return futures
+
+    @staticmethod
+    def _is_rows_input(local_path) -> bool:
+        """
+        Whether the upload input holds database rows rather than files.
+        A DataFrame with a 'local_path' column is a table of file uploads (local_path, remote_path, remote_name,
+        item_metadata...), not rows.
+        """
+        if isinstance(local_path, pandas.DataFrame):
+            return 'local_path' not in local_path.columns
+        if isinstance(local_path, dict):
+            return True
+        if isinstance(local_path, (list, tuple)) and len(local_path) > 0:
+            return all(isinstance(row, dict) for row in local_path)
+        return False
+
+    @staticmethod
+    def _warn_ignored_rows_options(local_annotations_path, remote_name, file_types, overwrite, item_metadata,
+                                   item_description):
+        options = {'local_annotations_path': local_annotations_path,
+                   'remote_name': remote_name,
+                   'file_types': file_types,
+                   'item_metadata': item_metadata,
+                   'item_description': item_description}
+        ignored = [name for name, value in options.items() if value is not None]
+        if overwrite:
+            ignored.append('overwrite')
+        if ignored:
+            logger.warning("Rows of a database-backed dataset are uploaded as-is, "
+                           "ignoring: {}".format(', '.join(ignored)))
+
+    @staticmethod
+    def _iter_rows_chunks(rows):
+        """
+        Serialize rows to NDJSON lines and group them into upload chunks of up to ROWS_UPLOAD_MAX_ROWS lines.
+
+        :param rows: DataFrame, dict or list of dicts
+        :return: generator of (index of the first row in the chunk, list of NDJSON lines)
+        """
+        if isinstance(rows, pandas.DataFrame):
+            lines = rows.to_json(orient='records', lines=True).splitlines()
+        else:
+            if isinstance(rows, dict):
+                rows = [rows]
+            lines = [json.dumps(row) for row in rows]
+        for start in range(0, len(lines), ROWS_UPLOAD_MAX_ROWS):
+            yield start, lines[start:start + ROWS_UPLOAD_MAX_ROWS]
+
+    def _build_rows_upload_futures(self, rows):
+        futures = deque()
+        for start, lines in self._iter_rows_chunks(rows=rows):
+            self.num_files += len(lines)
+            self.pbar.total += len(lines)
+            self.reporter.upcount_num_workers()
+            futures.append(asyncio.run_coroutine_threadsafe(
+                self.__upload_rows_chunk_wrapper(start=start, lines=lines),
+                loop=self.items_repository._client_api.event_loop.loop))
+        return futures
+
+    def _upload_rows_chunk(self, lines):
+        """
+        Send one NDJSON chunk of rows to the items endpoint.
+
+        No retry here - with an auto-generated primary key, resending a chunk would duplicate its rows.
+
+        :param list lines: NDJSON lines
+        :return: the item json for a single-row chunk, the item ids otherwise, None if the error was suppressed
+        """
+        content = '\n'.join(lines).encode('utf-8')
+        success, response = self.items_repository._client_api.gen_request(
+            req_type='post',
+            path=self.remote_url,
+            data={'type': 'file'},
+            files={'file': ('rows.jsonl', content, 'application/x-ndjson')})
+        if self.items_repository._client_api.check_response(success, response, path=self.remote_url) is False:
+            return None
+        return response.json()
+
+    async def __upload_rows_chunk_wrapper(self, start, lines):
+        async with self.items_repository._client_api.event_loop.semaphore('items.upload_rows',
+                                                                           ROWS_UPLOAD_CONCURRENCY):
+            ref = 'rows {}-{}'.format(start, start + len(lines) - 1)
+            outputs = None
+            error = None
+            try:
+                response = await asyncio.get_running_loop().run_in_executor(None,
+                                                                            self._upload_rows_chunk,
+                                                                            lines)
+                if response is None:
+                    error = 'Rows upload request failed and its error was suppressed'
+                else:
+                    # a single row is answered with the created item, several rows with their ids only
+                    outputs = [response] if isinstance(response, dict) else response
+            except Exception as e:
+                error = "{}\n{}".format(e, traceback.format_exc())
+                logger.debug("Rows upload: {}. Fail.\n{}".format(ref, error))
+
+            if outputs is not None:
+                for output in outputs:
+                    self.reporter.set_index(ref=output['id'] if isinstance(output, dict) else output,
+                                            status='created',
+                                            success=True,
+                                            output=output)
+                self.pbar.update(len(outputs))
+                # the platform returns only the rows that were uploaded
+                if len(outputs) < len(lines):
+                    error = '{} of {} rows were not uploaded by the platform'.format(
+                        len(lines) - len(outputs), len(lines))
+            if error is not None:
+                self.reporter.set_index(ref=ref, status='error', success=False, error=error)
+
+    def _rows_output(self, outputs):
+        """
+        Convert the rows upload outputs to output_entity - an item json is parsed, an item id becomes a
+        not-fetched entity. Built here rather than in the Reporter, which cannot attach the dataset.
+        With no output_entity, the item json (or {'id': id}) is returned, like for file uploads.
+        """
+        for output in outputs:
+            is_fetched = isinstance(output, dict)
+            _json = output if is_fetched else {'id': output}
+            if self.output_entity is None:
+                yield _json
+            else:
+                yield self.output_entity.from_json(_json=_json,
+                                                   client_api=self.items_repository._client_api,
+                                                   dataset=self.items_repository.dataset,
+                                                   project=self.items_repository.project,
+                                                   is_fetched=is_fetched)
 
     async def __single_external_sync(self, element):
         # Path format: anything before last "://" is scheme (external, provider s3/gs, etc.). After it: bucket_name/path_to_file.
@@ -495,7 +675,12 @@ class Uploader:
 
         if self.items_repository._client_api.check_response(response.ok, response, path='/items') is False:
             return None
-        if item_size != response.json().get('metadata', {}).get('system', {}).get('size', 0):
+        # a database row has no file behind it and the platform reports its size as 0, so the
+        # corruption guard below would fire on every upload to a database-backed dataset
+        dataset = self.items_repository._dataset
+        is_database_backed = dataset is not None and dataset.is_database_backed
+        if not is_database_backed and \
+                item_size != response.json().get('metadata', {}).get('system', {}).get('size', 0):
             self.items_repository.delete(item_id=response.json()['id'])
             raise PlatformException(500,
                                     "The uploaded file is corrupted. "

@@ -24,6 +24,9 @@ class Feature(entities.BaseEntity):
     project_id = attr.ib()
     org_id = attr.ib()
     creator = attr.ib()
+    dataset_id = attr.ib()
+    # the id of the vector in the external store, when the feature set is backed by an embeddings driver
+    external_id = attr.ib()
 
     # sdk
     _client_api = attr.ib(type=ApiClient, repr=False)
@@ -87,6 +90,8 @@ class Feature(entities.BaseEntity):
             client_api=client_api,
             org_id=_json.get('org', None),
             creator=_json.get('creator', None),
+            dataset_id=_json.get('datasetId', None),
+            external_id=_json.get('externalId', None),
         )
         inst.is_fetched = is_fetched
         return inst
@@ -113,6 +118,10 @@ class Feature(entities.BaseEntity):
             _json['parentId'] = self.parent_id
         if self.org_id is not None:
             _json['org'] = self.org_id
+        if self.dataset_id is not None:
+            _json['datasetId'] = self.dataset_id
+        if self.external_id is not None:
+            _json['externalId'] = self.external_id
         return _json
 
     def delete(self):
