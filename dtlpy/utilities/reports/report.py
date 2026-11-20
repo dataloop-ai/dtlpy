@@ -3,6 +3,8 @@ import json
 import numpy as np
 import dtlpy as dl
 import tempfile
+import io
+import requests
 
 
 class Report:
@@ -59,13 +61,43 @@ class Report:
         :param remote_path: remote directory to upload the item to
         :return:
         """
-        with tempfile.TemporaryDirectory() as tmpdir:
-            filepath = os.path.join(tmpdir, remote_name)
-            print(filepath)
-            with open(filepath, 'w') as f:
-                json.dump(self.prepare(), f)
-            item = dataset.items.upload(local_path=filepath,
-                                        remote_path=remote_path,
-                                        remote_name=remote_name,
-                                        overwrite=True)
+        if '.' not in remote_name:
+            remote_name += '.json'
+        else:
+            extension = remote_name.split('.')[-1]
+            if extension.lower() != 'json':
+                raise Exception('remote file should be a JSON file. Please provide ".json" in remote name suffix')
+
+        if remote_path[0] == '/':
+            remote_path = remote_path[1:]
+
+        if remote_path[-1] == '/':
+            remote_path = remote_path[:-1]
+
+        filepath = f'/{remote_path}/{remote_name}'
+
+        try:
+            item = dataset.items.get(filepath=filepath)
+        except dl.exceptions.NotFound:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                filepath = os.path.join(tmpdir, remote_name)
+                with open(filepath, 'w') as f:
+                    json.dump(self.prepare(), f)
+                item = dataset.items.upload(local_path=filepath,
+                                            remote_path=remote_path,
+                                            remote_name=remote_name,
+                                            overwrite=True)
+            return item
+
+        binary = io.BytesIO()
+        binary.write(json.dumps(self.prepare()).encode())
+        binary.name = item.name
+        headers_req = dl.client_api.auth
+        binary.seek(0)
+        resp = requests.post(url=dl.environment() + '/items/{}/revisions'.format(item.id),
+                             headers=headers_req,
+                             files={'file': (binary.name, binary)},
+                             )
+        if not resp.ok:
+            raise ValueError(resp.text)
         return item
