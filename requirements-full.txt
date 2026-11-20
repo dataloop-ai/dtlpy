@@ -26,7 +26,7 @@ google-cloud-storage
 google-cloud-core
 protobuf>=3.17.3
 opencv-python
-torch>=1.8
+torch>=2.7.1
 torchvision>0.9
 tensorflow-gpu
 imgaug
